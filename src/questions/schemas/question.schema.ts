@@ -2,8 +2,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export enum QuestionType {
-  MCQ = 'MCQ',
-  WRITTEN = 'WRITTEN',
+  Mcq = 'mcq',
+  Written = 'written',
 }
 
 export type QuestionDocument = Question & Document;
@@ -16,11 +16,29 @@ export class Question {
   })
   type: QuestionType;
 
-  @Prop({
-    type: MongooseSchema.Types.Mixed,
-    required: true,
-  })
-  metadata: any;
+  @Prop({ required: true })
+  text: string;
+
+  @Prop({ type: [String], default: [] })
+  options: string[];
+
+  @Prop()
+  correctOption: string;
+
+  @Prop({ type: [String], default: [] })
+  idealAnswerPoints: string[];
+
+  @Prop()
+  studentAnswer: string;
+
+  @Prop()
+  isCorrect: boolean;
+
+  @Prop({ default: 0 })
+  answerScore: number;
+
+  @Prop()
+  answerExplanation: string;
 
   @Prop({
     required: true,
