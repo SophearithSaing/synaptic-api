@@ -3,8 +3,11 @@ import { Document } from 'mongoose';
 
 export type StudentModelDocument = StudentModel & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'studentModels' })
 export class StudentModel {
+  @Prop({ required: true, unique: true, index: true })
+  userId: string;
+
   @Prop({ required: true, default: 1 })
   overallLevel: number;
 
