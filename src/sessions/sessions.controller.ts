@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Param } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 
 /**
@@ -20,5 +20,19 @@ export class SessionsController {
     @Body('userId') userId: string,
   ) {
     return this.sessionsService.startSession(topicId, userId);
+  }
+
+  /**
+   * Submits student answers for a specific session for evaluation.
+   * @param id The session (QuestionSet) ID.
+   * @param answers Array of student answers with their corresponding question IDs.
+   * @returns The final evaluation results and updated student profile.
+   */
+  @Post(':id/submit')
+  async submitSession(
+    @Param('id') id: string,
+    @Body('answers') answers: { questionId: string; studentAnswer: string }[],
+  ) {
+    return this.sessionsService.submitSession(id, answers);
   }
 }

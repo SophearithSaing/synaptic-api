@@ -16,6 +16,10 @@ import {
   TopicStatus,
 } from '../topics/schemas/topic-progress.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
+import {
+  StudentModel,
+  StudentModelDocument,
+} from '../students/schemas/student-model.schema';
 
 /**
  * Service to manage learning sessions, including question generation
@@ -31,6 +35,8 @@ export class SessionsService {
     @InjectModel(TopicProgress.name)
     private topicProgressModel: Model<TopicProgressDocument>,
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
+    @InjectModel(StudentModel.name)
+    private studentModel: Model<StudentModelDocument>,
   ) {}
 
   /**
@@ -81,5 +87,77 @@ export class SessionsService {
     }
 
     return questionSet.populate(['topic', 'questions']);
+  }
+
+  /**
+   * Submits student answers for a session, evaluates them using AI,
+   * updates the QuestionSet, and adjusts the student's overall level.
+   * @param id The ID of the QuestionSet (session).
+   * @param answers Array of question IDs and corresponding student answers.
+   * @returns Evaluation results and updated StudentModel.
+   * @throws NotFoundException if QuestionSet or questions are not found.
+   */
+  async submitSession(
+    id: string,
+    answers: { questionId: string; studentAnswer: string }[],
+  ) {
+    const questionSet = await this.questionSetModel
+      .findById(id)
+      .populate('questions');
+    if (!questionSet) {
+      throw new NotFoundException('Question set not found');
+    }
+
+    const questions = questionSet.questions as QuestionDocument[];
+    const evaluationData = answers.map((answer) => {
+      const question = questions.find(
+        (q) => q._id.toString() === answer.questionId,
+      );
+      if (!question) {
+        throw new NotFoundException(
+          `Question ${answer.questionId} not found in this set`,
+        );
+      }
+      question.studentAnswer = answer.studentAnswer;
+      return {
+        questionText: question.text,
+        studentAnswer: answer.studentAnswer,
+      };
+    });
+
+    // Persist student answers to individual question documents
+    await Promise.all(questions.map((q) => q.save()));
+
+    const evaluation = await this.aiService.evaluateAnswers(evaluationData);
+
+    // Update session results
+    questionSet.score = evaluation.totalScore;
+    questionSet.feedback = evaluation.critique;
+    questionSet.weakConcepts = evaluation.weakConcepts;
+    questionSet.strongConcepts = evaluation.strongConcepts;
+    await questionSet.save();
+
+    // Update user's overall level in StudentModel
+    let studentModel = await this.studentModel.findOne({
+      userId: questionSet.userId,
+    });
+    if (!studentModel) {
+      studentModel = await this.studentModel.create({
+        userId: questionSet.userId,
+        overallLevel: 1,
+      });
+    }
+
+    const levelIncrement = Math.floor(evaluation.totalScore / 20);
+    studentModel.overallLevel = Math.min(
+      100,
+      studentModel.overallLevel + levelIncrement,
+    );
+    await studentModel.save();
+
+    return {
+      evaluation,
+      studentModel,
+    };
   }
 }
