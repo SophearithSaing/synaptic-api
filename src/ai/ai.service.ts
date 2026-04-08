@@ -32,8 +32,8 @@ export class AiService {
    */
   private getModelForProvider(provider: AiProvider): AiModel {
     const modelMap: Record<AiProvider, AiModel> = {
-      [AiProvider.Gemini]: AiModel.Gemini_1_5_Flash,
-      [AiProvider.Claude]: AiModel.Claude_3_5_Sonnet,
+      [AiProvider.Gemini]: AiModel.Gemini_2_5_Flash,
+      [AiProvider.Claude]: AiModel.ClaudeSonnet_4_6,
     };
     return modelMap[provider];
   }
@@ -117,15 +117,22 @@ export class AiService {
    * Evaluates student's answers.
    * @param answers Array of objects with questionText and studentAnswer.
    * @param provider Optional AI provider (defaults to Gemini).
-   * @returns Evaluation result with totalScore and critique.
+   * @returns Evaluation result with totalScore, critique, weakConcepts, and strongConcepts.
    */
   async evaluateAnswers(
     answers: { questionText: string; studentAnswer: string }[],
     provider: AiProvider = AiProvider.Gemini,
-  ): Promise<{ totalScore: number; critique: string }> {
+  ): Promise<{
+    totalScore: number;
+    critique: string;
+    weakConcepts: string[];
+    strongConcepts: string[];
+  }> {
     const schema = z.object({
       totalScore: z.number().min(0).max(100),
       critique: z.string().max(500),
+      weakConcepts: z.array(z.string()),
+      strongConcepts: z.array(z.string()),
     });
 
     const prompt = `Evaluate the following student answers for the corresponding questions:
@@ -137,12 +144,14 @@ export class AiService {
       )
       .join('\n\n')}
     
-    Provide a total score from 0 to 100 and a concise critique (max 3 sentences).
+    Provide a total score from 0 to 100, a concise critique (max 3 sentences), and identify up to 3 weak concepts and 3 strong concepts based on the student's performance.
     
     Return the response as a JSON object:
     {
       "totalScore": number,
-      "critique": "string"
+      "critique": "string",
+      "weakConcepts": ["concept1", "concept2"],
+      "strongConcepts": ["concept3", "concept4"]
     }
     
     Ensure the JSON is valid and only return the JSON object.`;
