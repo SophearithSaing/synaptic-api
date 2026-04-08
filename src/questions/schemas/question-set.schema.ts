@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Topic } from '../../topics/schemas/topic.schema';
 import { Question } from './question.schema';
 
@@ -10,14 +10,14 @@ export class QuestionSet {
   @Prop({ required: true, index: true })
   userId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Topic', required: true })
-  topic: Topic;
+  @Prop({ type: Types.ObjectId, ref: 'Topic', required: true })
+  topic: Topic | Types.ObjectId;
 
   @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Question' }],
+    type: [{ type: Types.ObjectId, ref: 'Question' }],
     default: [],
   })
-  questions: Question[];
+  questions: (Question | Types.ObjectId)[];
 
   @Prop({ required: true, default: 0 })
   score: number;

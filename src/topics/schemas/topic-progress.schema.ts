@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Topic } from './topic.schema';
 import { QuestionSet } from '../../questions/schemas/question-set.schema';
 
@@ -15,14 +15,14 @@ export class TopicProgress {
   @Prop({ required: true, index: true })
   userId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Topic', required: true })
-  topic: Topic;
+  @Prop({ type: Types.ObjectId, ref: 'Topic', required: true })
+  topic: Topic | Types.ObjectId;
 
   @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'QuestionSet' }],
+    type: [{ type: Types.ObjectId, ref: 'QuestionSet' }],
     default: [],
   })
-  history: QuestionSet[];
+  history: (QuestionSet | Types.ObjectId)[];
 
   @Prop({ required: true, default: 0 })
   currentLevel: number;
