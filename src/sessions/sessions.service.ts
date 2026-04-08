@@ -125,18 +125,31 @@ export class SessionsService {
       }
       question.studentAnswer = answer.studentAnswer;
       return {
+        questionId: question._id.toString(),
         questionText: question.text,
         studentAnswer: answer.studentAnswer,
       };
     });
 
-    // Persist student answers to individual question documents
-    await Promise.all(questions.map((q) => q.save()));
-
     const evaluation = await this.aiService.evaluateAnswers(
       evaluationData,
       provider,
     );
+
+    // Save per-question results
+    evaluation.questionEvaluations.forEach((qEval) => {
+      const question = questions.find(
+        (q) => q._id.toString() === qEval.questionId,
+      );
+      if (question) {
+        question.score = qEval.score;
+        question.isCorrect = qEval.isCorrect;
+        question.feedback = qEval.feedback;
+      }
+    });
+
+    // Persist student answers and evaluations to individual question documents
+    await Promise.all(questions.map((q) => q.save()));
 
     // Update session results
     questionSet.score = evaluation.totalScore;
@@ -145,7 +158,7 @@ export class SessionsService {
     questionSet.strongConcepts = evaluation.strongConcepts;
     await questionSet.save();
 
-    // Update user's overall level in StudentModel
+    // Update user's progress in StudentModel
     let studentModel = await this.studentModel.findOne({
       userId: questionSet.userId,
     });
@@ -156,11 +169,23 @@ export class SessionsService {
       });
     }
 
-    const levelIncrement = Math.floor(evaluation.totalScore / 20);
-    studentModel.overallLevel = Math.min(
-      100,
-      studentModel.overallLevel + levelIncrement,
+    // Update topic mastery using the increment logic
+    const topicId = (questionSet.topic as Types.ObjectId).toString();
+    const masteryIncrement = Math.floor(evaluation.totalScore / 20);
+    const currentMastery = studentModel.topicMastery.get(topicId) || 0;
+    
+    studentModel.topicMastery.set(
+      topicId, 
+      Math.min(100, currentMastery + masteryIncrement)
     );
+
+    // Calculate overall level as the average of all topic masteries
+    const masteries = Array.from(studentModel.topicMastery.values());
+    if (masteries.length > 0) {
+      const averageMastery = masteries.reduce((sum, m) => sum + m, 0) / masteries.length;
+      studentModel.overallLevel = Math.max(1, Math.round(averageMastery));
+    }
+
     await studentModel.save();
 
     return {

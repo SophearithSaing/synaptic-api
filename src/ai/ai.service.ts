@@ -115,24 +115,38 @@ export class AiService {
 
   /**
    * Evaluates student's answers.
-   * @param answers Array of objects with questionText and studentAnswer.
+   * @param answers Array of objects with questionId, questionText and studentAnswer.
    * @param provider Optional AI provider (defaults to Gemini).
-   * @returns Evaluation result with totalScore, critique, weakConcepts, and strongConcepts.
+   * @returns Evaluation result with totalScore, critique, weakConcepts, strongConcepts, and per-question evaluations.
    */
   async evaluateAnswers(
-    answers: { questionText: string; studentAnswer: string }[],
+    answers: { questionId: string; questionText: string; studentAnswer: string }[],
     provider: AiProvider = AiProvider.Gemini,
   ): Promise<{
     totalScore: number;
     critique: string;
     weakConcepts: string[];
     strongConcepts: string[];
+    questionEvaluations: {
+      questionId: string;
+      score: number;
+      isCorrect: boolean;
+      feedback: string;
+    }[];
   }> {
     const schema = z.object({
       totalScore: z.number().min(0).max(100),
       critique: z.string().max(500),
       weakConcepts: z.array(z.string()),
       strongConcepts: z.array(z.string()),
+      questionEvaluations: z.array(
+        z.object({
+          questionId: z.string(),
+          score: z.number().min(0).max(100),
+          isCorrect: z.boolean(),
+          feedback: z.string().max(500),
+        }),
+      ),
     });
 
     const prompt = `Evaluate the following student answers for the corresponding questions:
@@ -140,18 +154,30 @@ export class AiService {
     ${answers
       .map(
         (answer, index) =>
-          `Question ${index + 1}: ${answer.questionText}\nStudent Answer ${index + 1}: ${answer.studentAnswer}`,
+          `Question ${index + 1} (ID: ${answer.questionId}): ${answer.questionText}\nStudent Answer ${index + 1}: ${answer.studentAnswer}`,
       )
       .join('\n\n')}
     
-    Provide a total score from 0 to 100, a concise critique (max 3 sentences), and identify up to 3 weak concepts and 3 strong concepts based on the student's performance.
+    Provide:
+    1. A total score from 0 to 100.
+    2. A concise overall critique (max 3 sentences).
+    3. Identify up to 3 weak concepts and 3 strong concepts based on the performance.
+    4. For each question, provide a score (0-100), whether it's correct (boolean), and a short feedback/explanation.
     
     Return the response as a JSON object:
     {
       "totalScore": number,
       "critique": "string",
       "weakConcepts": ["concept1", "concept2"],
-      "strongConcepts": ["concept3", "concept4"]
+      "strongConcepts": ["concept3", "concept4"],
+      "questionEvaluations": [
+        {
+          "questionId": "string",
+          "score": number,
+          "isCorrect": boolean,
+          "feedback": "string"
+        }
+      ]
     }
     
     Ensure the JSON is valid and only return the JSON object.`;
