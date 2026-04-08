@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
+import { parseAiJson } from './utils/ai.utils';
+import { AiProvider, AiModel, ModelExecutionOptions } from './types/ai.types';
 
 /**
  * Service for interacting with AI models (Gemini and Anthropic).
@@ -24,67 +26,102 @@ export class AiService {
   }
 
   /**
-   * Returns the Gemini AI client.
-   * @returns GoogleGenAI instance.
+   * Internal mapping to get the correct model for a given provider.
+   * @param provider The AI provider.
+   * @returns The corresponding AiModel.
    */
-  getGeminiClient() {
-    return this.geminiClient;
+  private getModelForProvider(provider: AiProvider): AiModel {
+    const modelMap: Record<AiProvider, AiModel> = {
+      [AiProvider.Gemini]: AiModel.Gemini_1_5_Flash,
+      [AiProvider.Claude]: AiModel.Claude_3_5_Sonnet,
+    };
+    return modelMap[provider];
   }
 
   /**
-   * Returns the Anthropic AI client.
-   * @returns Anthropic instance.
+   * Generic method to execute a prompt against the selected AI provider.
+   * @param options Configuration for the model call.
+   * @returns The raw text response from the model.
+   * @throws InternalServerErrorException if the call fails or returns unexpected data.
    */
-  getAnthropicClient() {
-    return this.anthropicClient;
+  private async executePrompt(options: ModelExecutionOptions): Promise<string> {
+    try {
+      const model = this.getModelForProvider(options.provider);
+
+      if (options.provider === AiProvider.Gemini) {
+        const response = await this.geminiClient.models.generateContent({
+          model: model,
+          contents: options.prompt,
+        });
+        return response.text ?? '';
+      }
+
+      if (options.provider === AiProvider.Claude) {
+        const message = await this.anthropicClient.messages.create({
+          model: model,
+          max_tokens: options.maxTokens || 1024,
+          messages: [{ role: 'user', content: options.prompt }],
+        });
+
+        const content = message.content[0];
+        if (content.type !== 'text') {
+          throw new Error('Unexpected response type from Anthropic');
+        }
+        return content.text;
+      }
+
+      throw new Error(`Unsupported model provider: ${options.provider}`);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `AI request failed (${options.provider}): ${error.message}`,
+      );
+    }
   }
 
   /**
-   * Generates a set of educational questions using Gemini 1.5 Flash.
-   * @param topic The subject of the questions.
-   * @param description A brief description of the topic context.
-   * @param difficulty Difficulty level (0-100).
-   * @param count Number of questions to generate.
-   * @returns Array of generated question objects.
+   * Generates educational questions.
+   * @param topic The subject.
+   * @param description Context description.
+   * @param difficulty Level 0-100.
+   * @param count Number of questions.
+   * @param provider Optional AI provider (defaults to Gemini).
+   * @returns Array of generated questions.
    */
   async generateQuestions(
     topic: string,
     description: string,
     difficulty: number,
     count: number = 3,
+    provider: AiProvider = AiProvider.Gemini,
   ) {
     const prompt = `Generate ${count} educational questions about "${topic}" (Description: ${description}) at difficulty level ${difficulty}.
     The questions should be a mix of MCQ and Written types.
     
     Return the response as a JSON array of objects following this structure:
-    {
+    [{
       "type": "mcq" | "written",
       "text": "The question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"], // Only for MCQ
-      "correctOption": "The correct option", // Only for MCQ
-      "idealAnswerPoints": ["Point 1", "Point 2"], // Only for Written
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctOption": "The correct option",
+      "idealAnswerPoints": ["Point 1", "Point 2"],
       "difficulty": ${difficulty}/100
-    }
+    }]
     
     Ensure the JSON is valid and only return the JSON array.`;
 
-    const response = await this.geminiClient.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
-    const responseText = response.text ?? '';
-
-    const jsonStr = responseText.replace(/```json|```/g, '').trim();
-    return JSON.parse(jsonStr);
+    const responseText = await this.executePrompt({ provider, prompt });
+    return parseAiJson(responseText);
   }
 
   /**
-   * Evaluates student's answers using Claude 3.5.
+   * Evaluates student's answers.
    * @param answers Array of objects with questionText and studentAnswer.
+   * @param provider Optional AI provider (defaults to Gemini).
    * @returns Evaluation result with totalScore and critique.
    */
   async evaluateAnswers(
     answers: { questionText: string; studentAnswer: string }[],
+    provider: AiProvider = AiProvider.Gemini,
   ): Promise<{ totalScore: number; critique: string }> {
     const schema = z.object({
       totalScore: z.number().min(0).max(100),
@@ -95,15 +132,14 @@ export class AiService {
     
     ${answers
       .map(
-        (a, i) =>
-          `Question ${i + 1}: ${a.questionText}\nStudent Answer ${i + 1}: ${a.studentAnswer}`,
+        (answer, index) =>
+          `Question ${index + 1}: ${answer.questionText}\nStudent Answer ${index + 1}: ${answer.studentAnswer}`,
       )
       .join('\n\n')}
     
-    Provide a total score from 0 to 100 based on the accuracy and completeness of the answers.
-    Also, provide a concise critique of the student's performance (maximum 3 sentences).
+    Provide a total score from 0 to 100 and a concise critique (max 3 sentences).
     
-    Return the response as a JSON object with the following structure:
+    Return the response as a JSON object:
     {
       "totalScore": number,
       "critique": "string"
@@ -111,20 +147,8 @@ export class AiService {
     
     Ensure the JSON is valid and only return the JSON object.`;
 
-    const message = await this.anthropicClient.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Anthropic');
-    }
-
-    const responseText = content.text;
-    const jsonStr = responseText.replace(/```json|```/g, '').trim();
-    const rawResult = JSON.parse(jsonStr);
+    const responseText = await this.executePrompt({ provider, prompt });
+    const rawResult = parseAiJson(responseText);
 
     return schema.parse(rawResult);
   }
