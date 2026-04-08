@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, QueryFilter, Types } from 'mongoose';
 import { AiService } from '../ai/ai.service';
+import { AiProvider } from '../ai/types/ai.types';
 import {
   Question,
   QuestionDocument,
@@ -44,10 +45,11 @@ export class SessionsService {
    * Generates questions using AI and updates the user's progress.
    * @param topicId The ID of the topic to start.
    * @param userId The ID of the user starting the session.
+   * @param provider Optional AI provider.
    * @returns The created and populated QuestionSet object.
    * @throws NotFoundException if the topic does not exist.
    */
-  async startSession(topicId: string, userId: string) {
+  async startSession(topicId: string, userId: string, provider?: AiProvider) {
     const topic = await this.topicModel.findById(topicId);
     if (!topic) {
       throw new NotFoundException('Topic not found');
@@ -58,6 +60,7 @@ export class SessionsService {
       topic.description,
       1,
       3,
+      provider,
     );
     const savedQuestions =
       await this.questionModel.insertMany(generatedQuestions);
@@ -94,12 +97,14 @@ export class SessionsService {
    * updates the QuestionSet, and adjusts the student's overall level.
    * @param id The ID of the QuestionSet (session).
    * @param answers Array of question IDs and corresponding student answers.
+   * @param provider Optional AI provider.
    * @returns Evaluation results and updated StudentModel.
    * @throws NotFoundException if QuestionSet or questions are not found.
    */
   async submitSession(
     id: string,
     answers: { questionId: string; studentAnswer: string }[],
+    provider?: AiProvider,
   ) {
     const questionSet = await this.questionSetModel
       .findById(id)
@@ -128,7 +133,10 @@ export class SessionsService {
     // Persist student answers to individual question documents
     await Promise.all(questions.map((q) => q.save()));
 
-    const evaluation = await this.aiService.evaluateAnswers(evaluationData);
+    const evaluation = await this.aiService.evaluateAnswers(
+      evaluationData,
+      provider,
+    );
 
     // Update session results
     questionSet.score = evaluation.totalScore;
