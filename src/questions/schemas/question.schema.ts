@@ -35,10 +35,10 @@ export class Question {
   isCorrect: boolean;
 
   @Prop({ default: 0 })
-  answerScore: number;
+  score: number;
 
   @Prop()
-  answerExplanation: string;
+  feedback: string;
 
   @Prop({
     required: true,
