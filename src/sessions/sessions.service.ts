@@ -17,6 +17,10 @@ import {
 } from '../topics/schemas/topic-progress.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 
+/**
+ * Service to manage learning sessions, including question generation
+ * and session tracking for users and topics.
+ */
 @Injectable()
 export class SessionsService {
   constructor(
@@ -29,6 +33,14 @@ export class SessionsService {
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
   ) {}
 
+  /**
+   * Starts a new learning session for a specific topic and user.
+   * Generates questions using AI and updates the user's progress.
+   * @param topicId The ID of the topic to start.
+   * @param userId The ID of the user starting the session.
+   * @returns The created and populated QuestionSet object.
+   * @throws NotFoundException if the topic does not exist.
+   */
   async startSession(topicId: string, userId: string) {
     const topic = await this.topicModel.findById(topicId);
     if (!topic) {

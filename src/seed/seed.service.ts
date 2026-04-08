@@ -7,6 +7,9 @@ import {
   StudentModelDocument,
 } from '../students/schemas/student-model.schema';
 
+/**
+ * Service to initialize the database with default topics and user data.
+ */
 @Injectable()
 export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
@@ -17,11 +20,17 @@ export class SeedService implements OnModuleInit {
     private readonly studentModel: Model<StudentModelDocument>,
   ) {}
 
+  /**
+   * Automatically triggered on module initialization to seed the database.
+   */
   async onModuleInit() {
     await this.seedTopics();
     await this.seedStudent();
   }
 
+  /**
+   * Seeds initial topics if none exist in the database.
+   */
   private async seedTopics() {
     const count = await this.topicModel.countDocuments();
     if (count) {
@@ -61,6 +70,9 @@ export class SeedService implements OnModuleInit {
     this.logger.log('5 topics seeded successfully.');
   }
 
+  /**
+   * Creates a default student model for development purposes.
+   */
   private async seedStudent() {
     const userId = 'dev-user-123';
     const exists = await this.studentModel.findOne({ userId });

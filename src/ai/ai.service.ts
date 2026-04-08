@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 
+/**
+ * Service for interacting with AI models (Gemini and Anthropic).
+ * Handles question generation and answer evaluation.
+ */
 @Injectable()
 export class AiService {
   private readonly geminiClient: GoogleGenAI;
@@ -18,14 +22,30 @@ export class AiService {
     });
   }
 
+  /**
+   * Returns the Gemini AI client.
+   * @returns GoogleGenAI instance.
+   */
   getGeminiClient() {
     return this.geminiClient;
   }
 
+  /**
+   * Returns the Anthropic AI client.
+   * @returns Anthropic instance.
+   */
   getAnthropicClient() {
     return this.anthropicClient;
   }
 
+  /**
+   * Generates a set of educational questions using Gemini 1.5 Flash.
+   * @param topic The subject of the questions.
+   * @param description A brief description of the topic context.
+   * @param difficulty Difficulty level (0-100).
+   * @param count Number of questions to generate.
+   * @returns Array of generated question objects.
+   */
   async generateQuestions(
     topic: string,
     description: string,
@@ -48,7 +68,7 @@ export class AiService {
     Ensure the JSON is valid and only return the JSON array.`;
 
     const response = await this.geminiClient.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
     });
     const responseText = response.text ?? '';
