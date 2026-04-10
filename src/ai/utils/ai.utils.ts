@@ -8,7 +8,10 @@
  * @returns The cleaned JSON string.
  */
 export function cleanJsonResponse(text: string): string {
-  return text.replace(/```json|```/g, '').trim();
+  const match =
+    text.match(/```json\s*([\s\S]*?)\s*```/) ||
+    text.match(/```\s*([\s\S]*?)\s*```/);
+  return match ? match[1].trim() : text.trim();
 }
 
 /**
