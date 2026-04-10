@@ -46,5 +46,9 @@
 ## Commit Standards
 
 - **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
-- **Message:** Commit messages must start with a capitalized word.
-- **Prefixes:** Do not use prefixes like 'Fix:', 'Enhancement:', or 'feat:'.
+- **Atomic Commits:** Separate changes into multiple logical commits. Avoid bulk commits of unrelated changes.
+- **Message Quality:** Use meaningful and descriptive commit messages that explain the "why" and "what".
+- **Formatting Rules:**
+  - Commit messages must start with a capitalized word.
+  - Do not use prefixes like 'Fix:', 'Enhancement:', or 'feat:'.
+  - Avoid vague messages like "Address comments", "Small fixes", or "Update files".
