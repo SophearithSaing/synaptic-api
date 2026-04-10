@@ -33,3 +33,9 @@
 - **Quotes:** Use single quotes `'` for strings unless double quotes are required for JSON.
 - **Line Width:** Keep code blocks under 80 characters per line where possible.
 - **Comment:** Every function should contains appropriate TS Doc but limit the amount of comment inside function.
+
+## Commit Standards
+
+- **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
+- **Message:** Commit messages must start with a capitalized word.
+- **Prefixes:** Do not use prefixes like 'Fix:', 'Enhancement:', or 'feat:'.
