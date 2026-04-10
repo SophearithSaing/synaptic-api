@@ -10,8 +10,10 @@ export enum AiProvider {
  * Supported AI models (Internal mapping).
  */
 export enum AiModel {
-  Gemini_2_5_Flash = 'gemini-2.5-flash',
-  ClaudeSonnet_4_6 = 'claude-sonnet-4-6',
+  // Gemini_2_5_Flash = 'gemini-2.5-flash',
+  Gemini_2_5_Flash = 'gemini-3-flash-preview',
+  // ClaudeSonnet_4_6 = 'claude-sonnet-4-6',
+  ClaudeSonnet_4_6 = 'claude-opus-4-6',
 }
 
 /**
