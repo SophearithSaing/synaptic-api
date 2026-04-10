@@ -74,7 +74,7 @@ export class SessionsService {
 
     let progress = await this.topicProgressModel.findOne({
       userId: userId,
-      topic: topicId,
+      topic: new Types.ObjectId(topicId),
     } as QueryFilter<TopicProgress>);
     if (!progress) {
       progress = await this.topicProgressModel.create({
