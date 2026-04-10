@@ -55,11 +55,22 @@ export class SessionsService {
       throw new NotFoundException('Topic not found');
     }
 
+    let studentModel = await this.studentModel.findOne({ userId });
+    if (!studentModel) {
+      studentModel = await this.studentModel.create({
+        userId,
+        overallLevel: 1,
+      });
+    }
+
+    const difficulty = studentModel.overallLevel;
+    const count = 3;
+
     const generatedQuestions = await this.aiService.generateQuestions(
       topic.title,
       topic.description,
-      1,
-      3,
+      difficulty,
+      count,
       provider,
     );
     const savedQuestions =
