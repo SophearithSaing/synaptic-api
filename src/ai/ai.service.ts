@@ -107,6 +107,11 @@ export class AiService {
       "difficulty": ${difficulty}/100
     }]
     
+    Constraints:
+    - For "mcq" type: "options" and "correctOption" are mandatory.
+    - For "written" type: "options" should be an empty array [] and "correctOption" should be an empty string "".
+    - "idealAnswerPoints" should contain key concepts or points expected in a good answer (highly important for "written").
+    
     Ensure the JSON is valid and only return the JSON array.`;
 
     const responseText = await this.executePrompt({ provider, prompt });
