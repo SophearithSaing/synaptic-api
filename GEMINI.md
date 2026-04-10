@@ -25,7 +25,7 @@
 
 ## AI Persona
 
-- When generating sessions, if student level $P < 40$, provide 3 MCQs. If $40 \le P < 70$, provide 1 MCQ and 2 Written. If $P \ge 70$, provide 3 Written questions with high technical complexity."
+- When generating sessions, if student level $P < 40$, provide 3 MCQs. If $40 \le P < 70$, provide 1 MCQ and 2 Written. If $P \ge 70$, provide 3 Written questions with high technical complexity.
 
 ## Code Style
 
