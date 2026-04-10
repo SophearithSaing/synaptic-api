@@ -94,6 +94,17 @@ export class AiService {
     count: number = 3,
     provider: AiProvider = AiProvider.Gemini,
   ) {
+    const questionSchema = z.array(
+      z.object({
+        type: z.enum(['mcq', 'written']),
+        text: z.string(),
+        options: z.array(z.string()),
+        correctOption: z.string(),
+        idealAnswerPoints: z.array(z.string()),
+        difficulty: z.number(),
+      }),
+    );
+
     const prompt = `Generate ${count} educational questions about "${topic}" (Description: ${description}) at difficulty level ${difficulty}.
     The questions should be a mix of MCQ and Written types.
     
@@ -104,7 +115,7 @@ export class AiService {
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctOption": "The correct option",
       "idealAnswerPoints": ["Point 1", "Point 2"],
-      "difficulty": ${difficulty}/100
+      "difficulty": ${difficulty}
     }]
     
     Constraints:
@@ -115,7 +126,7 @@ export class AiService {
     Ensure the JSON is valid and only return the JSON array.`;
 
     const responseText = await this.executePrompt({ provider, prompt });
-    return parseAiJson(responseText);
+    return questionSchema.parse(parseAiJson(responseText));
   }
 
   /**
@@ -125,7 +136,11 @@ export class AiService {
    * @returns Evaluation result with totalScore, critique, weakConcepts, strongConcepts, and per-question evaluations.
    */
   async evaluateAnswers(
-    answers: { questionId: string; questionText: string; studentAnswer: string }[],
+    answers: {
+      questionId: string;
+      questionText: string;
+      studentAnswer: string;
+    }[],
     provider: AiProvider = AiProvider.Gemini,
   ): Promise<{
     totalScore: number;
