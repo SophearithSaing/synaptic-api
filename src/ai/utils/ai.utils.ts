@@ -21,6 +21,6 @@ export function parseAiJson<T>(text: string): T {
   try {
     return JSON.parse(cleaned) as T;
   } catch (error) {
-    throw new Error(`Failed to parse AI JSON response: ${error.message}\nRaw: ${text}`);
+    throw new Error(`Failed to parse AI JSON response: ${error.message}`);
   }
 }
