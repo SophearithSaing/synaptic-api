@@ -18,14 +18,23 @@
 
 ## AI Approach
 
-- **Models:** Gemini 2.5/3 Flash (via `@google/generative-ai`) and Claude 4.6 (via `@anthropic-ai/sdk`).
-- **Generator:** Selected model will perform the function
-- **Evaluator:** Selected model will perform the function
-- **Validation:** Manual JSON parsing + Zod schema validation for LLM outputs.
+- **Models:** Gemini 3 Flash and Claude 4.6 Opus.
+- **Generator:** Selected model will perform the function.
+- **Evaluator:** Selected model will perform the function.
+- **Validation:** Manual JSON parsing + Zod schema validation for all LLM outputs.
 
 ## AI Persona
 
-- When generating sessions, if student level $P < 40$, provide 3 MCQs. If $40 \le P < 70$, provide 1 MCQ and 2 Written. If $P \ge 70$, provide 3 Written questions with high technical complexity.
+- **Student Level (P):** The session difficulty scales directly with the student's overall level (0-100).
+- **Question Mix:**
+  - If $P < 40$: Provide 3 MCQs.
+  - If $40 \le P < 70$: Provide 1 MCQ and 2 Written questions.
+  - If $P \ge 70$: Provide 3 Written questions with high technical complexity.
+
+## Mastery System
+
+- **Topic Mastery:** Incremented by $\lfloor \text{score} / 20 \rfloor$ after each session (max 100).
+- **Overall Level:** Calculated as the average of all topic masteries, starting at 1.
 
 ## Code Style
 
