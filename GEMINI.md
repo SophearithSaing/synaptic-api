@@ -3,6 +3,11 @@
 **Goal:** Interactive AI-driven education platform for computing theory.
 **Status:** Multi-repo Architecture.
 
+## Environment
+
+- **OS:** Windows (win32).
+- **Shell:** PowerShell. Use PowerShell-compatible syntax (e.g., `;` instead of `&&` for command chaining).
+
 ## Technical Constraints
 
 - **Frontend:** Angular 18+, SCSS (Custom Styles only, NO Tailwind).
