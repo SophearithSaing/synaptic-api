@@ -84,7 +84,7 @@ export class SessionsService {
         history: [questionSet._id],
       });
     } else {
-      progress.history.push(questionSet);
+      progress.history.push(questionSet._id);
 
       await progress.save();
     }
@@ -173,16 +173,17 @@ export class SessionsService {
     const topicId = (questionSet.topic as Types.ObjectId).toString();
     const masteryIncrement = Math.floor(evaluation.totalScore / 20);
     const currentMastery = studentModel.topicMastery.get(topicId) || 0;
-    
+
     studentModel.topicMastery.set(
-      topicId, 
-      Math.min(100, currentMastery + masteryIncrement)
+      topicId,
+      Math.min(100, currentMastery + masteryIncrement),
     );
 
     // Calculate overall level as the average of all topic masteries
     const masteries = Array.from(studentModel.topicMastery.values());
     if (masteries.length > 0) {
-      const averageMastery = masteries.reduce((sum, m) => sum + m, 0) / masteries.length;
+      const averageMastery =
+        masteries.reduce((sum, m) => sum + m, 0) / masteries.length;
       studentModel.overallLevel = Math.max(1, Math.round(averageMastery));
     }
 
