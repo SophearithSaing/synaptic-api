@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SeedModule } from './seed/seed.module';
+import { AiModule } from './ai/ai.module';
+import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { SeedModule } from './seed/seed.module';
       inject: [ConfigService],
     }),
     SeedModule,
+    AiModule,
+    SessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
