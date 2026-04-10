@@ -43,6 +43,10 @@
 - **Line Width:** Keep code blocks under 80 characters per line where possible.
 - **Comment:** Every function should contains appropriate TS Doc but limit the amount of comment inside function.
 
+## Environment
+
+- **Shell:** PowerShell. Use PowerShell-compatible syntax (e.g., `;` instead of `&&` for command chaining).
+
 ## Commit Standards
 
 - **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
