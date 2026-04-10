@@ -29,6 +29,9 @@ interface RequestWithUser extends Request {
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  /**
+   * Registers a new user with the provided credentials.
+   */
   @Post('register')
   async register(@Body() body: RegisterDto) {
     return this.authService.register(body.email, body.password);

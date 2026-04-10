@@ -7,6 +7,9 @@ import { User, UserDocument } from './schemas/user.schema';
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
+  /**
+   * Creates a new user with the specified email and hashed password.
+   */
   async create(email: string, passwordHash: string): Promise<UserDocument> {
     const newUser = new this.userModel({ email, passwordHash });
     return newUser.save();

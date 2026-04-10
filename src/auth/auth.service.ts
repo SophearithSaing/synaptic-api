@@ -31,6 +31,9 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
+  /**
+   * Validates a user based on email and password.
+   */
   async validateUser(email: string, pass: string): Promise<UserObject | null> {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(pass, user.passwordHash))) {
@@ -42,6 +45,9 @@ export class AuthService {
     return null;
   }
 
+  /**
+   * Generates new access and refresh tokens for a user.
+   */
   async login(user: UserObject) {
     const payload: JwtPayload = { email: user.email, sub: user._id };
     const accessToken = this.jwtService.sign(payload, {
@@ -68,6 +74,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Registers a new user.
+   */
   async register(email: string, pass: string) {
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
@@ -80,29 +89,28 @@ export class AuthService {
     return { message: 'User registered successfully' };
   }
 
+  /**
+   * Refreshes access and refresh tokens.
+   */
   async refresh(refreshToken: string) {
+    // 1. Verify the token signature first
     let payload: RefreshPayload;
     try {
-      payload = this.jwtService.decode(refreshToken) as RefreshPayload;
+      payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+      }) as RefreshPayload;
     } catch {
-      throw new ForbiddenException('Invalid refresh token');
+      throw new ForbiddenException('Expired or invalid refresh token');
     }
 
     if (!payload || !payload.sub) {
       throw new ForbiddenException('Invalid refresh token');
     }
 
+    // 2. Perform DB lookup only after verification
     const user = await this.usersService.findById(payload.sub);
     if (!user || !user.refreshTokenHash) {
       throw new ForbiddenException('Invalid refresh token');
-    }
-
-    try {
-      this.jwtService.verify(refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      });
-    } catch {
-      throw new ForbiddenException('Expired or invalid refresh token');
     }
 
     const isMatch = await bcrypt.compare(refreshToken, user.refreshTokenHash);
@@ -114,6 +122,9 @@ export class AuthService {
     return this.login(userObj);
   }
 
+  /**
+   * Invalidates the user refresh token.
+   */
   async logout(userId: string) {
     await this.usersService.updateRefreshToken(userId, null);
     return { message: 'Logged out successfully' };
