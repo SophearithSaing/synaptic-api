@@ -32,8 +32,8 @@ export class AiService {
    */
   private getModelForProvider(provider: AiProvider): AiModel {
     const modelMap: Record<AiProvider, AiModel> = {
-      [AiProvider.Gemini]: AiModel.Gemini_2_5_Flash,
-      [AiProvider.Claude]: AiModel.ClaudeSonnet_4_6,
+      [AiProvider.Gemini]: AiModel.Gemini_3_Flash,
+      [AiProvider.Claude]: AiModel.Claude_4_6_Opus,
     };
     return modelMap[provider];
   }
