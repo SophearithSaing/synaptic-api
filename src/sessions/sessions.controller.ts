@@ -1,11 +1,13 @@
-import { Controller, Post, Body, Param } from '@nestjs/common';
+import { Controller, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { AiProvider } from '../ai/types/ai.types';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 /**
  * Controller for handling learning session requests.
  */
 @Controller('sessions')
+@UseGuards(JwtAuthGuard)
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 

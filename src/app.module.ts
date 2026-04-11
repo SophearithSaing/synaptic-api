@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SeedModule } from './seed/seed.module';
 import { AiModule } from './ai/ai.module';
+import { AuthModule } from './auth/auth.module';
 import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { SessionsModule } from './sessions/sessions.module';
     SeedModule,
     AiModule,
     SessionsModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
