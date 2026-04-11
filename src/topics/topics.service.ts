@@ -6,6 +6,7 @@ import {
   TopicCategory,
   TopicCategoryDocument,
 } from './schemas/topic-category.schema';
+import { CreateCategoryDto, CreateTopicDto } from './dto/create-topic.dto';
 
 @Injectable()
 export class TopicsService {
@@ -15,25 +16,28 @@ export class TopicsService {
     private categoryModel: Model<TopicCategoryDocument>,
   ) {}
 
-  async createCategory(data: {
-    title: string;
-    slug: string;
-    description: string;
-  }) {
-    const category = new this.categoryModel(data);
+  /**
+   * Creates a new topic category.
+   * @param dto The category details.
+   */
+  async createCategory(dto: CreateCategoryDto) {
+    const category = new this.categoryModel(dto);
     return category.save();
   }
 
-  async createTopic(data: {
-    title: string;
-    slug: string;
-    description: string;
-    categoryId: string;
-  }) {
-    const topic = new this.topicModel(data);
+  /**
+   * Creates a new topic within a category.
+   * @param dto The topic details
+   */
+  async createTopic(dto: CreateTopicDto) {
+    const topic = new this.topicModel(dto);
     return topic.save();
   }
 
+  /**
+   * Fetches a topic by its unique ID.
+   * @param id The topic ID.
+   */
   async getTopicById(id: string) {
     const topic = await this.topicModel
       .findById(id)

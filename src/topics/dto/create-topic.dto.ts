@@ -29,5 +29,5 @@ export class CreateTopicDto {
 
   @IsMongoId()
   @IsNotEmpty()
-  categoryId: string;
+  category: string;
 }
