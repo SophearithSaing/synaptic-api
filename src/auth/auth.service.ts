@@ -32,8 +32,12 @@ export class AuthService {
       const savedUser = await user.save();
       await this.studentsService.create(savedUser.id);
       return { email: savedUser.email };
-    } catch (error) {
-      if ((error as { code: number }).code === 11000) {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        (error as { code: number }).code === 11000
+      ) {
         throw new ConflictException('Email already exists');
       }
       throw error;
