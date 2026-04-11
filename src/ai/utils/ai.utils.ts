@@ -1,3 +1,5 @@
+import { getErrorMessage } from '../../utils/error.utils';
+
 /**
  * Utilities for AI-related operations.
  */
@@ -23,7 +25,9 @@ export function parseAiJson<T>(text: string): T {
   const cleaned = cleanJsonResponse(text);
   try {
     return JSON.parse(cleaned) as T;
-  } catch (error) {
-    throw new Error(`Failed to parse AI JSON response: ${error.message}`);
+  } catch (error: unknown) {
+    throw new Error(
+      `Failed to parse AI JSON response: ${getErrorMessage(error)}`,
+    );
   }
 }

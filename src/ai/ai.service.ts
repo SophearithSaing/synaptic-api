@@ -5,6 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { parseAiJson } from './utils/ai.utils';
 import { AiProvider, AiModel, ModelExecutionOptions } from './types/ai.types';
+import { getErrorMessage } from '../utils/error.utils';
 
 /**
  * Service for interacting with AI models (Gemini and Anthropic).
@@ -71,9 +72,9 @@ export class AiService {
       }
 
       throw new Error(`Unsupported model provider: ${options.provider}`);
-    } catch (error) {
+    } catch (error: unknown) {
       throw new InternalServerErrorException(
-        `AI request failed (${options.provider}): ${error.message}`,
+        `AI request failed (${options.provider}): ${getErrorMessage(error)}`,
       );
     }
   }
