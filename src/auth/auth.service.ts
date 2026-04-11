@@ -34,6 +34,7 @@ export class AuthService {
       return { email: savedUser.email };
     } catch (error: unknown) {
       if (
+        error &&
         typeof error === 'object' &&
         (error as { code: number }).code === 11000
       ) {
