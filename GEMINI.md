@@ -47,9 +47,15 @@
 
 - **Shell:** PowerShell. Use PowerShell-compatible syntax (e.g., `;` instead of `&&` for command chaining).
 
+## Pull Request Standards
+
+- When finishing a feature, draft a detailed pull request description covering the "what", "why", and "how" of the changes.
+- Use the `gh pr create` command to submit PRs, passing a file containing the drafted description as the body.
+- Clean up temporary files (like the PR description draft) immediately after the PR creation command completes.
+
 ## Commit Standards
 
-- **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
+- **Formatting:** Edited files must be formatted with `npx prettier --write <editedFiles>` before any commit.
 - **Atomic Commits:** Separate changes into multiple logical commits. Avoid bulk commits of unrelated changes.
 - **Message Quality:** Use meaningful and descriptive commit messages that explain the "why" and "what".
 - **Formatting Rules:**
