@@ -14,6 +14,12 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * Registers a new user and creates their student profile.
+   * @param email User email address.
+   * @param pass Plaintext password.
+   * @returns The registered user's email.
+   */
   async register(email: string, pass: string) {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(pass, salt);
@@ -23,6 +29,12 @@ export class AuthService {
     return { email: savedUser.email };
   }
 
+  /**
+   * Authenticates a user and generates a JWT access token.
+   * @param email User email address.
+   * @param pass Plaintext password.
+   * @returns An object containing the access token.
+   */
   async login(email: string, pass: string) {
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(pass, user.password))) {

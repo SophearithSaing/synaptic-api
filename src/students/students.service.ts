@@ -13,6 +13,11 @@ export class StudentsService {
     private studentModel: Model<StudentModelDocument>,
   ) {}
 
+  /**
+   * Creates a new student profile for a given user.
+   * @param userId The ID of the user.
+   * @returns The created student document.
+   */
   async create(userId: string): Promise<StudentModel> {
     const newStudent = new this.studentModel({ userId });
     return newStudent.save();

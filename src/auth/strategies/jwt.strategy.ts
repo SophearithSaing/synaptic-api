@@ -18,6 +18,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  /**
+   * Validates the JWT payload and returns the user information.
+   * @param payload The decoded JWT payload.
+   * @returns The user object to be attached to the request.
+   */
   validate(payload: JwtPayload) {
     return { email: payload.email, userId: payload.sub };
   }
