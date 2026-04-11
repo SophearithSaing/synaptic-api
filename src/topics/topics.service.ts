@@ -35,7 +35,10 @@ export class TopicsService {
   }
 
   async getTopicById(id: string) {
-    const topic = await this.topicModel.findById(id).exec();
+    const topic = await this.topicModel
+      .findById(id)
+      .populate('category')
+      .exec();
     if (!topic) {
       throw new NotFoundException('Topic not found');
     }

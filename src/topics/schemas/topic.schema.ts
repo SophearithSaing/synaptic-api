@@ -16,7 +16,7 @@ export class Topic {
   description: string;
 
   @Prop({ type: Types.ObjectId, ref: TopicCategory.name, required: true })
-  categoryId: Types.ObjectId;
+  category: Types.ObjectId;
 }
 
 export const TopicSchema = SchemaFactory.createForClass(Topic);
