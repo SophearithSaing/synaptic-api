@@ -41,7 +41,7 @@
 - **Indentation:** 2 spaces (no tabs).
 - **Quotes:** Use single quotes `'` for strings unless double quotes are required for JSON.
 - **Line Width:** Keep code blocks under 80 characters per line where possible.
-- **Comment:** Every function should contains appropriate TS Doc but limit the amount of comment inside function.
+- **Comment:** Every function MUST have a TS Doc header. Body comments are forbidden, except for complex algorithmic logic in long functions or non-obvious workarounds for third-party bugs.
 
 ## Environment
 
