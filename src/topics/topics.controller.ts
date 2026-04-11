@@ -6,12 +6,12 @@ import { CreateCategoryDto, CreateTopicDto } from './dto/create-topic.dto';
 export class TopicsController {
   constructor(private topicsService: TopicsService) {}
 
-  @Post('category')
+  @Post('category/create')
   async createCategory(@Body() body: CreateCategoryDto) {
     return this.topicsService.createCategory(body);
   }
 
-  @Post()
+  @Post('create')
   async createTopic(@Body() body: CreateTopicDto) {
     return this.topicsService.createTopic(body);
   }
