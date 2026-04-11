@@ -9,7 +9,6 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './schemas/user.schema';
 import { StudentsService } from '../students/students.service';
-import { toError } from '../utils/error.utils';
 
 @Injectable()
 export class AuthService {
@@ -34,11 +33,14 @@ export class AuthService {
       await this.studentsService.create(savedUser.id);
       return { email: savedUser.email };
     } catch (error: unknown) {
-      const err = toError(error);
-      if ((err as { code: number }).code === 11000) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        (error as { code: number }).code === 11000
+      ) {
         throw new ConflictException('Email already exists');
       }
-      throw err;
+      throw error;
     }
   }
 
