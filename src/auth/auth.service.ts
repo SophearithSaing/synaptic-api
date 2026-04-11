@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -24,9 +28,19 @@ export class AuthService {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(pass, salt);
     const user = new this.userModel({ email, password: hashedPassword });
-    const savedUser = await user.save();
-    await this.studentsService.create(savedUser.id);
-    return { email: savedUser.email };
+    try {
+      const savedUser = await user.save();
+      await this.studentsService.create(savedUser.id);
+      return { email: savedUser.email };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        (error as { code: number }).code === 11000
+      ) {
+        throw new ConflictException('Email already exists');
+      }
+      throw error;
+    }
   }
 
   /**
