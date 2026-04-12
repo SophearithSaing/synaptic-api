@@ -15,6 +15,9 @@ export class Topic {
   @Prop({ required: true })
   description: string;
 
+  @Prop({ required: true })
+  icon: string;
+
   @Prop({ type: Types.ObjectId, ref: TopicCategory.name, required: true })
   category: Types.ObjectId;
 }

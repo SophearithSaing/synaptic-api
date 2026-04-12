@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type TopicCategoryDocument = TopicCategory & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'topicCategories' })
 export class TopicCategory {
   @Prop({ required: true, trim: true })
   title: string;
@@ -13,6 +13,9 @@ export class TopicCategory {
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ required: true })
+  icon: string;
 }
 
 export const TopicCategorySchema = SchemaFactory.createForClass(TopicCategory);
