@@ -20,18 +20,15 @@ This skill automates the process of retrieving and resolving feedback from a Git
     - Run `npm run build` or project-specific lint/test commands to ensure no regressions.
     - Run `npx prettier --write` on all modified files.
 5.  **Review:**
-    - Present the implemented changes to the user for review.
+    - Notify the user that implementation and verification are complete.
     - **STOP and wait** for explicit approval before proceeding to the commit phase.
 6.  **Commit:**
     - Use **Atomic Commits** for unrelated groups of fixes.
     - Follow `GEMINI.md` commit guidelines (Capitalized, meaningful, no prefixes like 'Fix:').
-7.  **Resolve:**
-    - Use `gh pr review <number> --comment -b "..."` to notify the reviewer that the comments have been addressed.
 
 ## Command Reference
 
 - Fetch comments: `gh api /repos/{owner}/{repo}/pulls/{number}/comments`
-- Reply to PR: `gh pr review {number} --comment -b "Addressed feedback in [commit hash]"`
 
 ## Constraints
 
