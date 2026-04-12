@@ -1,6 +1,8 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { CreateCategoryDto, CreateTopicDto } from './dto/create-topic.dto';
+import { TopicDocument } from './schemas/topic.schema';
+import { TopicCategoryDocument } from './schemas/topic-category.schema';
 
 @Controller('topics')
 export class TopicsController {
@@ -11,7 +13,9 @@ export class TopicsController {
    * @param body The category details.
    */
   @Post('category/create')
-  async createCategory(@Body() body: CreateCategoryDto) {
+  async createCategory(
+    @Body() body: CreateCategoryDto,
+  ): Promise<TopicCategoryDocument> {
     return this.topicsService.createCategory(body);
   }
 
@@ -20,7 +24,7 @@ export class TopicsController {
    * @param body The topic details.
    */
   @Post('create')
-  async createTopic(@Body() body: CreateTopicDto) {
+  async createTopic(@Body() body: CreateTopicDto): Promise<TopicDocument> {
     return this.topicsService.createTopic(body);
   }
 
@@ -29,7 +33,7 @@ export class TopicsController {
    * @param id The topic ID.
    */
   @Get(':id')
-  async getTopicById(@Param('id') id: string) {
+  async getTopicById(@Param('id') id: string): Promise<TopicDocument> {
     return this.topicsService.getTopicById(id);
   }
 }

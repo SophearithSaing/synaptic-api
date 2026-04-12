@@ -20,7 +20,7 @@ export class TopicsService {
    * Creates a new topic category.
    * @param dto The category details.
    */
-  async createCategory(dto: CreateCategoryDto) {
+  async createCategory(dto: CreateCategoryDto): Promise<TopicCategoryDocument> {
     const category = new this.categoryModel(dto);
     return category.save();
   }
@@ -29,7 +29,7 @@ export class TopicsService {
    * Creates a new topic within a category.
    * @param dto The topic details
    */
-  async createTopic(dto: CreateTopicDto) {
+  async createTopic(dto: CreateTopicDto): Promise<TopicDocument> {
     const topic = new this.topicModel(dto);
     return topic.save();
   }
@@ -38,7 +38,7 @@ export class TopicsService {
    * Fetches a topic by its unique ID.
    * @param id The topic ID.
    */
-  async getTopicById(id: string) {
+  async getTopicById(id: string): Promise<TopicDocument> {
     const topic = await this.topicModel
       .findById(id)
       .populate('category')
