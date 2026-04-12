@@ -20,7 +20,8 @@ This skill automates the process of retrieving and resolving feedback from a Git
     - Run `npm run build` or project-specific lint/test commands to ensure no regressions.
     - Run `npx prettier --write` on all modified files.
 5.  **Review:**
-    - Notify the user that implementation and verification are complete.
+    - Notify user and explicitly state that implementation and verification are complete.
+    - **Do NOT** output the code changes or diffs in the chat (neither manually nor via `git diff`), as the user has already monitored the progress.
     - **STOP and wait** for explicit approval before proceeding to the commit phase.
 6.  **Commit:**
     - Use **Atomic Commits** for unrelated groups of fixes.
