@@ -1,10 +1,15 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards } from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { CreateCategoryDto, CreateTopicDto } from './dto/create-topic.dto';
 import { TopicDocument } from './schemas/topic.schema';
 import { TopicCategoryDocument } from './schemas/topic-category.schema';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+/**
+ * Controller for managing topics and categories.
+ */
 @Controller('topics')
+@UseGuards(JwtAuthGuard)
 export class TopicsController {
   constructor(private topicsService: TopicsService) {}
 
