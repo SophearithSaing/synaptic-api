@@ -7,6 +7,7 @@ import { SeedModule } from './seed/seed.module';
 import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { TopicsModule } from './topics/topics.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SessionsModule } from './sessions/sessions.module';
     AiModule,
     SessionsModule,
     AuthModule,
+    TopicsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
