@@ -13,6 +13,9 @@ export class TopicCategory {
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ required: true })
+  icon: string;
 }
 
 export const TopicCategorySchema = SchemaFactory.createForClass(TopicCategory);

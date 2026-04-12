@@ -12,6 +12,10 @@ export class CreateCategoryDto {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @IsString()
+  @IsNotEmpty()
+  icon: string;
 }
 
 export class CreateTopicDto {
@@ -26,6 +30,10 @@ export class CreateTopicDto {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @IsString()
+  @IsNotEmpty()
+  icon: string;
 
   @IsMongoId()
   @IsNotEmpty()
