@@ -80,13 +80,11 @@ export class SeedService implements OnModuleInit {
       return;
     }
 
-    const csCategory = await this.categoryModel.findOne({
-      slug: 'cs-concepts',
-    });
-    const techCategory = await this.categoryModel.findOne({
-      slug: 'tech-stacks',
-    });
-    const opsCategory = await this.categoryModel.findOne({ slug: 'ops-infra' });
+    const [csCategory, techCategory, opsCategory] = await Promise.all([
+      this.categoryModel.findOne({ slug: 'cs-concepts' }),
+      this.categoryModel.findOne({ slug: 'tech-stacks' }),
+      this.categoryModel.findOne({ slug: 'ops-infra' }),
+    ]);
 
     if (!csCategory || !techCategory || !opsCategory) {
       this.logger.error('Categories not found, cannot seed topics.');
