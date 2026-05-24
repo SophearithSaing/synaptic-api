@@ -18,7 +18,7 @@ This skill automates the creation of a Pull Request (PR) by drafting a descripti
    - **Technical Details:** Highlights of the approach.
    - **Verification:** Brief confirmation of build/test success.
 3. **Execute:** Create a temporary file for the PR description and run `gh pr create --body-file <file>`.
-4. **Cleanup:** Delete the temporary description file.
+4. **Cleanup:** Delete the temporary description file with `git clean -f <file>`.
 
 ## Execution
 
@@ -27,6 +27,6 @@ When you request to create a PR, the agent will:
 1. Generate the content based on the current branch's commit history and file modifications.
 2. Save this to a temporary file.
 3. Execute `gh pr create --title "<Title>" --body-file <temp-file>`.
-4. Delete the temporary file.
+4. Delete the temporary file with `git clean -f <temp-file>`.
 
 _Note: Ensure you have authenticated with `gh auth login` before using this skill._
