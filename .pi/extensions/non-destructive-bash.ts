@@ -18,7 +18,6 @@ const readOnlyCommands = new Set([
   'head',
   'less',
   'ls',
-  'node',
   'npm',
   'npx',
   'pwd',
