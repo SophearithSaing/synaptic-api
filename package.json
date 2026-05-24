@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
-    "@earendil-works/pi-coding-agent": "^0.75.5",
     "@google/genai": "^1.48.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
@@ -41,6 +40,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.5",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",

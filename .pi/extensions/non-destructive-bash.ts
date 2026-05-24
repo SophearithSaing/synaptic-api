@@ -5,7 +5,6 @@ const readOnlyCommands = new Set([
   'basename',
   'cat',
   'cd',
-  'cp',
   'dir',
   'dirname',
   'du',
@@ -18,8 +17,6 @@ const readOnlyCommands = new Set([
   'head',
   'less',
   'ls',
-  'mkdir',
-  'mv',
   'node',
   'npm',
   'npx',
@@ -28,13 +25,14 @@ const readOnlyCommands = new Set([
   'sort',
   'tail',
   'test',
-  'touch',
   'tree',
   'type',
   'wc',
   'where',
   'which',
 ]);
+
+const allowedWriteCommands = new Set(['cp', 'mkdir', 'mv', 'touch']);
 
 const readOnlyGitSubcommands = new Set([
   'branch',
@@ -103,14 +101,16 @@ function getProgramAndArgs(segment: string): string[] {
     .filter((part) => !/^[A-Z_][A-Z0-9_]*=.*/.test(part));
 }
 
-function isReadOnlyProgram(parts: string[]): boolean {
+function isAllowedProgram(parts: string[]): boolean {
   const [program, subcommand] = parts;
 
   if (!program) return false;
 
   const normalized = program.replace(/\.(exe|cmd|bat)$/i, '');
 
-  if (!readOnlyCommands.has(normalized)) return false;
+  if (!readOnlyCommands.has(normalized)) {
+    return allowedWriteCommands.has(normalized);
+  }
 
   if (normalized === 'git' && subcommand) {
     return readOnlyGitSubcommands.has(subcommand);
@@ -151,7 +151,7 @@ function getBlockReason(command: string): string | undefined {
   for (const segment of splitSegments(command)) {
     const parts = getProgramAndArgs(segment);
 
-    if (!isReadOnlyProgram(parts)) {
+    if (!isAllowedProgram(parts)) {
       return `Blocked non-allowlisted bash segment: ${segment}`;
     }
   }
@@ -161,6 +161,10 @@ function getBlockReason(command: string): string | undefined {
 
 export default function (pi: ExtensionAPI): void {
   let permissionDenied = false;
+
+  pi.on('before_agent_start', async () => {
+    permissionDenied = false;
+  });
 
   pi.on('tool_call', async (event, ctx) => {
     if (event.toolName !== 'bash') return Promise.resolve(undefined);
@@ -217,7 +221,7 @@ export default function (pi: ExtensionAPI): void {
     description: 'Show the active non-destructive bash permission policy',
     handler: (_args, ctx) => {
       ctx.ui.notify(
-        'Non-destructive bash policy is active. Only allowlisted read-only commands are permitted. Denied permissions are treated as a hard stop.',
+        'Non-destructive bash policy is active. Allowlisted read-only commands and limited write commands are permitted. Denied permissions are treated as a hard stop.',
         'info',
       );
 
