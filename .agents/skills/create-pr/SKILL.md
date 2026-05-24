@@ -9,20 +9,20 @@ This skill automates the creation of a Pull Request (PR) by drafting a descripti
 
 ## Workflow
 
-1. **Analyze:** Gemini CLI reviews the staged/committed changes in the current branch.
-2. **Draft:** Gemini CLI drafts a detailed PR description following the project's standards:
-   - **Description:** Clear summary of what was changed.
+1. **Analyze:** Review the staged/committed changes in the current branch.
+2. **Draft:** Draft a concise PR description following the project's standards:
+   - **Description:** Summary of what was changed.
    - **Summary of Changes:**
-     - Bulleted list of modifications.
+     - Bulleted list of modifications. Keep it short, use verb + subject. Ex: "Add {modelName}", "Remove {fileName}" or "Refactor {serviceName}
      - List added changes before modified changes (new files before modified files)
    - **Technical Details:** Highlights of the approach.
    - **Verification:** Brief confirmation of build/test success.
-3. **Execute:** Gemini CLI creates a temporary file for the PR description and runs `gh pr create --body-file <file>`.
-4. **Cleanup:** Gemini CLI deletes the temporary description file.
+3. **Execute:** Create a temporary file for the PR description and run `gh pr create --body-file <file>`.
+4. **Cleanup:** Delete the temporary description file.
 
 ## Execution
 
-When you request to create a PR, Gemini CLI will:
+When you request to create a PR, the agent will:
 
 1. Generate the content based on the current branch's commit history and file modifications.
 2. Save this to a temporary file.
