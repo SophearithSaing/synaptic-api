@@ -9,6 +9,7 @@ These rules must be checked immediately before staging or committing changes.
 
 - **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
 - **Atomic Commits:** Separate changes into multiple logical commits. Avoid bulk commits of unrelated changes.
+- **Commit Permission:** Ask for permission before each individual commit. Present the files and message for that specific commit so the user can approve or reject it without blocking the full commit flow.
 - **Message Quality:** Use meaningful and descriptive commit messages that explain the "why" and "what".
 - **Formatting Rules:**
   - Commit messages must start with a capitalized word.
