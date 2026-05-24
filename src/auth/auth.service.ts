@@ -24,7 +24,7 @@ export class AuthService {
    * @param pass Plaintext password.
    * @returns The registered user's email.
    */
-  async register(email: string, pass: string) {
+  async register(email: string, pass: string): Promise<{ email: string }> {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(pass, salt);
     const user = new this.userModel({ email, password: hashedPassword });
@@ -50,7 +50,7 @@ export class AuthService {
    * @param pass Plaintext password.
    * @returns An object containing the access token.
    */
-  async login(email: string, pass: string) {
+  async login(email: string, pass: string): Promise<{ access_token: string }> {
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();

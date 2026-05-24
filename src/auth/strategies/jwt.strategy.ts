@@ -1,7 +1,11 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument, UserRole } from '../schemas/user.schema';
+import { AuthenticatedUser } from '../types/request-with-user.type';
 
 interface JwtPayload {
   email: string;
@@ -10,7 +14,10 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -19,11 +26,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   /**
-   * Validates the JWT payload and returns the user information.
+   * Validates the JWT payload and returns the current user information.
    * @param payload The decoded JWT payload.
    * @returns The user object to be attached to the request.
    */
-  validate(payload: JwtPayload) {
-    return { email: payload.email, userId: payload.sub };
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    const user = await this.userModel.findById(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    return {
+      email: user.email,
+      role: user.role ?? UserRole.User,
+      userId: user.id,
+    };
   }
 }

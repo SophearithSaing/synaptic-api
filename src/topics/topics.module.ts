@@ -7,6 +7,7 @@ import {
 } from './schemas/topic-category.schema';
 import { TopicsService } from './topics.service';
 import { TopicsController } from './topics.controller';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { TopicsController } from './topics.controller';
       { name: TopicCategory.name, schema: TopicCategorySchema },
     ]),
   ],
-  providers: [TopicsService],
+  providers: [TopicsService, RolesGuard],
   controllers: [TopicsController],
   exports: [TopicsService],
 })
