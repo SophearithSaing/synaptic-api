@@ -49,7 +49,11 @@ export class SessionsService {
    * @returns The created and populated QuestionSet object.
    * @throws NotFoundException if the topic does not exist.
    */
-  async startSession(topicId: string, userId: string, provider?: AiProvider) {
+  async startSession(
+    topicId: string,
+    userId: string,
+    provider?: AiProvider,
+  ): Promise<QuestionSetDocument> {
     const topic = await this.topicModel.findById(topicId);
     if (!topic) {
       throw new NotFoundException('Topic not found');
@@ -79,7 +83,7 @@ export class SessionsService {
       userId,
       topic: new Types.ObjectId(topicId),
       questions: savedQuestions.map((q) => q._id),
-      difficulty: 1,
+      difficulty,
       score: 0,
     });
 
@@ -107,6 +111,7 @@ export class SessionsService {
    * Submits student answers for a session, evaluates them using AI,
    * updates the QuestionSet, and adjusts the student's overall level.
    * @param id The ID of the QuestionSet (session).
+   * @param userId The ID of the user submitting the session.
    * @param answers Array of question IDs and corresponding student answers.
    * @param provider Optional AI provider.
    * @returns Evaluation results and updated StudentModel.
@@ -114,11 +119,15 @@ export class SessionsService {
    */
   async submitSession(
     id: string,
+    userId: string,
     answers: { questionId: string; studentAnswer: string }[],
     provider?: AiProvider,
-  ) {
+  ): Promise<{
+    evaluation: Awaited<ReturnType<AiService['evaluateAnswers']>>;
+    studentModel: StudentModelDocument;
+  }> {
     const questionSet = await this.questionSetModel
-      .findById(id)
+      .findOne({ _id: id, userId })
       .populate('questions');
     if (!questionSet) {
       throw new NotFoundException('Question set not found');
@@ -147,7 +156,6 @@ export class SessionsService {
       provider,
     );
 
-    // Save per-question results
     evaluation.questionEvaluations.forEach((qEval) => {
       const question = questions.find(
         (q) => q._id.toString() === qEval.questionId,
@@ -159,17 +167,14 @@ export class SessionsService {
       }
     });
 
-    // Persist student answers and evaluations to individual question documents
     await Promise.all(questions.map((q) => q.save()));
 
-    // Update session results
     questionSet.score = evaluation.totalScore;
     questionSet.feedback = evaluation.critique;
     questionSet.weakConcepts = evaluation.weakConcepts;
     questionSet.strongConcepts = evaluation.strongConcepts;
     await questionSet.save();
 
-    // Update user's progress in StudentModel
     let studentModel = await this.studentModel.findOne({
       userId: questionSet.userId,
     });
@@ -180,7 +185,6 @@ export class SessionsService {
       });
     }
 
-    // Update topic mastery using the increment logic
     const topicId = (questionSet.topic as Types.ObjectId).toString();
     const masteryIncrement = Math.floor(evaluation.totalScore / 20);
     const currentMastery = studentModel.topicMastery.get(topicId) || 0;
@@ -190,7 +194,6 @@ export class SessionsService {
       Math.min(100, currentMastery + masteryIncrement),
     );
 
-    // Calculate overall level as the average of all topic masteries
     const masteries = Array.from(studentModel.topicMastery.values());
     if (masteries.length > 0) {
       const averageMastery =
