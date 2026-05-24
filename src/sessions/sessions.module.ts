@@ -3,10 +3,19 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
 import { Question, QuestionSchema } from '../questions/schemas/question.schema';
-import { QuestionSet, QuestionSetSchema } from '../questions/schemas/question-set.schema';
-import { TopicProgress, TopicProgressSchema } from '../topics/schemas/topic-progress.schema';
+import {
+  QuestionSet,
+  QuestionSetSchema,
+} from '../questions/schemas/question-set.schema';
+import {
+  TopicProgress,
+  TopicProgressSchema,
+} from '../topics/schemas/topic-progress.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
-import { StudentModel, StudentModelSchema } from '../students/schemas/student-model.schema';
+import {
+  StudentModel,
+  StudentModelSchema,
+} from '../students/schemas/student-model.schema';
 import { AiModule } from '../ai/ai.module';
 
 @Module({
