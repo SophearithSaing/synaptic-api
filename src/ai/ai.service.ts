@@ -80,6 +80,23 @@ export class AiService {
   }
 
   /**
+   * Builds the required question mix instruction for a difficulty level.
+   * @param difficulty Student difficulty level from 0 to 100.
+   * @returns The question mix instruction for the prompt.
+   */
+  private getQuestionMixInstruction(difficulty: number): string {
+    if (difficulty < 40) {
+      return 'Generate exactly 3 MCQ questions and 0 written questions.';
+    }
+
+    if (difficulty < 70) {
+      return 'Generate exactly 1 MCQ question and 2 written questions.';
+    }
+
+    return 'Generate exactly 0 MCQ questions and 3 written questions with high technical complexity.';
+  }
+
+  /**
    * Generates educational questions.
    * @param topic The subject.
    * @param description Context description.
@@ -106,8 +123,10 @@ export class AiService {
       }),
     );
 
+    const questionMixInstruction = this.getQuestionMixInstruction(difficulty);
+
     const prompt = `Generate ${count} educational questions about "${topic}" (Description: ${description}) at difficulty level ${difficulty}.
-    The questions should be a mix of MCQ and Written types.
+    ${questionMixInstruction}
     
     Return the response as a JSON array of objects following this structure:
     [{
