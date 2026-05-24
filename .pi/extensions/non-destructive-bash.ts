@@ -12,6 +12,7 @@ const readOnlyCommands = new Set([
   'env',
   'fd',
   'find',
+  'gh',
   'git',
   'grep',
   'head',
@@ -164,6 +165,8 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on('before_agent_start', async () => {
     permissionDenied = false;
+
+    return Promise.resolve();
   });
 
   pi.on('tool_call', async (event, ctx) => {
@@ -221,7 +224,7 @@ export default function (pi: ExtensionAPI): void {
     description: 'Show the active non-destructive bash permission policy',
     handler: (_args, ctx) => {
       ctx.ui.notify(
-        'Non-destructive bash policy is active. Allowlisted read-only commands and limited write commands are permitted. Denied permissions are treated as a hard stop.',
+        'Non-destructive bash policy is active. Allowlisted read-only commands, GitHub CLI, and limited write commands are permitted. Denied permissions are treated as a hard stop.',
         'info',
       );
 
