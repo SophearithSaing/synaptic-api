@@ -4,7 +4,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { parseAiJson } from './utils/ai.utils';
-import { AiProvider, AiModel, ModelExecutionOptions } from './types/ai.types';
+import {
+  AiAnswerEvaluation,
+  AiAnswerEvaluationInput,
+  AiProvider,
+  AiModel,
+  ModelExecutionOptions,
+} from './types/ai.types';
 import { getErrorMessage } from '../utils/error.utils';
 
 /**
@@ -80,6 +86,23 @@ export class AiService {
   }
 
   /**
+   * Builds the required question mix instruction for a difficulty level.
+   * @param difficulty Student difficulty level from 0 to 100.
+   * @returns The question mix instruction for the prompt.
+   */
+  private getQuestionMixInstruction(difficulty: number): string {
+    if (difficulty < 40) {
+      return 'Generate exactly 3 MCQ questions and 0 written questions.';
+    }
+
+    if (difficulty < 70) {
+      return 'Generate exactly 1 MCQ question and 2 written questions.';
+    }
+
+    return 'Generate exactly 0 MCQ questions and 3 written questions with high technical complexity.';
+  }
+
+  /**
    * Generates educational questions.
    * @param topic The subject.
    * @param description Context description.
@@ -106,8 +129,10 @@ export class AiService {
       }),
     );
 
+    const questionMixInstruction = this.getQuestionMixInstruction(difficulty);
+
     const prompt = `Generate ${count} educational questions about "${topic}" (Description: ${description}) at difficulty level ${difficulty}.
-    The questions should be a mix of MCQ and Written types.
+    ${questionMixInstruction}
     
     Return the response as a JSON array of objects following this structure:
     [{
@@ -137,24 +162,9 @@ export class AiService {
    * @returns Evaluation result with totalScore, critique, weakConcepts, strongConcepts, and per-question evaluations.
    */
   async evaluateAnswers(
-    answers: {
-      questionId: string;
-      questionText: string;
-      studentAnswer: string;
-    }[],
+    answers: AiAnswerEvaluationInput[],
     provider: AiProvider = AiProvider.Gemini,
-  ): Promise<{
-    totalScore: number;
-    critique: string;
-    weakConcepts: string[];
-    strongConcepts: string[];
-    questionEvaluations: {
-      questionId: string;
-      score: number;
-      isCorrect: boolean;
-      feedback: string;
-    }[];
-  }> {
+  ): Promise<AiAnswerEvaluation> {
     const schema = z.object({
       totalScore: z.number().min(0).max(100),
       critique: z.string().max(500),
