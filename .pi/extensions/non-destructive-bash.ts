@@ -160,10 +160,21 @@ function getBlockReason(command: string): string | undefined {
 }
 
 export default function (pi: ExtensionAPI): void {
+  let permissionDenied = false;
+
   pi.on('tool_call', async (event, ctx) => {
     if (event.toolName !== 'bash') return Promise.resolve(undefined);
 
     const command = String((event.input.command as string) ?? '');
+
+    if (permissionDenied) {
+      return Promise.resolve({
+        block: true,
+        reason:
+          'A previous tool permission was denied. Treating denial as a hard stop.',
+      });
+    }
+
     const confirmReason = getConfirmReason(command);
 
     if (confirmReason) {
@@ -180,7 +191,12 @@ export default function (pi: ExtensionAPI): void {
       );
 
       if (!allowed) {
-        return Promise.resolve({ block: true, reason: 'Blocked by user' });
+        permissionDenied = true;
+
+        return Promise.resolve({
+          block: true,
+          reason: 'Blocked by user. Treating denial as a hard stop.',
+        });
       }
 
       return Promise.resolve(undefined);
@@ -201,7 +217,7 @@ export default function (pi: ExtensionAPI): void {
     description: 'Show the active non-destructive bash permission policy',
     handler: (_args, ctx) => {
       ctx.ui.notify(
-        'Non-destructive bash policy is active. Only allowlisted read-only commands are permitted.',
+        'Non-destructive bash policy is active. Only allowlisted read-only commands are permitted. Denied permissions are treated as a hard stop.',
         'info',
       );
 
