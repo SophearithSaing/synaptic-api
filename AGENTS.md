@@ -3,6 +3,18 @@
 **Goal:** Interactive AI-driven education platform for computing theory.
 **Status:** Multi-repo Architecture.
 
+## Mandatory Git Commit Instructions
+
+These rules must be checked immediately before staging or committing changes.
+
+- **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
+- **Atomic Commits:** Separate changes into multiple logical commits. Avoid bulk commits of unrelated changes.
+- **Message Quality:** Use meaningful and descriptive commit messages that explain the "why" and "what".
+- **Formatting Rules:**
+  - Commit messages must start with a capitalized word.
+  - Do not use prefixes like 'Fix:', 'Enhancement:', or 'feat:'.
+  - Avoid vague messages like "Address comments", "Small fixes", or "Update files".
+
 ## Technical Constraints
 
 - **Frontend:** Angular 18+, SCSS (Custom Styles only, NO Tailwind).
@@ -58,13 +70,3 @@
 - When in Plan Mode, focus on implementing requested changes as defined by the approved plan.
 - Implement the requested changes and verify them (e.g., via local build), but **do not** stage, commit, or create a Pull Request for these changes until you receive an explicit directive from the user to do so.
 - After implementing and verifying, summarize the completed work and await further instructions.
-
-## Commit Standards
-
-- **Formatting:** Edited files must be formatted with `npx prettier --write` before any commit.
-- **Atomic Commits:** Separate changes into multiple logical commits. Avoid bulk commits of unrelated changes.
-- **Message Quality:** Use meaningful and descriptive commit messages that explain the "why" and "what".
-- **Formatting Rules:**
-  - Commit messages must start with a capitalized word.
-  - Do not use prefixes like 'Fix:', 'Enhancement:', or 'feat:'.
-  - Avoid vague messages like "Address comments", "Small fixes", or "Update files".
