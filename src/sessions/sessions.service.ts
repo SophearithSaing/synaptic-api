@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, QueryFilter, Types } from 'mongoose';
 import { AiService } from '../ai/ai.service';
-import { AiProvider } from '../ai/types/ai.types';
+import { AiAnswerEvaluation, AiProvider } from '../ai/types/ai.types';
 import {
   Question,
   QuestionDocument,
@@ -123,7 +123,7 @@ export class SessionsService {
     answers: { questionId: string; studentAnswer: string }[],
     provider?: AiProvider,
   ): Promise<{
-    evaluation: Awaited<ReturnType<AiService['evaluateAnswers']>>;
+    evaluation: AiAnswerEvaluation;
     studentModel: StudentModelDocument;
   }> {
     const questionSet = await this.questionSetModel

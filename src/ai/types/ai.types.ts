@@ -22,3 +22,33 @@ export interface ModelExecutionOptions {
   prompt: string;
   maxTokens?: number;
 }
+
+/**
+ * Student answer payload sent to the evaluator model.
+ */
+export interface AiAnswerEvaluationInput {
+  questionId: string;
+  questionText: string;
+  studentAnswer: string;
+}
+
+/**
+ * Evaluation details for a single question.
+ */
+export interface AiQuestionEvaluation {
+  questionId: string;
+  score: number;
+  isCorrect: boolean;
+  feedback: string;
+}
+
+/**
+ * Structured answer evaluation returned by the evaluator model.
+ */
+export interface AiAnswerEvaluation {
+  totalScore: number;
+  critique: string;
+  weakConcepts: string[];
+  strongConcepts: string[];
+  questionEvaluations: AiQuestionEvaluation[];
+}

@@ -4,7 +4,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { parseAiJson } from './utils/ai.utils';
-import { AiProvider, AiModel, ModelExecutionOptions } from './types/ai.types';
+import {
+  AiAnswerEvaluation,
+  AiAnswerEvaluationInput,
+  AiProvider,
+  AiModel,
+  ModelExecutionOptions,
+} from './types/ai.types';
 import { getErrorMessage } from '../utils/error.utils';
 
 /**
@@ -156,24 +162,9 @@ export class AiService {
    * @returns Evaluation result with totalScore, critique, weakConcepts, strongConcepts, and per-question evaluations.
    */
   async evaluateAnswers(
-    answers: {
-      questionId: string;
-      questionText: string;
-      studentAnswer: string;
-    }[],
+    answers: AiAnswerEvaluationInput[],
     provider: AiProvider = AiProvider.Gemini,
-  ): Promise<{
-    totalScore: number;
-    critique: string;
-    weakConcepts: string[];
-    strongConcepts: string[];
-    questionEvaluations: {
-      questionId: string;
-      score: number;
-      isCorrect: boolean;
-      feedback: string;
-    }[];
-  }> {
+  ): Promise<AiAnswerEvaluation> {
     const schema = z.object({
       totalScore: z.number().min(0).max(100),
       critique: z.string().max(500),
