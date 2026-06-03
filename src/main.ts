@@ -4,10 +4,14 @@ import { AppModule } from './app.module';
 
 /**
  * Starts the NestJS API server.
- * @returns A promise that resolves when the server is listening.
+ * @returns {Promise<void>} A promise that resolves when the server is listening.
  */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+
+  app.enableCors({
+    origin: process.env.CLIENT_URL ?? 'http://localhost:4200',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
