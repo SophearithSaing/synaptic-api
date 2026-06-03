@@ -1,26 +1,32 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthDto } from './dto/auth.dto';
+import { AuthResponse, AuthService } from './auth.service';
+import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   /**
    * Handles user registration requests.
-   * @param authDto Registration data.
+   * @param {RegisterDto} authDto - Registration data.
+   * @returns {Promise<AuthResponse>} A JWT access token.
    */
   @Post('register')
-  async register(@Body() authDto: AuthDto) {
-    return this.authService.register(authDto.email, authDto.password);
+  async register(@Body() authDto: RegisterDto): Promise<AuthResponse> {
+    return this.authService.register(
+      authDto.email,
+      authDto.username,
+      authDto.password,
+    );
   }
 
   /**
    * Handles user login requests.
-   * @param authDto Login credentials.
+   * @param {LoginDto} authDto - Login credentials.
+   * @returns {Promise<AuthResponse>} A JWT access token.
    */
   @Post('login')
-  async login(@Body() authDto: AuthDto) {
+  async login(@Body() authDto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(authDto.email, authDto.password);
   }
 }

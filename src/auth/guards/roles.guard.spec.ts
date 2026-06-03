@@ -14,6 +14,7 @@ describe('RolesGuard', () => {
           user: role
             ? {
                 email: 'test@example.com',
+                username: 'test-user',
                 role,
                 userId: 'user-id',
               }
