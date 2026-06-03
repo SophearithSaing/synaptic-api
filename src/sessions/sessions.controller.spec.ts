@@ -12,6 +12,7 @@ describe('SessionsController', () => {
   const request = {
     user: {
       email: 'student@example.com',
+      username: 'student-user',
       role: UserRole.User,
       userId: 'authenticated-user-id',
     },
