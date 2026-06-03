@@ -30,17 +30,20 @@ Review repository changes like a lightweight code review. Compare both committed
 4. **Format findings:**
    - Use the commit hash and commit message as the heading for committed findings.
    - Use `Working Tree` as the heading for uncommitted findings.
+   - Include the relevant file path before each finding.
    - Include a short code snippet for each finding inside a `diff` fenced block.
-   - Show the `diff` snippet first, then the finding category and message.
+   - Show the file path first, then the `diff` snippet, then the finding category and message.
 
 ## Output Format
 
 - `## Committed Changes`
 - `### <commit-hash> <commit message>`
+- `File: <path/to/file>`
 - A short fenced `diff` snippet supporting the finding.
 - `**Safety:** <short message>`, `**Concern:** <short message>`, or `**Suggestion:** <short message>`
 - `## Uncommitted Changes`
 - `### Working Tree`
+- `File: <path/to/file>`
 - A short fenced `diff` snippet supporting the finding.
 - `**Safety:** <short message>`, `**Concern:** <short message>`, or `**Suggestion:** <short message>`
 
