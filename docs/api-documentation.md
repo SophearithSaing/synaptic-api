@@ -13,7 +13,8 @@ or extending the backend.
   - `forbidNonWhitelisted: true` unknown DTO fields also cause `400` errors.
   - `transform: true` DTO transformation is enabled.
 - Authentication uses JWT bearer tokens from the `Authorization` header.
-- CORS is not explicitly enabled in `src/main.ts`.
+- CORS is enabled in `src/main.ts` for `CLIENT_URL`, defaulting to
+  `http://localhost:4200` for local Angular development.
 
 ## Authentication
 
@@ -642,8 +643,10 @@ it internally.
 
 ## Suggested client flow
 
-1. Register a user with `POST /auth/register`.
-2. Login with `POST /auth/login` and store `access_token`.
+1. Register a user with `POST /auth/register` and store the returned
+   `access_token`.
+2. Alternatively, login with `POST /auth/login` and store `access_token` for an
+   existing account.
 3. Obtain a topic ID.
    - Current limitation: there is no public list-categories or list-topics
      endpoint. Topics are seeded automatically on app startup, but clients need
@@ -688,7 +691,7 @@ ID.
 - Add `GET /topics/categories` to list seeded categories.
 - Add a student profile/progress endpoint for current user.
 - Add admin user role management or a documented seed admin path.
-- Consider enabling CORS for frontend integration.
+- Consider tightening CORS origins per deployment environment.
 - Consider hiding `correctOption` and `idealAnswerPoints` from
   `/sessions/start` responses to avoid exposing answers before submission.
 - Convert duplicate slug Mongo errors into friendly `409 Conflict` responses.
