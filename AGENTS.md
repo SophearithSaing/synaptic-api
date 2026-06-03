@@ -1,4 +1,4 @@
-# Project: Curiosity
+# Project: Synaptic
 
 **Goal:** Interactive AI-driven education platform for computing theory.
 **Status:** Multi-repo Architecture.

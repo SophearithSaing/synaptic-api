@@ -1,6 +1,6 @@
-# Curiosity API Documentation
+# Synaptic API Documentation
 
-This document describes the currently implemented HTTP API in `curiosity-api`.
+This document describes the currently implemented HTTP API in `synaptic-api`.
 It is intended as a handoff document for another coding agent integrating with
 or extending the backend.
 
