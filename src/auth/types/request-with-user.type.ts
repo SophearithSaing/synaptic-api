@@ -6,6 +6,7 @@ import { UserRole } from '../schemas/user.schema';
  */
 export interface AuthenticatedUser {
   email: string;
+  username: string;
   userId: string;
   role: UserRole;
 }

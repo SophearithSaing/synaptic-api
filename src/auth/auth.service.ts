@@ -10,6 +10,10 @@ import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './schemas/user.schema';
 import { StudentsService } from '../students/students.service';
 
+export interface AuthResponse {
+  access_token: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,24 +24,38 @@ export class AuthService {
 
   /**
    * Registers a new user and creates their student profile.
-   * @param email User email address.
-   * @param pass Plaintext password.
-   * @returns The registered user's email.
+   * @param {string} email - User email address.
+   * @param {string} username - Public username.
+   * @param {string} pass - Plaintext password.
+   * @returns {Promise<AuthResponse>} A JWT access token.
    */
-  async register(email: string, pass: string): Promise<{ email: string }> {
+  async register(
+    email: string,
+    username: string,
+    pass: string,
+  ): Promise<AuthResponse> {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(pass, salt);
-    const user = new this.userModel({ email, password: hashedPassword });
+    const user = new this.userModel({
+      email,
+      username,
+      password: hashedPassword,
+    });
     try {
       const savedUser = await user.save();
       await this.studentsService.create(savedUser.id);
-      return { email: savedUser.email };
+      return this.createAuthResponse(savedUser);
     } catch (error: unknown) {
       if (
         error &&
         typeof error === 'object' &&
         (error as { code: number }).code === 11000
       ) {
+        const keyPattern = (error as { keyPattern?: Record<string, number> })
+          .keyPattern;
+        if (keyPattern?.['username']) {
+          throw new ConflictException('Username already exists');
+        }
         throw new ConflictException('Email already exists');
       }
       throw error;
@@ -46,16 +64,30 @@ export class AuthService {
 
   /**
    * Authenticates a user and generates a JWT access token.
-   * @param email User email address.
-   * @param pass Plaintext password.
-   * @returns An object containing the access token.
+   * @param {string} email - User email address.
+   * @param {string} pass - Plaintext password.
+   * @returns {Promise<AuthResponse>} A JWT access token.
    */
-  async login(email: string, pass: string): Promise<{ access_token: string }> {
+  async login(email: string, pass: string): Promise<AuthResponse> {
     const user = await this.userModel.findOne({ email });
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();
     }
-    const payload = { email: user.email, sub: user.id };
+    return this.createAuthResponse(user);
+  }
+
+  /**
+   * Creates a JWT authentication response for a persisted user.
+   * @param {UserDocument} user - User document to encode in the token.
+   * @returns {AuthResponse} A JWT access token response.
+   */
+  private createAuthResponse(user: UserDocument): AuthResponse {
+    const payload = {
+      email: user.email,
+      username: user.username,
+      sub: user._id,
+    };
+
     return {
       access_token: this.jwtService.sign(payload),
     };

@@ -9,6 +9,7 @@ import { AuthenticatedUser } from '../types/request-with-user.type';
 
 interface JwtPayload {
   email: string;
+  username: string;
   sub: string;
 }
 
@@ -27,8 +28,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   /**
    * Validates the JWT payload and returns the current user information.
-   * @param payload The decoded JWT payload.
-   * @returns The user object to be attached to the request.
+   * @param {JwtPayload} payload - The decoded JWT payload.
+   * @returns {Promise<AuthenticatedUser>} The user attached to the request.
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const user = await this.userModel.findById(payload.sub);
@@ -39,6 +40,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     return {
       email: user.email,
+      username: user.username,
       role: user.role ?? UserRole.User,
       userId: user.id,
     };
