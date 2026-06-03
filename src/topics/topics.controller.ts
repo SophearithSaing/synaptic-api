@@ -42,6 +42,24 @@ export class TopicsController {
   }
 
   /**
+   * Fetches all topics.
+   * @returns The available topics.
+   */
+  @Get()
+  async getTopics(): Promise<TopicDocument[]> {
+    return this.topicsService.getTopics();
+  }
+
+  /**
+   * Fetches all topic categories.
+   * @returns The available topic categories.
+   */
+  @Get('categories')
+  async getCategories(): Promise<TopicCategoryDocument[]> {
+    return this.topicsService.getCategories();
+  }
+
+  /**
    * Fetches a topic by its ID.
    * @param id The topic ID.
    * @returns The requested topic.

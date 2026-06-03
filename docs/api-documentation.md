@@ -58,6 +58,8 @@ endpoint in the current API.
 | `POST` | `/auth/login`             | No   | Any        | Return a JWT access token.                 |
 | `POST` | `/topics/category/create` | Yes  | Admin      | Create a topic category.                   |
 | `POST` | `/topics/create`          | Yes  | Admin      | Create a topic.                            |
+| `GET`  | `/topics`                 | Yes  | User/Admin | List all topics.                           |
+| `GET`  | `/topics/categories`      | Yes  | User/Admin | List all topic categories.                 |
 | `GET`  | `/topics/:id`             | Yes  | User/Admin | Fetch a topic by Mongo ID.                 |
 | `POST` | `/sessions/start`         | Yes  | User/Admin | Generate a 3-question session for a topic. |
 | `POST` | `/sessions/:id/submit`    | Yes  | User/Admin | Submit answers and update mastery.         |
@@ -243,6 +245,7 @@ Creates a topic inside a category.
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
+  "tags": ["systems", "runtime"],
   "category": "<category-id>"
 }
 ```
@@ -250,6 +253,7 @@ Creates a topic inside a category.
 Validation:
 
 - `title`, `slug`, `description`, `icon`: required non-empty strings.
+- `tags`: required array of 1 or 2 non-empty strings.
 - `category`: required Mongo ObjectId string.
 
 #### Response `201 Created`
@@ -262,6 +266,7 @@ Returns the MongoDB topic document.
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
+  "tags": ["systems", "runtime"],
   "category": "<category-id>",
   "_id": "<topic-id>",
   "createdAt": "2026-06-03T00:00:00.000Z",
@@ -276,6 +281,83 @@ Returns the MongoDB topic document.
 - `403 Forbidden` if authenticated but not admin.
 - Mongo duplicate errors can occur for duplicate `slug` values; these are not
   currently converted to a friendly API error.
+
+---
+
+### `GET /topics`
+
+Lists all topics sorted by title.
+
+#### Auth
+
+- Requires JWT.
+- Any authenticated role can call it.
+
+#### Response `200 OK`
+
+Each topic is returned with `category` populated.
+
+```json
+[
+  {
+    "_id": "<topic-id>",
+    "title": "Memory Management",
+    "slug": "memory-management",
+    "description": "Understanding stack, heap, and garbage collection.",
+    "icon": "memory-management",
+    "tags": ["systems", "runtime"],
+    "category": {
+      "_id": "<category-id>",
+      "title": "Computer Science Concepts",
+      "slug": "cs-concepts",
+      "description": "Core theories and fundamental CS principles.",
+      "icon": "cs-concepts",
+      "createdAt": "2026-06-03T00:00:00.000Z",
+      "updatedAt": "2026-06-03T00:00:00.000Z",
+      "__v": 0
+    },
+    "createdAt": "2026-06-03T00:00:00.000Z",
+    "updatedAt": "2026-06-03T00:00:00.000Z",
+    "__v": 0
+  }
+]
+```
+
+#### Important errors
+
+- `401 Unauthorized` if unauthenticated.
+
+---
+
+### `GET /topics/categories`
+
+Lists all topic categories sorted by title.
+
+#### Auth
+
+- Requires JWT.
+- Any authenticated role can call it.
+
+#### Response `200 OK`
+
+```json
+[
+  {
+    "_id": "<category-id>",
+    "title": "Computer Science Concepts",
+    "slug": "cs-concepts",
+    "description": "Core theories and fundamental CS principles.",
+    "icon": "cs-concepts",
+    "createdAt": "2026-06-03T00:00:00.000Z",
+    "updatedAt": "2026-06-03T00:00:00.000Z",
+    "__v": 0
+  }
+]
+```
+
+#### Important errors
+
+- `401 Unauthorized` if unauthenticated.
 
 ---
 
@@ -303,6 +385,7 @@ The topic is returned with `category` populated.
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
+  "tags": ["systems", "runtime"],
   "category": {
     "_id": "<category-id>",
     "title": "Computer Science Concepts",
@@ -369,6 +452,7 @@ Returns the created `QuestionSet` with `topic` and `questions` populated.
     "slug": "memory-management",
     "description": "Understanding stack, heap, and garbage collection.",
     "icon": "memory-management",
+    "tags": ["systems", "runtime"],
     "category": "<category-id>",
     "createdAt": "2026-06-03T00:00:00.000Z",
     "updatedAt": "2026-06-03T00:00:00.000Z",
@@ -647,10 +731,7 @@ it internally.
    `access_token`.
 2. Alternatively, login with `POST /auth/login` and store `access_token` for an
    existing account.
-3. Obtain a topic ID.
-   - Current limitation: there is no public list-categories or list-topics
-     endpoint. Topics are seeded automatically on app startup, but clients need
-     direct database knowledge, a hard-coded ID, or new list endpoints.
+3. Call `GET /topics` to obtain the available topics and select a topic ID.
 4. Start a session with `POST /sessions/start`.
 5. Render the returned `questions`.
    - For `mcq`, render `options` and submit the chosen option text/string.
@@ -671,15 +752,19 @@ Seeded categories:
 
 Seeded topics:
 
-- Memory Management
-- Concurrency
-- Computer Networking
-- Node.js
-- Go
-- Hyperledger Fabric
-- Containerization (Docker)
-- CI/CD Pipelines
-- Kubernetes
+- Memory Management: `systems`, `runtime`
+- Concurrency: `systems`, `parallelism`
+- Computer Networking: `networking`, `protocols`
+- Distributed Systems: `distributed`, `networking`
+- Graph Theory: `algorithms`, `graphs`
+- Node.js: `backend`, `runtime`
+- Go: `systems`, `backend`
+- Rust Fundamentals: `systems`, `memory-safety`
+- Go Concurrency: `concurrency`, `backend`
+- Hyperledger Fabric: `blockchain`, `enterprise`
+- Containerization (Docker): `containers`, `devops`
+- CI/CD Pipelines: `automation`, `devops`
+- Kubernetes: `orchestration`, `containers`
 
 A development `StudentModel` is also created for `userId = dev-user-123`, but
 JWT-protected endpoints use real user IDs from authenticated JWTs, not this dev
@@ -687,8 +772,6 @@ ID.
 
 ## Integration gaps for another agent to consider
 
-- Add `GET /topics` to list topics, likely grouped or filterable by category.
-- Add `GET /topics/categories` to list seeded categories.
 - Add a student profile/progress endpoint for current user.
 - Add admin user role management or a documented seed admin path.
 - Consider tightening CORS origins per deployment environment.

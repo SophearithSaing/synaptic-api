@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsMongoId } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsMongoId,
+  IsNotEmpty,
+  IsString,
+} from 'class-validator';
 
 export class CreateCategoryDto {
   @IsString()
@@ -34,6 +41,13 @@ export class CreateTopicDto {
   @IsString()
   @IsNotEmpty()
   icon: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  tags: string[];
 
   @IsMongoId()
   @IsNotEmpty()
