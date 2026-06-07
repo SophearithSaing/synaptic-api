@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SessionsController } from './sessions.controller';
 import { SessionsService } from './sessions.service';
-import { Question, QuestionSchema } from '../questions/schemas/question.schema';
 import {
   QuestionSet,
   QuestionSetSchema,
@@ -13,7 +12,6 @@ import { AiModule } from '../ai/ai.module';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: Question.name, schema: QuestionSchema },
       { name: QuestionSet.name, schema: QuestionSetSchema },
       { name: Topic.name, schema: TopicSchema },
     ]),
