@@ -64,21 +64,6 @@ interface PermissionRequest {
   reason: string;
 }
 
-interface SessionMessage {
-  role?: string;
-  content?: unknown;
-}
-
-interface SessionEntry {
-  message?: SessionMessage;
-}
-
-interface SessionContext {
-  sessionManager?: {
-    getEntries(): unknown[];
-  };
-}
-
 const confirmablePatterns: RegExp[] = [
   /(^|[;&|()\s])git\s+(clean|reset|checkout|restore|switch|merge|rebase|commit|push|pull|fetch|add|rm|mv|stash|apply)\b/i,
 ];
@@ -225,95 +210,6 @@ function getBlockedRequest(command: string): PermissionRequest | undefined {
 }
 
 /**
- * Extracts readable text from message content.
- *
- * @param content The message content.
- * @returns Readable text from the content.
- */
-function getContentText(content: unknown): string {
-  if (typeof content === 'string') {
-    return content;
-  }
-
-  if (!Array.isArray(content)) {
-    return '';
-  }
-
-  return content
-    .map((block) => {
-      if (!block || typeof block !== 'object') {
-        return '';
-      }
-
-      if ('text' in block && typeof block.text === 'string') {
-        return block.text;
-      }
-
-      if ('thinking' in block && typeof block.thinking === 'string') {
-        return block.thinking;
-      }
-
-      return '';
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
-
-/**
- * Gets the latest message text for a role from session context.
- *
- * @param ctx The extension context.
- * @param role The message role to find.
- * @returns Latest message text for the role, or an empty string.
- */
-function getLatestMessageText(ctx: SessionContext, role: string): string {
-  const entries = ctx.sessionManager?.getEntries() ?? [];
-
-  for (const entry of entries.slice().reverse()) {
-    const message = (entry as SessionEntry).message;
-
-    if (message?.role !== role) {
-      continue;
-    }
-
-    const text = getContentText(message.content);
-
-    if (text) {
-      return text;
-    }
-  }
-
-  return '';
-}
-
-/**
- * Builds the permission dialog message for a blocked command.
- *
- * @param command The requested command.
- * @param request The permission request.
- * @param ctx The extension context.
- * @returns The permission dialog message.
- */
-function buildPermissionMessage(
-  command: string,
-  request: PermissionRequest,
-  ctx: SessionContext,
-): string {
-  const assistantReason =
-    getLatestMessageText(ctx, 'assistant') ||
-    'No assistant rationale was provided before this tool call.';
-  const userRequest = getLatestMessageText(ctx, 'user') || 'Unavailable.';
-
-  return [
-    `Why it is blocked:\n${request.reason}`,
-    `Why I am trying to run it:\n${assistantReason}`,
-    `Latest user request:\n${userRequest}`,
-    `Allow this command?\n\n${command}`,
-  ].join('\n\n');
-}
-
-/**
  * Registers the bash permission extension.
  *
  * @param pi The pi extension API.
@@ -347,15 +243,13 @@ export default function (pi: ExtensionAPI): void {
     if (!ctx.hasUI) {
       return Promise.resolve({
         block: true,
-        reason: `${request.reason}; no UI available. Why I tried: ${
-          getLatestMessageText(ctx, 'assistant') || 'not provided'
-        }`,
+        reason: `${request.reason}; no UI available`,
       });
     }
 
     const allowed = await ctx.ui.confirm(
       request.title,
-      buildPermissionMessage(command, request, ctx),
+      `Reason:\n${request.reason}\n\nAllow this command?\n\n${command}`,
     );
 
     if (!allowed) {
