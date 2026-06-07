@@ -3,13 +3,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
-  TopicCategory,
-  TopicCategoryDocument,
-} from '../topics/schemas/topic-category.schema';
-import {
   StudentModel,
   StudentModelDocument,
 } from '../students/schemas/student-model.schema';
+import {
+  Category,
+  CategoryDocument,
+} from '../categories/schemas/category.schema';
 
 /**
  * Service to initialize the database with default topics and user data.
@@ -20,8 +20,8 @@ export class SeedService implements OnModuleInit {
 
   constructor(
     @InjectModel(Topic.name) private readonly topicModel: Model<TopicDocument>,
-    @InjectModel(TopicCategory.name)
-    private readonly categoryModel: Model<TopicCategoryDocument>,
+    @InjectModel(Category.name)
+    private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(StudentModel.name)
     private readonly studentModel: Model<StudentModelDocument>,
   ) {}
