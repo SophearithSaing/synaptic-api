@@ -42,7 +42,7 @@ export class CategoriesService {
 
   private toResponse(category: CategoryDocument): CategoryResponseDto {
     return {
-      id: category.id,
+      id: category._id.toString(),
       title: category.title,
       slug: category.slug,
       description: category.description,
