@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, QueryFilter, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { AiService } from '../ai/ai.service';
 import { AiAnswerEvaluation, AiProvider } from '../ai/types/ai.types';
 import {
@@ -11,11 +11,6 @@ import {
   QuestionSet,
   QuestionSetDocument,
 } from '../questions/schemas/question-set.schema';
-import {
-  TopicProgress,
-  TopicProgressDocument,
-  TopicStatus,
-} from '../topics/schemas/topic-progress.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
   StudentModel,
@@ -33,8 +28,6 @@ export class SessionsService {
     @InjectModel(Question.name) private questionModel: Model<QuestionDocument>,
     @InjectModel(QuestionSet.name)
     private questionSetModel: Model<QuestionSetDocument>,
-    @InjectModel(TopicProgress.name)
-    private topicProgressModel: Model<TopicProgressDocument>,
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
     @InjectModel(StudentModel.name)
     private studentModel: Model<StudentModelDocument>,
@@ -86,23 +79,6 @@ export class SessionsService {
       difficulty,
       score: 0,
     });
-
-    let progress = await this.topicProgressModel.findOne({
-      userId: userId,
-      topic: new Types.ObjectId(topicId),
-    } as QueryFilter<TopicProgress>);
-    if (!progress) {
-      progress = await this.topicProgressModel.create({
-        userId,
-        topic: new Types.ObjectId(topicId),
-        status: TopicStatus.InProgress,
-        history: [questionSet._id],
-      });
-    } else {
-      progress.history.push(questionSet._id);
-
-      await progress.save();
-    }
 
     return questionSet.populate(['topic', 'questions']);
   }
