@@ -15,12 +15,6 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
-  /**
-   * Creates an auth service.
-   *
-   * @param userModel The user model.
-   * @param jwtService The JWT service.
-   */
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,

@@ -14,11 +14,6 @@ import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 @Controller('topics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TopicsController {
-  /**
-   * Creates a topics controller.
-   *
-   * @param topicsService The topics service.
-   */
   constructor(private topicsService: TopicsService) {}
 
   /**

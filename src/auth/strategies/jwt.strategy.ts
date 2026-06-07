@@ -15,12 +15,6 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  /**
-   * Creates a JWT strategy.
-   *
-   * @param configService The configuration service.
-   * @param userModel The user model.
-   */
   constructor(
     configService: ConfigService,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,

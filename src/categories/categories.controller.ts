@@ -14,11 +14,6 @@ import { CreateCategoryDto } from './dtos/create-category.dto';
 @Controller('categories')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CategoriesController {
-  /**
-   * Creates a categories controller.
-   *
-   * @param categoriesService The categories service.
-   */
   constructor(private categoriesService: CategoriesService) {}
 
   /**

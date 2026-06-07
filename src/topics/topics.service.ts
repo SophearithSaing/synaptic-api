@@ -9,11 +9,6 @@ import { CategoryDocument } from '../categories/schemas/category.schema';
 
 @Injectable()
 export class TopicsService {
-  /**
-   * Creates a topics service.
-   *
-   * @param topicModel The topic model.
-   */
   constructor(
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
   ) {}

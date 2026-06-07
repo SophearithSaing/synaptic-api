@@ -4,11 +4,6 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
-  /**
-   * Creates an auth controller.
-   *
-   * @param authService The authentication service.
-   */
   constructor(private readonly authService: AuthService) {}
 
   /**

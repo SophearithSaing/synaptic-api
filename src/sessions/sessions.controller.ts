@@ -11,11 +11,6 @@ import { StartSessionDto, SubmitSessionDto } from './dto/session.dto';
 @Controller('sessions')
 @UseGuards(JwtAuthGuard)
 export class SessionsController {
-  /**
-   * Creates a sessions controller.
-   *
-   * @param sessionsService The sessions service.
-   */
   constructor(private readonly sessionsService: SessionsService) {}
 
   /**

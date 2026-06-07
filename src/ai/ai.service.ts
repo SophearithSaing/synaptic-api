@@ -23,11 +23,6 @@ export class AiService {
   private readonly geminiClient: GoogleGenAI;
   private readonly anthropicClient: Anthropic;
 
-  /**
-   * Creates an AI service.
-   *
-   * @param configService The configuration service.
-   */
   constructor(private readonly configService: ConfigService) {
     const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');

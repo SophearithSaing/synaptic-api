@@ -19,14 +19,6 @@ import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
  */
 @Injectable()
 export class SessionsService {
-  /**
-   * Creates a sessions service.
-   *
-   * @param aiService The AI service.
-   * @param questionModel The question model.
-   * @param questionSetModel The question set model.
-   * @param topicModel The topic model.
-   */
   constructor(
     private readonly aiService: AiService,
     @InjectModel(Question.name) private questionModel: Model<QuestionDocument>,

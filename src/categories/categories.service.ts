@@ -7,11 +7,6 @@ import { CreateCategoryDto } from './dtos/create-category.dto';
 
 @Injectable()
 export class CategoriesService {
-  /**
-   * Creates a categories service.
-   *
-   * @param categoryModel The category model.
-   */
   constructor(
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
