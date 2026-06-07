@@ -8,6 +8,7 @@ import { AiModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { TopicsModule } from './topics/topics.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TopicsModule } from './topics/topics.module';
     SessionsModule,
     AuthModule,
     TopicsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
