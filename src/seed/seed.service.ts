@@ -3,10 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
-  StudentModel,
-  StudentModelDocument,
-} from '../students/schemas/student-model.schema';
-import {
   Category,
   CategoryDocument,
 } from '../categories/schemas/category.schema';
@@ -22,8 +18,6 @@ export class SeedService implements OnModuleInit {
     @InjectModel(Topic.name) private readonly topicModel: Model<TopicDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
-    @InjectModel(StudentModel.name)
-    private readonly studentModel: Model<StudentModelDocument>,
   ) {}
 
   /**
@@ -32,7 +26,6 @@ export class SeedService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await this.seedCategories();
     await this.seedTopics();
-    await this.seedStudent();
   }
 
   /**
@@ -206,26 +199,5 @@ export class SeedService implements OnModuleInit {
       })),
     );
     this.logger.log('13 topics synchronized successfully across 3 categories.');
-  }
-
-  /**
-   * Creates a default student model for development purposes.
-   */
-  private async seedStudent(): Promise<void> {
-    const userId = 'dev-user-123';
-    const exists = await this.studentModel.findOne({ userId });
-
-    if (exists) {
-      this.logger.log(`Student model for ${userId} already exists.`);
-      return;
-    }
-
-    await this.studentModel.create({
-      userId,
-      overallLevel: 0,
-      topicMastery: new Map(),
-    });
-
-    this.logger.log(`Default student model created for ${userId} at level 0.`);
   }
 }

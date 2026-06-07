@@ -8,10 +8,6 @@ import {
   QuestionSetSchema,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
-import {
-  StudentModel,
-  StudentModelSchema,
-} from '../students/schemas/student-model.schema';
 import { AiModule } from '../ai/ai.module';
 
 @Module({
@@ -20,7 +16,6 @@ import { AiModule } from '../ai/ai.module';
       { name: Question.name, schema: QuestionSchema },
       { name: QuestionSet.name, schema: QuestionSetSchema },
       { name: Topic.name, schema: TopicSchema },
-      { name: StudentModel.name, schema: StudentModelSchema },
     ]),
     AiModule,
   ],

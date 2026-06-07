@@ -12,10 +12,6 @@ import {
   QuestionSetDocument,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
-import {
-  StudentModel,
-  StudentModelDocument,
-} from '../students/schemas/student-model.schema';
 
 /**
  * Service to manage learning sessions, including question generation
@@ -29,8 +25,6 @@ export class SessionsService {
     @InjectModel(QuestionSet.name)
     private questionSetModel: Model<QuestionSetDocument>,
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
-    @InjectModel(StudentModel.name)
-    private studentModel: Model<StudentModelDocument>,
   ) {}
 
   /**
@@ -52,15 +46,7 @@ export class SessionsService {
       throw new NotFoundException('Topic not found');
     }
 
-    let studentModel = await this.studentModel.findOne({ userId });
-    if (!studentModel) {
-      studentModel = await this.studentModel.create({
-        userId,
-        overallLevel: 1,
-      });
-    }
-
-    const difficulty = studentModel.overallLevel;
+    const difficulty = 0;
     const count = 3;
 
     const generatedQuestions = await this.aiService.generateQuestions(
@@ -100,7 +86,6 @@ export class SessionsService {
     provider?: AiProvider,
   ): Promise<{
     evaluation: AiAnswerEvaluation;
-    studentModel: StudentModelDocument;
   }> {
     const questionSet = await this.questionSetModel
       .findOne({ _id: id, userId })
@@ -151,37 +136,8 @@ export class SessionsService {
     questionSet.strongConcepts = evaluation.strongConcepts;
     await questionSet.save();
 
-    let studentModel = await this.studentModel.findOne({
-      userId: questionSet.userId,
-    });
-    if (!studentModel) {
-      studentModel = await this.studentModel.create({
-        userId: questionSet.userId,
-        overallLevel: 1,
-      });
-    }
-
-    const topicId = (questionSet.topic as Types.ObjectId).toString();
-    const masteryIncrement = Math.floor(evaluation.totalScore / 20);
-    const currentMastery = studentModel.topicMastery.get(topicId) || 0;
-
-    studentModel.topicMastery.set(
-      topicId,
-      Math.min(100, currentMastery + masteryIncrement),
-    );
-
-    const masteries = Array.from(studentModel.topicMastery.values());
-    if (masteries.length > 0) {
-      const averageMastery =
-        masteries.reduce((sum, m) => sum + m, 0) / masteries.length;
-      studentModel.overallLevel = Math.max(1, Math.round(averageMastery));
-    }
-
-    await studentModel.save();
-
     return {
       evaluation,
-      studentModel,
     };
   }
 }

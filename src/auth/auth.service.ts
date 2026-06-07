@@ -8,7 +8,6 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './schemas/user.schema';
-import { StudentsService } from '../students/students.service';
 
 export interface AuthResponse {
   access_token: string;
@@ -18,12 +17,11 @@ export interface AuthResponse {
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private studentsService: StudentsService,
     private jwtService: JwtService,
   ) {}
 
   /**
-   * Registers a new user and creates their student profile.
+   * Registers a new user and creates their profile.
    * @param {string} email - User email address.
    * @param {string} username - Public username.
    * @param {string} pass - Plaintext password.
@@ -43,7 +41,6 @@ export class AuthService {
     });
     try {
       const savedUser = await user.save();
-      await this.studentsService.create(savedUser.id);
       return this.createAuthResponse(savedUser);
     } catch (error: unknown) {
       if (
