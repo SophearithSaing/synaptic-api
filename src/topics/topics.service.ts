@@ -7,6 +7,10 @@ import { TopicResponseDto } from './dto/topic-response.dto';
 import { CategoriesService } from '../categories/categories.service';
 import { CategoryDocument } from '../categories/schemas/category.schema';
 
+type PopulatedTopicDocument = Omit<TopicDocument, 'category'> & {
+  category: CategoryDocument;
+};
+
 @Injectable()
 export class TopicsService {
   constructor(
@@ -22,9 +26,11 @@ export class TopicsService {
   async createTopic(dto: CreateTopicDto): Promise<TopicResponseDto> {
     const topic = new this.topicModel(dto);
     const savedTopic = await topic.save();
-    await savedTopic.populate('category');
+    const populatedTopic = await savedTopic.populate<{
+      category: CategoryDocument;
+    }>('category');
 
-    return this.toResponse(savedTopic);
+    return this.toResponse(populatedTopic);
   }
 
   /**
@@ -36,7 +42,7 @@ export class TopicsService {
     const topics = await this.topicModel
       .find()
       .sort({ title: 1 })
-      .populate('category')
+      .populate<{ category: CategoryDocument }>('category')
       .exec();
 
     return topics.map((topic) => this.toResponse(topic));
@@ -51,7 +57,7 @@ export class TopicsService {
   async getTopicById(id: string): Promise<TopicResponseDto> {
     const topic = await this.topicModel
       .findById(id)
-      .populate('category')
+      .populate<{ category: CategoryDocument }>('category')
       .exec();
 
     if (!topic) {
@@ -67,7 +73,7 @@ export class TopicsService {
    * @param topic The topic document.
    * @returns The topic response.
    */
-  private toResponse(topic: TopicDocument): TopicResponseDto {
+  private toResponse(topic: PopulatedTopicDocument): TopicResponseDto {
     return {
       id: topic._id.toString(),
       title: topic.title,
@@ -75,9 +81,7 @@ export class TopicsService {
       description: topic.description,
       icon: topic.icon,
       tags: topic.tags,
-      category: CategoriesService.toResponse(
-        topic.category as unknown as CategoryDocument,
-      ),
+      category: CategoriesService.toResponse(topic.category),
     };
   }
 }
