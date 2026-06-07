@@ -9,10 +9,16 @@ import { RequestWithUser } from '../types/request-with-user.type';
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
+  /**
+   * Creates a roles guard.
+   *
+   * @param reflector The Nest reflector.
+   */
   constructor(private readonly reflector: Reflector) {}
 
   /**
    * Determines whether the authenticated user has an allowed role.
+   *
    * @param context Nest execution context.
    * @returns Whether the request can proceed.
    */

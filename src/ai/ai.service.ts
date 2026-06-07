@@ -10,6 +10,7 @@ import {
   AiProvider,
   AiModel,
   ModelExecutionOptions,
+  AiGeneratedQuestion,
 } from './types/ai.types';
 import { getErrorMessage } from '../utils/error.utils';
 
@@ -22,6 +23,11 @@ export class AiService {
   private readonly geminiClient: GoogleGenAI;
   private readonly anthropicClient: Anthropic;
 
+  /**
+   * Creates an AI service.
+   *
+   * @param configService The configuration service.
+   */
   constructor(private readonly configService: ConfigService) {
     const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
     const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
@@ -34,8 +40,9 @@ export class AiService {
 
   /**
    * Internal mapping to get the correct model for a given provider.
+   *
    * @param provider The AI provider.
-   * @returns The corresponding AiModel.
+   * @returns The corresponding AI model.
    */
   private getModelForProvider(provider: AiProvider): AiModel {
     const modelMap: Record<AiProvider, AiModel> = {
@@ -47,6 +54,7 @@ export class AiService {
 
   /**
    * Generic method to execute a prompt against the selected AI provider.
+   *
    * @param options Configuration for the model call.
    * @returns The raw text response from the model.
    * @throws InternalServerErrorException if the call fails or returns unexpected data.
@@ -87,6 +95,7 @@ export class AiService {
 
   /**
    * Builds the required question mix instruction for a difficulty level.
+   *
    * @param difficulty Student difficulty level from 0 to 100.
    * @returns The question mix instruction for the prompt.
    */
@@ -104,11 +113,12 @@ export class AiService {
 
   /**
    * Generates educational questions.
+   *
    * @param topic The subject.
    * @param description Context description.
-   * @param difficulty Level 0-100.
+   * @param difficulty Level from 0 to 100.
    * @param count Number of questions.
-   * @param provider Optional AI provider (defaults to Gemini).
+   * @param provider Optional AI provider.
    * @returns Array of generated questions.
    */
   async generateQuestions(
@@ -117,7 +127,7 @@ export class AiService {
     difficulty: number,
     count: number = 3,
     provider: AiProvider = AiProvider.Gemini,
-  ) {
+  ): Promise<AiGeneratedQuestion[]> {
     const questionSchema = z.array(
       z.object({
         type: z.enum(['mcq', 'written']),
@@ -157,9 +167,10 @@ export class AiService {
 
   /**
    * Evaluates student's answers.
-   * @param answers Array of objects with questionId, questionText and studentAnswer.
-   * @param provider Optional AI provider (defaults to Gemini).
-   * @returns Evaluation result with totalScore, critique, weakConcepts, strongConcepts, and per-question evaluations.
+   *
+   * @param answers Student answers to evaluate.
+   * @param provider Optional AI provider.
+   * @returns Evaluation result with overall and per-question feedback.
    */
   async evaluateAnswers(
     answers: AiAnswerEvaluationInput[],

@@ -31,8 +31,9 @@ export class Topic {
 
 /**
  * Validates the number of topic tags.
- * @param {string[]} tags - The topic tags.
- * @returns {boolean}
+ *
+ * @param tags The topic tags.
+ * @returns Whether the tag count is valid.
  */
 function tagsLimit(tags: string[]): boolean {
   return Array.isArray(tags) && tags.length >= 1 && tags.length <= 2;

@@ -5,6 +5,7 @@ export const ROLES_KEY = 'roles';
 
 /**
  * Marks a route as requiring one of the provided roles.
+ *
  * @param roles Roles allowed to access the route.
  * @returns Nest metadata decorator for role requirements.
  */

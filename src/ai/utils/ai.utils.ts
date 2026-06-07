@@ -6,6 +6,7 @@ import { getErrorMessage } from '../../utils/error.utils';
 
 /**
  * Cleans the response text from an LLM by removing Markdown JSON blocks.
+ *
  * @param text The raw response text from the LLM.
  * @returns The cleaned JSON string.
  */
@@ -18,6 +19,7 @@ export function cleanJsonResponse(text: string): string {
 
 /**
  * Parses a JSON string after cleaning it.
+ *
  * @param text The raw response text.
  * @returns The parsed JSON object.
  */

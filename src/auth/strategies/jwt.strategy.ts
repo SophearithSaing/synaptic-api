@@ -15,6 +15,12 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  /**
+   * Creates a JWT strategy.
+   *
+   * @param configService The configuration service.
+   * @param userModel The user model.
+   */
   constructor(
     configService: ConfigService,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
@@ -28,8 +34,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   /**
    * Validates the JWT payload and returns the current user information.
-   * @param {JwtPayload} payload - The decoded JWT payload.
-   * @returns {Promise<AuthenticatedUser>} The user attached to the request.
+   *
+   * @param payload The decoded JWT payload.
+   * @returns The user attached to the request.
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const user = await this.userModel.findById(payload.sub);

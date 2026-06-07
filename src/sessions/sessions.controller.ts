@@ -11,10 +11,16 @@ import { StartSessionDto, SubmitSessionDto } from './dto/session.dto';
 @Controller('sessions')
 @UseGuards(JwtAuthGuard)
 export class SessionsController {
+  /**
+   * Creates a sessions controller.
+   *
+   * @param sessionsService The sessions service.
+   */
   constructor(private readonly sessionsService: SessionsService) {}
 
   /**
    * Starts a new session for the authenticated user on a given topic.
+   *
    * @param req Authenticated request.
    * @param body Session start payload.
    * @returns The newly created session details.
@@ -33,10 +39,11 @@ export class SessionsController {
 
   /**
    * Submits student answers for a specific session for evaluation.
+   *
    * @param req Authenticated request.
    * @param id The session QuestionSet ID.
    * @param body Session submission payload.
-   * @returns The final evaluation results and updated student profile.
+   * @returns The final evaluation results.
    */
   @Post(':id/submit')
   async submitSession(

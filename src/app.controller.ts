@@ -6,10 +6,16 @@ import { AppService } from './app.service';
  */
 @Controller()
 export class AppController {
+  /**
+   * Creates an app controller.
+   *
+   * @param appService The app service.
+   */
   constructor(private readonly appService: AppService) {}
 
   /**
    * Returns a basic greeting.
+   *
    * @returns Greeting string.
    */
   @Get()

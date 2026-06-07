@@ -14,6 +14,12 @@ import {
 export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
 
+  /**
+   * Creates a seed service.
+   *
+   * @param topicModel The topic model.
+   * @param categoryModel The category model.
+   */
   constructor(
     @InjectModel(Topic.name) private readonly topicModel: Model<TopicDocument>,
     @InjectModel(Category.name)

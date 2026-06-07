@@ -19,6 +19,14 @@ import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
  */
 @Injectable()
 export class SessionsService {
+  /**
+   * Creates a sessions service.
+   *
+   * @param aiService The AI service.
+   * @param questionModel The question model.
+   * @param questionSetModel The question set model.
+   * @param topicModel The topic model.
+   */
   constructor(
     private readonly aiService: AiService,
     @InjectModel(Question.name) private questionModel: Model<QuestionDocument>,
@@ -29,11 +37,12 @@ export class SessionsService {
 
   /**
    * Starts a new learning session for a specific topic and user.
-   * Generates questions using AI and updates the user's progress.
+   * Generates questions using AI.
+   *
    * @param topicId The ID of the topic to start.
    * @param userId The ID of the user starting the session.
    * @param provider Optional AI provider.
-   * @returns The created and populated QuestionSet object.
+   * @returns The created and populated question set object.
    * @throws NotFoundException if the topic does not exist.
    */
   async startSession(
@@ -70,14 +79,14 @@ export class SessionsService {
   }
 
   /**
-   * Submits student answers for a session, evaluates them using AI,
-   * updates the QuestionSet, and adjusts the student's overall level.
-   * @param id The ID of the QuestionSet (session).
+   * Submits student answers for a session and evaluates them using AI.
+   *
+   * @param id The ID of the question set session.
    * @param userId The ID of the user submitting the session.
-   * @param answers Array of question IDs and corresponding student answers.
+   * @param answers Question IDs and corresponding student answers.
    * @param provider Optional AI provider.
-   * @returns Evaluation results and updated StudentModel.
-   * @throws NotFoundException if QuestionSet or questions are not found.
+   * @returns Evaluation results.
+   * @throws NotFoundException if the question set or questions are not found.
    */
   async submitSession(
     id: string,
