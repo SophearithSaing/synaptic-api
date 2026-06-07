@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { TopicCategory } from './topic-category.schema';
+import { HydratedDocument, Types } from 'mongoose';
+import { Category } from '../../categories/schemas/category.schema';
 
-export type TopicDocument = Topic & Document;
+export type TopicDocument = HydratedDocument<Topic>;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'topics' })
 export class Topic {
   @Prop({ required: true, trim: true })
   title: string;
@@ -25,7 +25,7 @@ export class Topic {
   })
   tags: string[];
 
-  @Prop({ type: Types.ObjectId, ref: TopicCategory.name, required: true })
+  @Prop({ type: Types.ObjectId, ref: Category.name, required: true })
   category: Types.ObjectId;
 }
 

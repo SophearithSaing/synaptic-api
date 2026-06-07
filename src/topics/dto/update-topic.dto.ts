@@ -4,34 +4,38 @@ import {
   IsArray,
   IsMongoId,
   IsNotEmpty,
+  IsOptional,
   IsString,
 } from 'class-validator';
 
-export class CreateTopicDto {
+export class UpdateTopicDto {
   @IsString()
-  @IsNotEmpty()
-  title: string;
+  id: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  slug: string;
+  title?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  slug?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  icon: string;
+  description?: string;
 
+  @IsOptional()
+  @IsString()
+  icon?: string;
+
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(2)
   @IsString({ each: true })
-  @IsNotEmpty({ each: true })
-  tags: string[];
+  tags?: string[];
 
   @IsMongoId()
   @IsNotEmpty()
-  category: string;
+  category?: string;
 }

@@ -2,29 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Topic, TopicDocument } from './schemas/topic.schema';
-import {
-  TopicCategory,
-  TopicCategoryDocument,
-} from './schemas/topic-category.schema';
-import { CreateCategoryDto, CreateTopicDto } from './dto/create-topic.dto';
+import { CreateTopicDto } from './dto/create-topic.dto';
 
 @Injectable()
 export class TopicsService {
   constructor(
     @InjectModel(Topic.name) private topicModel: Model<TopicDocument>,
-    @InjectModel(TopicCategory.name)
-    private categoryModel: Model<TopicCategoryDocument>,
   ) {}
-
-  /**
-   * Creates a new topic category.
-   * @param dto The category details.
-   * @returns The created topic category.
-   */
-  async createCategory(dto: CreateCategoryDto): Promise<TopicCategoryDocument> {
-    const category = new this.categoryModel(dto);
-    return category.save();
-  }
 
   /**
    * Creates a new topic within a category.
@@ -34,14 +18,6 @@ export class TopicsService {
   async createTopic(dto: CreateTopicDto): Promise<TopicDocument> {
     const topic = new this.topicModel(dto);
     return topic.save();
-  }
-
-  /**
-   * Fetches all topic categories.
-   * @returns The topic categories sorted by title.
-   */
-  async getCategories(): Promise<TopicCategoryDocument[]> {
-    return this.categoryModel.find().sort({ title: 1 }).exec();
   }
 
   /**
@@ -66,9 +42,11 @@ export class TopicsService {
       .findById(id)
       .populate('category')
       .exec();
+
     if (!topic) {
       throw new NotFoundException('Topic not found');
     }
+
     return topic;
   }
 }
