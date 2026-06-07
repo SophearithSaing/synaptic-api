@@ -59,6 +59,11 @@ const allowedNpmSubcommands = new Set([
 
 const allowedNpxCommands = new Set(['prettier']);
 
+interface PermissionRequest {
+  title: string;
+  reason: string;
+}
+
 const confirmablePatterns: RegExp[] = [
   /(^|[;&|()\s])git\s+(clean|reset|checkout|restore|switch|merge|rebase|commit|push|pull|fetch|add|rm|mv|stash|apply)\b/i,
 ];
@@ -82,10 +87,22 @@ const destructivePatterns: RegExp[] = [
   /(^|[^<>])>{1,2}[^>]/,
 ];
 
+/**
+ * Removes wrapping quotes from a shell token.
+ *
+ * @param value The shell token to normalize.
+ * @returns The token without wrapping quotes.
+ */
 function stripQuotes(value: string): string {
   return value.replace(/^['"]|['"]$/g, '');
 }
 
+/**
+ * Splits a shell command into command segments.
+ *
+ * @param command The shell command to split.
+ * @returns The command segments.
+ */
 function splitSegments(command: string): string[] {
   return command
     .split(/&&|\|\||;|\|/g)
@@ -93,6 +110,12 @@ function splitSegments(command: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Gets the program and arguments from a shell segment.
+ *
+ * @param segment The shell segment to parse.
+ * @returns The parsed program and arguments.
+ */
 function getProgramAndArgs(segment: string): string[] {
   return segment
     .split(/\s+/g)
@@ -101,6 +124,12 @@ function getProgramAndArgs(segment: string): string[] {
     .filter((part) => !/^[A-Z_][A-Z0-9_]*=.*/.test(part));
 }
 
+/**
+ * Checks whether a parsed shell command is allowlisted.
+ *
+ * @param parts The parsed command parts.
+ * @returns Whether the command is allowlisted.
+ */
 function isAllowedProgram(parts: string[]): boolean {
   const [program, subcommand] = parts;
 
@@ -127,38 +156,64 @@ function isAllowedProgram(parts: string[]): boolean {
   return true;
 }
 
-function getConfirmReason(command: string): string | undefined {
+/**
+ * Gets a permission request for explicitly confirmable commands.
+ *
+ * @param command The shell command to inspect.
+ * @returns The permission request, or undefined when none is needed.
+ */
+function getConfirmRequest(command: string): PermissionRequest | undefined {
   const matchedPattern = confirmablePatterns.find((pattern) =>
     pattern.test(command),
   );
 
   if (matchedPattern) {
-    return `Git command requires permission: ${matchedPattern}`;
+    return {
+      title: 'Git command requires permission',
+      reason: `Git command requires permission: ${matchedPattern}`,
+    };
   }
 
   return undefined;
 }
 
-function getBlockReason(command: string): string | undefined {
+/**
+ * Gets a permission request for commands blocked by the bash policy.
+ *
+ * @param command The shell command to inspect.
+ * @returns The permission request, or undefined when the command is allowed.
+ */
+function getBlockedRequest(command: string): PermissionRequest | undefined {
   const matchedPattern = destructivePatterns.find((pattern) =>
     pattern.test(command),
   );
 
   if (matchedPattern) {
-    return `Blocked potentially destructive bash command: ${matchedPattern}`;
+    return {
+      title: 'Blocked bash command requires permission',
+      reason: `Blocked potentially destructive bash command: ${matchedPattern}`,
+    };
   }
 
   for (const segment of splitSegments(command)) {
     const parts = getProgramAndArgs(segment);
 
     if (!isAllowedProgram(parts)) {
-      return `Blocked non-allowlisted bash segment: ${segment}`;
+      return {
+        title: 'Blocked bash segment requires permission',
+        reason: `Blocked non-allowlisted bash segment: ${segment}`,
+      };
     }
   }
 
   return undefined;
 }
 
+/**
+ * Registers the bash permission extension.
+ *
+ * @param pi The pi extension API.
+ */
 export default function (pi: ExtensionAPI): void {
   let permissionDenied = false;
 
@@ -181,42 +236,32 @@ export default function (pi: ExtensionAPI): void {
       });
     }
 
-    const confirmReason = getConfirmReason(command);
+    const request = getConfirmRequest(command) ?? getBlockedRequest(command);
 
-    if (confirmReason) {
-      if (!ctx.hasUI) {
-        return Promise.resolve({
-          block: true,
-          reason: `${confirmReason}; no UI available`,
-        });
-      }
+    if (!request) return Promise.resolve(undefined);
 
-      const allowed = await ctx.ui.confirm(
-        'Git command requires permission',
-        `Allow this command?\n\n${command}`,
-      );
-
-      if (!allowed) {
-        permissionDenied = true;
-
-        return Promise.resolve({
-          block: true,
-          reason: 'Blocked by user. Treating denial as a hard stop.',
-        });
-      }
-
-      return Promise.resolve(undefined);
+    if (!ctx.hasUI) {
+      return Promise.resolve({
+        block: true,
+        reason: `${request.reason}; no UI available`,
+      });
     }
 
-    const reason = getBlockReason(command);
+    const allowed = await ctx.ui.confirm(
+      request.title,
+      `Reason:\n${request.reason}\n\nAllow this command?\n\n${command}`,
+    );
 
-    if (!reason) return Promise.resolve(undefined);
+    if (!allowed) {
+      permissionDenied = true;
 
-    if (ctx.hasUI) {
-      ctx.ui.notify(reason, 'warning');
+      return Promise.resolve({
+        block: true,
+        reason: 'Blocked by user. Treating denial as a hard stop.',
+      });
     }
 
-    return Promise.resolve({ block: true, reason });
+    return Promise.resolve(undefined);
   });
 
   pi.registerCommand('bash-permissions', {
