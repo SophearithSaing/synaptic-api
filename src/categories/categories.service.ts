@@ -7,6 +7,11 @@ import { CreateCategoryDto } from './dtos/create-category.dto';
 
 @Injectable()
 export class CategoriesService {
+  /**
+   * Creates a categories service.
+   *
+   * @param categoryModel The category model.
+   */
   constructor(
     @InjectModel(Category.name)
     private categoryModel: Model<CategoryDocument>,
@@ -14,22 +19,34 @@ export class CategoriesService {
 
   /**
    * Creates a new category.
+   *
    * @param dto The category details.
    * @returns The created category.
    */
   async createCategory(dto: CreateCategoryDto): Promise<CategoryResponseDto> {
     const category = new this.categoryModel(dto);
-    return category.save();
+    return CategoriesService.toResponse(await category.save());
   }
 
   /**
    * Fetches all topic categories.
+   *
    * @returns The categories sorted by title.
    */
   async getCategories(): Promise<CategoryResponseDto[]> {
-    return this.categoryModel.find().sort({ title: 1 }).exec();
+    const categories = await this.categoryModel
+      .find()
+      .sort({ title: 1 })
+      .exec();
+    return categories.map((category) => CategoriesService.toResponse(category));
   }
 
+  /**
+   * Fetches a category by its unique ID.
+   *
+   * @param id The category ID.
+   * @returns The requested category.
+   */
   async getCategoryById(id: string): Promise<CategoryResponseDto> {
     const category = await this.categoryModel.findById(id).lean();
 
@@ -37,10 +54,16 @@ export class CategoriesService {
       throw new NotFoundException('Category not found');
     }
 
-    return this.toResponse(category);
+    return CategoriesService.toResponse(category);
   }
 
-  private toResponse(category: CategoryDocument): CategoryResponseDto {
+  /**
+   * Converts a category document to an API response.
+   *
+   * @param category The category document.
+   * @returns The category response.
+   */
+  static toResponse(category: CategoryDocument): CategoryResponseDto {
     return {
       id: category._id.toString(),
       title: category.title,

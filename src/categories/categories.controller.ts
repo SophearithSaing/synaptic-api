@@ -9,15 +9,21 @@ import { CategoryResponseDto } from './dtos/category-response.dto';
 import { CreateCategoryDto } from './dtos/create-category.dto';
 
 /**
- * Controller for managing and categories.
+ * Controller for managing categories.
  */
 @Controller('categories')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CategoriesController {
+  /**
+   * Creates a categories controller.
+   *
+   * @param categoriesService The categories service.
+   */
   constructor(private categoriesService: CategoriesService) {}
 
   /**
    * Creates a new topic category.
+   *
    * @param body The category details.
    * @returns The created category.
    */
@@ -31,6 +37,7 @@ export class CategoriesController {
 
   /**
    * Fetches all topic categories.
+   *
    * @returns The available topic categories.
    */
   @Get('categories')
@@ -40,8 +47,9 @@ export class CategoriesController {
 
   /**
    * Fetches a category by its ID.
+   *
    * @param id The category ID.
-   * @returns The requested cateogory.
+   * @returns The requested category.
    */
   @Get(':id')
   async getCategoryById(
