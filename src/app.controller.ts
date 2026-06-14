@@ -10,6 +10,7 @@ export class AppController {
 
   /**
    * Returns a basic greeting.
+   *
    * @returns Greeting string.
    */
   @Get()

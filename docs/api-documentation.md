@@ -51,16 +51,19 @@ endpoint in the current API.
 
 ## Endpoint summary
 
-| Method | Path                      | Auth | Role       | Purpose                                    |
-| ------ | ------------------------- | ---- | ---------- | ------------------------------------------ |
-| `GET`  | `/`                       | No   | Any        | Basic health/welcome response.             |
-| `POST` | `/auth/register`          | No   | Any        | Create a user and student model.           |
-| `POST` | `/auth/login`             | No   | Any        | Return a JWT access token.                 |
-| `POST` | `/topics/category/create` | Yes  | Admin      | Create a topic category.                   |
-| `POST` | `/topics/create`          | Yes  | Admin      | Create a topic.                            |
-| `GET`  | `/topics/:id`             | Yes  | User/Admin | Fetch a topic by Mongo ID.                 |
-| `POST` | `/sessions/start`         | Yes  | User/Admin | Generate a 3-question session for a topic. |
-| `POST` | `/sessions/:id/submit`    | Yes  | User/Admin | Submit answers and update mastery.         |
+| Method | Path                          | Auth | Role       | Purpose                                    |
+| ------ | ----------------------------- | ---- | ---------- | ------------------------------------------ |
+| `GET`  | `/`                           | No   | Any        | Basic health/welcome response.             |
+| `POST` | `/auth/register`              | No   | Any        | Create a user.                             |
+| `POST` | `/auth/login`                 | No   | Any        | Return a JWT access token.                 |
+| `POST` | `/categories/category/create` | Yes  | Admin      | Create a topic category.                   |
+| `GET`  | `/categories/categories`      | Yes  | User/Admin | List all topic categories.                 |
+| `GET`  | `/categories/:id`             | Yes  | User/Admin | Fetch a category by Mongo ID.              |
+| `POST` | `/topics/create`              | Yes  | Admin      | Create a topic.                            |
+| `GET`  | `/topics`                     | Yes  | User/Admin | List all topics.                           |
+| `GET`  | `/topics/:id`                 | Yes  | User/Admin | Fetch a topic by Mongo ID.                 |
+| `POST` | `/sessions/start`             | Yes  | User/Admin | Generate a 3-question session for a topic. |
+| `POST` | `/sessions/:id/submit`        | Yes  | User/Admin | Submit answers for evaluation.             |
 
 ## Error behavior
 
@@ -98,7 +101,7 @@ The exact string comes from `AppService.getHello()`.
 
 ### `POST /auth/register`
 
-Registers a new user and creates a student model for that user.
+Registers a new user.
 
 #### Request body
 
@@ -176,7 +179,7 @@ protected endpoint.
 
 ---
 
-### `POST /topics/category/create`
+### `POST /categories/category/create`
 
 Creates a topic category.
 
@@ -202,18 +205,15 @@ Validation:
 
 #### Response `201 Created`
 
-Returns the MongoDB category document, including timestamps and `_id`.
+Returns the category response DTO.
 
 ```json
 {
+  "id": "<category-id>",
   "title": "Computer Science Concepts",
   "slug": "cs-concepts",
   "description": "Core theories and fundamental CS principles.",
-  "icon": "cs-concepts",
-  "_id": "<category-id>",
-  "createdAt": "2026-06-03T00:00:00.000Z",
-  "updatedAt": "2026-06-03T00:00:00.000Z",
-  "__v": 0
+  "icon": "cs-concepts"
 }
 ```
 
@@ -243,6 +243,7 @@ Creates a topic inside a category.
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
+  "tags": ["systems", "runtime"],
   "category": "<category-id>"
 }
 ```
@@ -250,23 +251,28 @@ Creates a topic inside a category.
 Validation:
 
 - `title`, `slug`, `description`, `icon`: required non-empty strings.
+- `tags`: required array of 1 or 2 non-empty strings.
 - `category`: required Mongo ObjectId string.
 
 #### Response `201 Created`
 
-Returns the MongoDB topic document.
+Returns the topic response DTO with its category populated.
 
 ```json
 {
+  "id": "<topic-id>",
   "title": "Memory Management",
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
-  "category": "<category-id>",
-  "_id": "<topic-id>",
-  "createdAt": "2026-06-03T00:00:00.000Z",
-  "updatedAt": "2026-06-03T00:00:00.000Z",
-  "__v": 0
+  "tags": ["systems", "runtime"],
+  "category": {
+    "id": "<category-id>",
+    "title": "Computer Science Concepts",
+    "slug": "cs-concepts",
+    "description": "Core theories and fundamental CS principles.",
+    "icon": "cs-concepts"
+  }
 }
 ```
 
@@ -276,6 +282,108 @@ Returns the MongoDB topic document.
 - `403 Forbidden` if authenticated but not admin.
 - Mongo duplicate errors can occur for duplicate `slug` values; these are not
   currently converted to a friendly API error.
+
+---
+
+### `GET /topics`
+
+Lists all topics sorted by title.
+
+#### Auth
+
+- Requires JWT.
+- Any authenticated role can call it.
+
+#### Response `200 OK`
+
+Each topic is returned as a response DTO with `category` populated.
+
+```json
+[
+  {
+    "id": "<topic-id>",
+    "title": "Memory Management",
+    "slug": "memory-management",
+    "description": "Understanding stack, heap, and garbage collection.",
+    "icon": "memory-management",
+    "tags": ["systems", "runtime"],
+    "category": {
+      "id": "<category-id>",
+      "title": "Computer Science Concepts",
+      "slug": "cs-concepts",
+      "description": "Core theories and fundamental CS principles.",
+      "icon": "cs-concepts"
+    }
+  }
+]
+```
+
+#### Important errors
+
+- `401 Unauthorized` if unauthenticated.
+
+---
+
+### `GET /categories/categories`
+
+Lists all topic categories sorted by title.
+
+#### Auth
+
+- Requires JWT.
+- Any authenticated role can call it.
+
+#### Response `200 OK`
+
+```json
+[
+  {
+    "id": "<category-id>",
+    "title": "Computer Science Concepts",
+    "slug": "cs-concepts",
+    "description": "Core theories and fundamental CS principles.",
+    "icon": "cs-concepts"
+  }
+]
+```
+
+#### Important errors
+
+- `401 Unauthorized` if unauthenticated.
+
+---
+
+### `GET /categories/:id`
+
+Fetches a category by Mongo ObjectId.
+
+#### Auth
+
+- Requires JWT.
+- Any authenticated role can call it.
+
+#### Path params
+
+- `id`: category Mongo ObjectId.
+
+#### Response `200 OK`
+
+```json
+{
+  "id": "<category-id>",
+  "title": "Computer Science Concepts",
+  "slug": "cs-concepts",
+  "description": "Core theories and fundamental CS principles.",
+  "icon": "cs-concepts"
+}
+```
+
+#### Important errors
+
+- `400 Bad Request` for invalid Mongo ID format.
+- `401 Unauthorized` if unauthenticated.
+- `404 Not Found` with message `Category not found` if the ID is valid but no
+  category exists.
 
 ---
 
@@ -294,28 +402,23 @@ Fetches a topic by Mongo ObjectId.
 
 #### Response `200 OK`
 
-The topic is returned with `category` populated.
+The topic is returned as a response DTO with `category` populated.
 
 ```json
 {
-  "_id": "<topic-id>",
+  "id": "<topic-id>",
   "title": "Memory Management",
   "slug": "memory-management",
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
+  "tags": ["systems", "runtime"],
   "category": {
-    "_id": "<category-id>",
+    "id": "<category-id>",
     "title": "Computer Science Concepts",
     "slug": "cs-concepts",
     "description": "Core theories and fundamental CS principles.",
-    "icon": "cs-concepts",
-    "createdAt": "2026-06-03T00:00:00.000Z",
-    "updatedAt": "2026-06-03T00:00:00.000Z",
-    "__v": 0
-  },
-  "createdAt": "2026-06-03T00:00:00.000Z",
-  "updatedAt": "2026-06-03T00:00:00.000Z",
-  "__v": 0
+    "icon": "cs-concepts"
+  }
 }
 ```
 
@@ -331,8 +434,8 @@ The topic is returned with `category` populated.
 ### `POST /sessions/start`
 
 Starts a learning session for the authenticated user on a topic. The server
-uses the student's current `overallLevel` as the difficulty and asks the AI
-provider to generate exactly three questions.
+currently uses difficulty `0` and asks the AI provider to generate exactly three
+questions.
 
 #### Auth
 
@@ -369,6 +472,7 @@ Returns the created `QuestionSet` with `topic` and `questions` populated.
     "slug": "memory-management",
     "description": "Understanding stack, heap, and garbage collection.",
     "icon": "memory-management",
+    "tags": ["systems", "runtime"],
     "category": "<category-id>",
     "createdAt": "2026-06-03T00:00:00.000Z",
     "updatedAt": "2026-06-03T00:00:00.000Z",
@@ -401,7 +505,7 @@ Returns the created `QuestionSet` with `topic` and `questions` populated.
 
 #### Question mix by difficulty
 
-The AI prompt chooses question type mix based on `overallLevel`:
+The AI prompt chooses question type mix based on session difficulty:
 
 - `< 40`: exactly 3 MCQs.
 - `40` to `69`: exactly 1 MCQ and 2 written questions.
@@ -411,8 +515,7 @@ The AI prompt chooses question type mix based on `overallLevel`:
 
 - Creates a `Question` document for each generated question.
 - Creates a `QuestionSet` document for the session.
-- Creates or updates `TopicProgress` for the current user and topic.
-- Creates a `StudentModel` if one does not exist.
+- Does not currently update persisted student progress.
 
 #### Important errors
 
@@ -427,8 +530,8 @@ The AI prompt chooses question type mix based on `overallLevel`:
 ### `POST /sessions/:id/submit`
 
 Submits answers for a previously generated question set. The server evaluates
-answers with the selected AI provider, stores per-question feedback, updates the
-question set summary, and updates student mastery.
+answers with the selected AI provider, stores per-question feedback, and updates
+the question set summary.
 
 #### Auth
 
@@ -485,35 +588,9 @@ If `provider` is omitted, the AI service defaults to `gemini`.
         "feedback": "Correct. The stack stores function call frames."
       }
     ]
-  },
-  "studentModel": {
-    "_id": "<student-model-id>",
-    "userId": "<user-id>",
-    "overallLevel": 4,
-    "topicMastery": {
-      "<topic-id>": 4
-    },
-    "createdAt": "2026-06-03T00:00:00.000Z",
-    "updatedAt": "2026-06-03T00:00:00.000Z",
-    "__v": 0
   }
 }
 ```
-
-#### Mastery update behavior
-
-After submission:
-
-- Topic mastery increment is `Math.floor(totalScore / 20)`.
-- Topic mastery is capped at `100`.
-- Overall level is the rounded average of all topic mastery values, minimum `1`.
-
-Examples:
-
-- `totalScore = 0..19` increments topic mastery by `0`.
-- `totalScore = 20..39` increments by `1`.
-- `totalScore = 80..99` increments by `4`.
-- `totalScore = 100` increments by `5`.
 
 #### Important errors
 
@@ -543,7 +620,7 @@ Examples:
 }
 ```
 
-### TopicCategory
+### Category
 
 ```ts
 {
@@ -566,7 +643,8 @@ Examples:
   slug: string;
   description: string;
   icon: string;
-  category: string | TopicCategory;
+  tags: string[];
+  category: string | Category;
   createdAt: string;
   updatedAt: string;
 }
@@ -610,53 +688,19 @@ Examples:
 }
 ```
 
-### StudentModel
-
-```ts
-{
-  _id: string;
-  userId: string;
-  overallLevel: number;
-  topicMastery: Record<string, number>; // key is topic ID
-  createdAt: string;
-  updatedAt: string;
-}
-```
-
-### TopicProgress
-
-There is currently no public endpoint returning this model, but sessions update
-it internally.
-
-```ts
-{
-  _id: string;
-  userId: string;
-  topic: string | Topic;
-  history: Array<string | QuestionSet>;
-  currentLevel: number;
-  status: 'in-progress' | 'completed';
-  createdAt: string;
-  updatedAt: string;
-}
-```
-
 ## Suggested client flow
 
 1. Register a user with `POST /auth/register` and store the returned
    `access_token`.
 2. Alternatively, login with `POST /auth/login` and store `access_token` for an
    existing account.
-3. Obtain a topic ID.
-   - Current limitation: there is no public list-categories or list-topics
-     endpoint. Topics are seeded automatically on app startup, but clients need
-     direct database knowledge, a hard-coded ID, or new list endpoints.
+3. Call `GET /topics` to obtain the available topics and select a topic ID.
 4. Start a session with `POST /sessions/start`.
 5. Render the returned `questions`.
    - For `mcq`, render `options` and submit the chosen option text/string.
    - For `written`, render a text input/textarea.
 6. Submit all answers with `POST /sessions/:id/submit`.
-7. Use the returned `evaluation` for feedback and `studentModel` for progress.
+7. Use the returned `evaluation` for feedback.
 
 ## Seeded content
 
@@ -671,24 +715,22 @@ Seeded categories:
 
 Seeded topics:
 
-- Memory Management
-- Concurrency
-- Computer Networking
-- Node.js
-- Go
-- Hyperledger Fabric
-- Containerization (Docker)
-- CI/CD Pipelines
-- Kubernetes
-
-A development `StudentModel` is also created for `userId = dev-user-123`, but
-JWT-protected endpoints use real user IDs from authenticated JWTs, not this dev
-ID.
+- Memory Management: `systems`, `runtime`
+- Concurrency: `systems`, `parallelism`
+- Computer Networking: `networking`, `protocols`
+- Distributed Systems: `distributed`, `networking`
+- Graph Theory: `algorithms`, `graphs`
+- Node.js: `backend`, `runtime`
+- Go: `systems`, `backend`
+- Rust Fundamentals: `systems`, `memory-safety`
+- Go Concurrency: `concurrency`, `backend`
+- Hyperledger Fabric: `blockchain`, `enterprise`
+- Containerization (Docker): `containers`, `devops`
+- CI/CD Pipelines: `automation`, `devops`
+- Kubernetes: `orchestration`, `containers`
 
 ## Integration gaps for another agent to consider
 
-- Add `GET /topics` to list topics, likely grouped or filterable by category.
-- Add `GET /topics/categories` to list seeded categories.
 - Add a student profile/progress endpoint for current user.
 - Add admin user role management or a documented seed admin path.
 - Consider tightening CORS origins per deployment environment.

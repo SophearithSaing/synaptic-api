@@ -1,38 +1,35 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Topic } from '../../topics/schemas/topic.schema';
-import { Question } from './question.schema';
 
 export type QuestionSetDocument = QuestionSet & Document;
 
 @Schema({ timestamps: true, collection: 'questionSets' })
 export class QuestionSet {
-  @Prop({ required: true, index: true })
-  userId: string;
-
   @Prop({ type: Types.ObjectId, ref: 'Topic', required: true })
-  topic: Topic | Types.ObjectId;
+  topic: Types.ObjectId;
 
-  @Prop({
-    type: [{ type: Types.ObjectId, ref: 'Question' }],
-    default: [],
-  })
-  questions: (Question | Types.ObjectId)[];
+  @Prop({ required: true })
+  setType: string;
+
+  @Prop({ required: true })
+  level: number;
+
+  @Prop({ type: [Object], required: true })
+  questions: Question[];
 
   @Prop({ required: true, default: 0 })
   score: number;
-
-  @Prop({ required: true, default: 1 })
-  difficulty: number;
-
-  @Prop({ type: [String], default: [] })
-  weakConcepts: string[];
-
-  @Prop({ type: [String], default: [] })
-  strongConcepts: string[];
-
-  @Prop()
-  feedback: string;
 }
 
 export const QuestionSetSchema = SchemaFactory.createForClass(QuestionSet);
+
+export interface Question {
+  id: string;
+  type: string;
+  prompt: string;
+  options: Array<{ id: string; text: string }>;
+  correctionOptionId: string;
+  targetConcepts: string[];
+  feedback: { correct: string; incorrect: string };
+  rubric: { keyPoints: string[]; misconceptions: string[] };
+}

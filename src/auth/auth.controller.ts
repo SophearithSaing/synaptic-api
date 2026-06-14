@@ -8,8 +8,9 @@ export class AuthController {
 
   /**
    * Handles user registration requests.
-   * @param {RegisterDto} authDto - Registration data.
-   * @returns {Promise<AuthResponse>} A JWT access token.
+   *
+   * @param authDto Registration data.
+   * @returns A JWT access token.
    */
   @Post('register')
   async register(@Body() authDto: RegisterDto): Promise<AuthResponse> {
@@ -22,8 +23,9 @@ export class AuthController {
 
   /**
    * Handles user login requests.
-   * @param {LoginDto} authDto - Login credentials.
-   * @returns {Promise<AuthResponse>} A JWT access token.
+   *
+   * @param authDto Login credentials.
+   * @returns A JWT access token.
    */
   @Post('login')
   async login(@Body() authDto: LoginDto): Promise<AuthResponse> {

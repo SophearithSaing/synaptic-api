@@ -43,6 +43,18 @@ export interface AiQuestionEvaluation {
 }
 
 /**
+ * Structured question returned by the generator model.
+ */
+export interface AiGeneratedQuestion {
+  type: 'mcq' | 'written';
+  text: string;
+  options: string[];
+  correctOption: string;
+  idealAnswerPoints: string[];
+  difficulty: number;
+}
+
+/**
  * Structured answer evaluation returned by the evaluator model.
  */
 export interface AiAnswerEvaluation {

@@ -8,6 +8,7 @@ import { Types } from 'mongoose';
 export class MongoIdPipe implements PipeTransform<string, string> {
   /**
    * Validates and returns a MongoDB ObjectId string.
+   *
    * @param value The route parameter value.
    * @returns The validated ObjectId string.
    */

@@ -8,7 +8,6 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './schemas/user.schema';
-import { StudentsService } from '../students/students.service';
 
 export interface AuthResponse {
   access_token: string;
@@ -18,16 +17,16 @@ export interface AuthResponse {
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private studentsService: StudentsService,
     private jwtService: JwtService,
   ) {}
 
   /**
-   * Registers a new user and creates their student profile.
-   * @param {string} email - User email address.
-   * @param {string} username - Public username.
-   * @param {string} pass - Plaintext password.
-   * @returns {Promise<AuthResponse>} A JWT access token.
+   * Registers a new user and creates their profile.
+   *
+   * @param email User email address.
+   * @param username Public username.
+   * @param pass Plaintext password.
+   * @returns A JWT access token.
    */
   async register(
     email: string,
@@ -43,7 +42,6 @@ export class AuthService {
     });
     try {
       const savedUser = await user.save();
-      await this.studentsService.create(savedUser.id);
       return this.createAuthResponse(savedUser);
     } catch (error: unknown) {
       if (
@@ -64,9 +62,10 @@ export class AuthService {
 
   /**
    * Authenticates a user and generates a JWT access token.
-   * @param {string} email - User email address.
-   * @param {string} pass - Plaintext password.
-   * @returns {Promise<AuthResponse>} A JWT access token.
+   *
+   * @param email User email address.
+   * @param pass Plaintext password.
+   * @returns A JWT access token.
    */
   async login(email: string, pass: string): Promise<AuthResponse> {
     const user = await this.userModel.findOne({ email });
@@ -78,8 +77,9 @@ export class AuthService {
 
   /**
    * Creates a JWT authentication response for a persisted user.
-   * @param {UserDocument} user - User document to encode in the token.
-   * @returns {AuthResponse} A JWT access token response.
+   *
+   * @param user User document to encode in the token.
+   * @returns A JWT access token response.
    */
   private createAuthResponse(user: UserDocument): AuthResponse {
     const payload = {

@@ -13,6 +13,7 @@ export class RolesGuard implements CanActivate {
 
   /**
    * Determines whether the authenticated user has an allowed role.
+   *
    * @param context Nest execution context.
    * @returns Whether the request can proceed.
    */

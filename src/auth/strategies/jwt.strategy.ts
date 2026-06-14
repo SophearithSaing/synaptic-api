@@ -28,8 +28,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   /**
    * Validates the JWT payload and returns the current user information.
-   * @param {JwtPayload} payload - The decoded JWT payload.
-   * @returns {Promise<AuthenticatedUser>} The user attached to the request.
+   *
+   * @param payload The decoded JWT payload.
+   * @returns The user attached to the request.
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     const user = await this.userModel.findById(payload.sub);

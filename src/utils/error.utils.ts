@@ -1,6 +1,7 @@
 /**
  * Converts an unknown error into a standard Error object.
- * @param error - The error to convert.
+ *
+ * @param error The error to convert.
  * @returns A standard Error instance.
  */
 export function toError(error: unknown): Error {
@@ -17,7 +18,8 @@ export function toError(error: unknown): Error {
 
 /**
  * Extracts the message from an unknown error.
- * @param error - The error to extract the message from.
+ *
+ * @param error The error to extract the message from.
  * @returns The error message string.
  */
 export function getErrorMessage(error: unknown): string {

@@ -4,7 +4,6 @@ import { AppModule } from './app.module';
 
 /**
  * Starts the NestJS API server.
- * @returns {Promise<void>} A promise that resolves when the server is listening.
  */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
