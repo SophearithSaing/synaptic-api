@@ -1,12 +1,6 @@
 import { SessionDocument } from '../schemas/session.schema';
 import { SessionOverallEvaluationDto } from './session-overall-evaluation.dto';
 
-type SessionResponseSource = SessionDocument & {
-  _id: { toString(): string };
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-
 export class SessionResponseDto {
   id: string;
   student: unknown;
@@ -26,7 +20,7 @@ export class SessionResponseDto {
    * @returns The session response DTO.
    */
   static from(session: SessionDocument): SessionResponseDto {
-    const source = session as SessionResponseSource;
+    const source = session;
 
     return {
       id: source._id.toString(),

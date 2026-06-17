@@ -27,6 +27,9 @@ export class Session {
 
   @Prop()
   finishAt: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const SessionSchema = SchemaFactory.createForClass(Session);

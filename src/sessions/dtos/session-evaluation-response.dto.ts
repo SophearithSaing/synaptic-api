@@ -1,11 +1,5 @@
 import { SessionEvaluationDocument } from '../schemas/session-evaluation.schemas';
 
-type SessionEvaluationResponseSource = SessionEvaluationDocument & {
-  _id: { toString(): string };
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-
 export class SessionEvaluationResponseDto {
   id: string;
   student: unknown;
@@ -31,7 +25,7 @@ export class SessionEvaluationResponseDto {
   static from(
     evaluation: SessionEvaluationDocument,
   ): SessionEvaluationResponseDto {
-    const source = evaluation as SessionEvaluationResponseSource;
+    const source = evaluation;
 
     return {
       id: source._id.toString(),

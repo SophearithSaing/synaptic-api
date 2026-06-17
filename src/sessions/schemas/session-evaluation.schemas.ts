@@ -40,6 +40,9 @@ export class SessionEvaluation {
 
   @Prop()
   attemptIds: string[];
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const SessionEvaluationSchema =
