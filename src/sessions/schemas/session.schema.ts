@@ -1,10 +1,11 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
 import { Topic } from '../../topics/schemas/topic.schema';
 
 export type SessionDocument = Session & Document;
 
+@Schema({ timestamps: true, collection: 'sessions' })
 export class Session {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   student: Types.ObjectId;
