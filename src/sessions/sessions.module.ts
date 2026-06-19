@@ -8,11 +8,13 @@ import {
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
 import { AiModule } from '../ai/ai.module';
+import { Session, SessionSchema } from './schemas/session.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: QuestionSet.name, schema: QuestionSetSchema },
+      { name: Session.name, schema: SessionSchema },
       { name: Topic.name, schema: TopicSchema },
     ]),
     AiModule,
