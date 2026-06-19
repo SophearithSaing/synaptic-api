@@ -22,11 +22,16 @@ export const QuestionSetSchema = SchemaFactory.createForClass(QuestionSet);
 
 export interface Question {
   id: string;
-  type: string;
+  type: QuestionType;
   prompt: string;
   options: Array<{ id: string; text: string }>;
   correctionOptionId: string;
   targetConcepts: string[];
   feedback: { correct: string; incorrect: string };
   rubric: { keyPoints: string[]; misconceptions: string[] };
+}
+
+export enum QuestionType {
+  MCQ = 'mcq',
+  Written = 'written',
 }
