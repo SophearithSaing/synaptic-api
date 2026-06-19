@@ -19,8 +19,8 @@ export class Session {
   @Prop()
   status: string;
 
-  @Prop()
-  overallEvaluation: overallEvaluation;
+  @Prop({ type: Object })
+  overallEvaluation: OverallEvaluation;
 
   @Prop()
   startAt: Date;
@@ -34,7 +34,7 @@ export class Session {
 
 export const SessionSchema = SchemaFactory.createForClass(Session);
 
-export interface overallEvaluation {
+export interface OverallEvaluation {
   summary: string;
   stengths: string[];
   weakness: string[];

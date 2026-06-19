@@ -32,13 +32,13 @@ export class SessionEvaluation {
   @Prop({ type: [String] })
   stength: string[];
 
-  @Prop({ types: [String] })
+  @Prop({ type: [String] })
   weakness: string[];
 
-  @Prop()
+  @Prop({ type: [String] })
   recommendation: string[];
 
-  @Prop()
+  @Prop({ type: [String] })
   attemptIds: string[];
 
   createdAt: Date;
