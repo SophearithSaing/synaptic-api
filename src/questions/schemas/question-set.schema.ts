@@ -16,9 +16,6 @@ export class QuestionSet {
 
   @Prop({ type: [Object], required: true })
   questions: Question[];
-
-  @Prop({ required: true, default: 0 })
-  score: number;
 }
 
 export const QuestionSetSchema = SchemaFactory.createForClass(QuestionSet);

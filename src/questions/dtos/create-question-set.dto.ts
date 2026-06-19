@@ -30,9 +30,4 @@ export class CreateQuestionSetDto {
   @ValidateNested({ each: true })
   @Type(() => QuestionDto)
   questions: QuestionDto[];
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  score?: number;
 }

@@ -33,9 +33,4 @@ export class UpdateQuestionSetDto {
   @Type(() => QuestionDto)
   @IsOptional()
   questions?: QuestionDto[];
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  score?: number;
 }
