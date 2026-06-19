@@ -1,3 +1,4 @@
+import { hasToObject } from '../../utils/object.utils';
 import { SessionEvaluationDocument } from '../schemas/session-evaluation.schemas';
 
 export class SessionEvaluationResponseDto {
@@ -66,12 +67,7 @@ export class SessionEvaluationResponseDto {
    * @returns The response reference value.
    */
   private static transformReference(reference: unknown): unknown {
-    if (
-      reference &&
-      typeof reference === 'object' &&
-      'toObject' in reference &&
-      typeof reference.toObject === 'function'
-    ) {
+    if (hasToObject(reference)) {
       return reference.toObject();
     }
 
