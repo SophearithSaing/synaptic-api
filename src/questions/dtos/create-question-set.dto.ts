@@ -5,7 +5,6 @@ import {
   IsMongoId,
   IsNotEmpty,
   IsNumber,
-  IsOptional,
   IsString,
   Min,
   ValidateNested,
