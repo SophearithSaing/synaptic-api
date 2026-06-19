@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
 import { Session } from './session.schema';
 import { Topic } from '../../topics/schemas/topic.schema';
 
-export type SessionEvaluationDocument = SessionEvaluation & Document;
+export type SessionEvaluationDocument = HydratedDocument<SessionEvaluation>;
 
 @Schema({ timestamps: true, collection: 'schemaEvaluations' })
 export class SessionEvaluation {
