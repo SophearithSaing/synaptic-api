@@ -13,7 +13,6 @@ export class QuestionSetResponseDto {
   setType: string;
   level: number;
   questions: QuestionDto[];
-  score: number;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -32,7 +31,6 @@ export class QuestionSetResponseDto {
       setType: source.setType,
       level: source.level,
       questions: source.questions,
-      score: source.score,
       createdAt: source.createdAt,
       updatedAt: source.updatedAt,
     };
