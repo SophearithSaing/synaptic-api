@@ -18,6 +18,15 @@ export class StartSessionDto {
 }
 
 /**
+ * Request body for continuing a learning session.
+ */
+export class ContinueSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+}
+
+/**
  * Student answer submitted for a generated question.
  */
 export class SessionAnswerDto {

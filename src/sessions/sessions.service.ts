@@ -1,8 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { QuestionSetResponseDto } from '../questions/dtos';
+import {
+  QuestionSet,
+  QuestionSetDocument,
+} from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
-import { SessionResponseDto } from './dtos';
 import { Session, SessionDocument } from './schemas/session.schema';
 
 @Injectable()
@@ -12,6 +16,8 @@ export class SessionsService {
     private readonly sessionModel: Model<SessionDocument>,
     @InjectModel(Topic.name)
     private readonly topicModel: Model<TopicDocument>,
+    @InjectModel(QuestionSet.name)
+    private readonly questionSetModel: Model<QuestionSetDocument>,
   ) {}
 
   /**
@@ -19,19 +25,27 @@ export class SessionsService {
    *
    * @param topicId The topic ID to start.
    * @param studentId The authenticated student ID.
-   * @returns The created session.
+   * @returns The level 0 question set for the selected topic.
    */
   async startSession(
     topicId: string,
     studentId: string,
-  ): Promise<SessionResponseDto> {
+  ): Promise<QuestionSetResponseDto> {
     const topic = await this.topicModel.findById(topicId).exec();
 
     if (!topic) {
       throw new NotFoundException('Topic not found');
     }
 
-    const session = await this.sessionModel.create({
+    const questionSet = await this.questionSetModel
+      .findOne({ topic: topic._id.toString(), level: 0 })
+      .exec();
+
+    if (!questionSet) {
+      throw new NotFoundException('Question set not found');
+    }
+
+    await this.sessionModel.create({
       student: Types.ObjectId.createFromHexString(studentId),
       topic: topic._id,
       currentLevel: 0,
@@ -39,6 +53,42 @@ export class SessionsService {
       startAt: new Date(),
     });
 
-    return SessionResponseDto.from(session);
+    return QuestionSetResponseDto.from(questionSet);
+  }
+
+  /**
+   * Continues a learning session for a user.
+   *
+   * @param sessionId The session ID to continue.
+   * @param studentId The authenticated student ID.
+   * @returns The question set for the session's current level.
+   */
+  async continueSession(
+    sessionId: string,
+    studentId: string,
+  ): Promise<QuestionSetResponseDto> {
+    const session = await this.sessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+      })
+      .exec();
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    const questionSet = await this.questionSetModel
+      .findOne({
+        topic: session.topic.toString(),
+        level: session.currentLevel,
+      })
+      .exec();
+
+    if (!questionSet) {
+      throw new NotFoundException('Question set not found');
+    }
+
+    return QuestionSetResponseDto.from(questionSet);
   }
 }
