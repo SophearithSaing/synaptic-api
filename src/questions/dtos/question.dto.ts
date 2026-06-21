@@ -2,10 +2,14 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { QuestionType } from '../schemas/question-set.schema';
 
 export class QuestionOptionDto {
   @IsString()
@@ -44,22 +48,23 @@ export class QuestionDto {
   @IsNotEmpty()
   id: string;
 
-  @IsString()
+  @IsEnum(QuestionType)
   @IsNotEmpty()
-  type: string;
+  type: QuestionType;
 
   @IsString()
   @IsNotEmpty()
   prompt: string;
 
+  @ValidateIf((obj: QuestionDto) => obj.type === QuestionType.MCQ)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => QuestionOptionDto)
   options: QuestionOptionDto[];
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  correctionOptionId: string;
+  correctOptionId: string;
 
   @IsArray()
   @ArrayNotEmpty()
@@ -72,5 +77,5 @@ export class QuestionDto {
 
   @ValidateNested()
   @Type(() => QuestionRubricDto)
-  rubric: QuestionRubricDto;
+  rubrics: QuestionRubricDto;
 }

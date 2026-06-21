@@ -2,14 +2,11 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
-  IsEnum,
   IsMongoId,
   IsNotEmpty,
-  IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { AiProvider } from '../../ai/types/ai.types';
 
 /**
  * Request body for starting a learning session.
@@ -18,10 +15,47 @@ export class StartSessionDto {
   @IsMongoId()
   @IsNotEmpty()
   topicId: string;
+}
 
-  @IsEnum(AiProvider)
-  @IsOptional()
-  provider?: AiProvider;
+/**
+ * Request body for continuing a learning session.
+ */
+export class ContinueSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+}
+
+/**
+ * Submitted answer for a question set question.
+ */
+export class SubmitAnswerItemDto {
+  @IsString()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  answer: string;
+}
+
+/**
+ * Request body for submitting answers for a question set.
+ */
+export class SubmitAnswerDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionSetId: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => SubmitAnswerItemDto)
+  answers: SubmitAnswerItemDto[];
 }
 
 /**
@@ -46,8 +80,4 @@ export class SubmitSessionDto {
   @ValidateNested({ each: true })
   @Type(() => SessionAnswerDto)
   answers: SessionAnswerDto[];
-
-  @IsEnum(AiProvider)
-  @IsOptional()
-  provider?: AiProvider;
 }

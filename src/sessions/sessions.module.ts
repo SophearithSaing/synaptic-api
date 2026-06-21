@@ -7,15 +7,22 @@ import {
   QuestionSetSchema,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
-import { AiModule } from '../ai/ai.module';
+import {
+  SessionEvaluation,
+  SessionEvaluationSchema,
+} from './schemas/session-evaluation.schemas';
+import { Session, SessionSchema } from './schemas/session.schema';
+import { SetAttempt, SetAttemptSchema } from './schemas/set-attempt.schemas';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: QuestionSet.name, schema: QuestionSetSchema },
+      { name: Session.name, schema: SessionSchema },
+      { name: SessionEvaluation.name, schema: SessionEvaluationSchema },
+      { name: SetAttempt.name, schema: SetAttemptSchema },
       { name: Topic.name, schema: TopicSchema },
     ]),
-    AiModule,
   ],
   controllers: [SessionsController],
   providers: [SessionsService],

@@ -16,20 +16,22 @@ export class QuestionSet {
 
   @Prop({ type: [Object], required: true })
   questions: Question[];
-
-  @Prop({ required: true, default: 0 })
-  score: number;
 }
 
 export const QuestionSetSchema = SchemaFactory.createForClass(QuestionSet);
 
 export interface Question {
   id: string;
-  type: string;
+  type: QuestionType;
   prompt: string;
   options: Array<{ id: string; text: string }>;
-  correctionOptionId: string;
+  correctOptionId: string;
   targetConcepts: string[];
   feedback: { correct: string; incorrect: string };
-  rubric: { keyPoints: string[]; misconceptions: string[] };
+  rubrics: { keyPoints: string[]; misconceptions: string[] };
+}
+
+export enum QuestionType {
+  MCQ = 'mcq',
+  Written = 'written',
 }
