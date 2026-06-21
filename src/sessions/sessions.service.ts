@@ -163,7 +163,7 @@ export class SessionsService {
       this.evaluateAnswer(submittedAnswer, questionSet.questions),
     );
     const setScore = calculateSetScore(answers);
-    const passed = setScore >= 0.7;
+    const passed = setScore >= 0.8;
     const strength = collectConceptsByScore(answers, 1);
     const weakness = collectConceptsByScore(answers, 0);
     const submittedAt = new Date();
