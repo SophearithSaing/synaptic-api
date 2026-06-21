@@ -64,7 +64,7 @@ export class QuestionDto {
 
   @IsOptional()
   @IsString()
-  correctionOptionId: string;
+  correctOptionId: string;
 
   @IsArray()
   @ArrayNotEmpty()
