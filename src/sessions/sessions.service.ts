@@ -14,7 +14,23 @@ import {
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import { SetAttemptResponseDto, SubmitAnswerItemDto } from './dtos';
-import { Session, SessionDocument } from './schemas/session.schema';
+import {
+  calculateAttemptScore,
+  calculateEvaluationScore,
+  calculateSetScore,
+  collectAttemptConcepts,
+  collectConceptsByScore,
+  createRecommendations,
+} from './sessions.util';
+import {
+  SessionEvaluation,
+  SessionEvaluationDocument,
+} from './schemas/session-evaluation.schemas';
+import {
+  OverallEvaluation,
+  Session,
+  SessionDocument,
+} from './schemas/session.schema';
 import {
   Answer,
   EvaluatedBy,
@@ -33,6 +49,8 @@ export class SessionsService {
     private readonly questionSetModel: Model<QuestionSetDocument>,
     @InjectModel(SetAttempt.name)
     private readonly setAttemptModel: Model<SetAttemptDocument>,
+    @InjectModel(SessionEvaluation.name)
+    private readonly sessionEvaluationModel: Model<SessionEvaluationDocument>,
   ) {}
 
   /**
@@ -144,10 +162,10 @@ export class SessionsService {
     const answers = submittedAnswers.map((submittedAnswer) =>
       this.evaluateAnswer(submittedAnswer, questionSet.questions),
     );
-    const setScore = this.calculateSetScore(answers);
+    const setScore = calculateSetScore(answers);
     const passed = setScore >= 0.7;
-    const strength = this.collectConceptsByScore(answers, 1);
-    const weakness = this.collectConceptsByScore(answers, 0);
+    const strength = collectConceptsByScore(answers, 1);
+    const weakness = collectConceptsByScore(answers, 0);
     const submittedAt = new Date();
     const attempt = await this.setAttemptModel.create({
       user: Types.ObjectId.createFromHexString(studentId),
@@ -168,6 +186,10 @@ export class SessionsService {
       await this.sessionModel
         .updateOne({ _id: session._id }, { $inc: { currentLevel: 1 } })
         .exec();
+
+      if (session.currentLevel > 0 && session.currentLevel % 10 === 0) {
+        await this.createSessionEvaluation(session, session.currentLevel);
+      }
     }
 
     return SetAttemptResponseDto.from(attempt);
@@ -242,31 +264,121 @@ export class SessionsService {
   }
 
   /**
-   * Calculates the average set score from evaluated answers.
+   * Creates a session evaluation for a completed level range.
    *
-   * @param answers The evaluated answers.
-   * @returns The average set score.
+   * @param session The session to evaluate.
+   * @param toLevel The last level in the evaluated range.
    */
-  private calculateSetScore(answers: Answer[]): number {
-    const totalScore = answers.reduce((sum, answer) => sum + answer.score, 0);
+  private async createSessionEvaluation(
+    session: SessionDocument,
+    toLevel: number,
+  ): Promise<void> {
+    const fromLevel = toLevel === 10 ? 0 : toLevel - 9;
+    const attempts = await this.setAttemptModel
+      .find({
+        session: session._id,
+        level: { $gte: fromLevel, $lte: toLevel },
+      })
+      .exec();
+    const overallScore = calculateAttemptScore(attempts);
+    const stength = collectAttemptConcepts(attempts, 'strength');
+    const weakness = collectAttemptConcepts(attempts, 'weakness');
+    const recommendation = createRecommendations(weakness);
+    const summary = this.createEvaluationSummary(
+      fromLevel,
+      toLevel,
+      overallScore,
+      weakness,
+    );
 
-    return totalScore / answers.length;
+    await this.sessionEvaluationModel.create({
+      student: session.student,
+      session: session._id,
+      topic: session.topic,
+      fromLevel,
+      toLevel,
+      overallScore,
+      summary,
+      stength,
+      weakness,
+      recommendation,
+      attemptIds: attempts.map((attempt) => attempt._id.toString()),
+    });
+
+    await this.updateOverallEvaluation(session);
   }
 
   /**
-   * Collects unique target concepts matching a score.
+   * Updates the overall evaluation for a session.
    *
-   * @param answers The evaluated answers.
-   * @param score The answer score to collect concepts for.
-   * @returns The matching unique target concepts.
+   * @param session The session to update.
    */
-  private collectConceptsByScore(answers: Answer[], score: number): string[] {
-    return [
-      ...new Set(
-        answers
-          .filter((answer) => answer.score === score)
-          .flatMap((answer) => answer.targetConcepts),
-      ),
-    ];
+  private async updateOverallEvaluation(
+    session: SessionDocument,
+  ): Promise<void> {
+    const evaluations = await this.sessionEvaluationModel
+      .find({ session: session._id })
+      .exec();
+    const overallEvaluation: OverallEvaluation = {
+      summary: this.createOverallSummary(evaluations),
+      stengths: [
+        ...new Set(evaluations.flatMap((evaluation) => evaluation.stength)),
+      ],
+      weakness: [
+        ...new Set(evaluations.flatMap((evaluation) => evaluation.weakness)),
+      ],
+      recommendations: [
+        ...new Set(
+          evaluations.flatMap((evaluation) => evaluation.recommendation),
+        ),
+      ],
+    };
+
+    await this.sessionModel
+      .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
+      .exec();
+  }
+
+  /**
+   * Creates a summary for a level range evaluation.
+   *
+   * @param fromLevel The first evaluated level.
+   * @param toLevel The last evaluated level.
+   * @param overallScore The average score for the range.
+   * @param weakness The weak concepts in the range.
+   * @returns The generated summary.
+   */
+  private createEvaluationSummary(
+    fromLevel: number,
+    toLevel: number,
+    overallScore: number,
+    weakness: string[],
+  ): string {
+    if (weakness.length === 0) {
+      return `Completed levels ${fromLevel}-${toLevel} with ${overallScore} score.`;
+    }
+
+    return `Completed levels ${fromLevel}-${toLevel} with ${overallScore} score. Review ${weakness.join(', ')}.`;
+  }
+
+  /**
+   * Creates the overall session summary from evaluations.
+   *
+   * @param evaluations The session evaluations.
+   * @returns The generated overall summary.
+   */
+  private createOverallSummary(
+    evaluations: SessionEvaluationDocument[],
+  ): string {
+    if (evaluations.length === 0) {
+      return '';
+    }
+
+    const latestLevel = Math.max(
+      ...evaluations.map((evaluation) => evaluation.toLevel),
+    );
+    const score = calculateEvaluationScore(evaluations);
+
+    return `Completed through level ${latestLevel} with ${score} average score.`;
   }
 }
