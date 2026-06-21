@@ -4,9 +4,9 @@ import type { RequestWithUser } from '../auth/types/request-with-user.type';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueSessionDto,
-  SetAttemptResponseDto,
   StartSessionDto,
   SubmitAnswerDto,
+  SubmitAnswerResponseDto,
 } from './dtos';
 import { SessionsService } from './sessions.service';
 
@@ -53,13 +53,13 @@ export class SessionsController {
    *
    * @param request The authenticated request.
    * @param body The submitted answers request.
-   * @returns The created set attempt.
+   * @returns The created set attempt and next question set when available.
    */
   @Post('submit-answer')
   async submitAnswer(
     @Req() request: RequestWithUser,
     @Body() body: SubmitAnswerDto,
-  ): Promise<SetAttemptResponseDto> {
+  ): Promise<SubmitAnswerResponseDto> {
     return this.sessionsService.submitAnswer(
       request.user.userId,
       body.sessionId,

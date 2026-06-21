@@ -13,7 +13,11 @@ import {
   QuestionType,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
-import { SetAttemptResponseDto, SubmitAnswerItemDto } from './dtos';
+import {
+  SetAttemptResponseDto,
+  SubmitAnswerItemDto,
+  SubmitAnswerResponseDto,
+} from './dtos';
 import {
   calculateAttemptScore,
   calculateEvaluationScore,
@@ -132,14 +136,14 @@ export class SessionsService {
    * @param sessionId The session ID receiving submitted answers.
    * @param questionSetId The question set ID being submitted.
    * @param submittedAnswers The submitted answers.
-   * @returns The created set attempt.
+   * @returns The created set attempt and next question set when available.
    */
   async submitAnswer(
     studentId: string,
     sessionId: string,
     questionSetId: string,
     submittedAnswers: SubmitAnswerItemDto[],
-  ): Promise<SetAttemptResponseDto> {
+  ): Promise<SubmitAnswerResponseDto> {
     const session = await this.sessionModel
       .findOne({
         _id: Types.ObjectId.createFromHexString(sessionId),
@@ -167,6 +171,7 @@ export class SessionsService {
     const strength = collectConceptsByScore(answers, 1);
     const weakness = collectConceptsByScore(answers, 0);
     const submittedAt = new Date();
+    let nextQuestionSet: QuestionSetResponseDto | null = null;
     const attempt = await this.setAttemptModel.create({
       user: Types.ObjectId.createFromHexString(studentId),
       session: session._id,
@@ -192,7 +197,42 @@ export class SessionsService {
       }
     }
 
-    return SetAttemptResponseDto.from(attempt);
+    if (passed) {
+      nextQuestionSet = await this.getNextQuestionSet(
+        session,
+        questionSet.level,
+      );
+    }
+
+    return {
+      attempt: SetAttemptResponseDto.from(attempt),
+      nextQuestionSet,
+    };
+  }
+
+  /**
+   * Gets the next question set after a completed level.
+   *
+   * @param session The current learning session.
+   * @param completedLevel The completed level.
+   * @returns The next question set response, or null when none exists.
+   */
+  private async getNextQuestionSet(
+    session: SessionDocument,
+    completedLevel: number,
+  ): Promise<QuestionSetResponseDto | null> {
+    const nextQuestionSet = await this.questionSetModel
+      .findOne({
+        topic: session.topic.toString(),
+        level: completedLevel + 1,
+      })
+      .exec();
+
+    if (!nextQuestionSet) {
+      return null;
+    }
+
+    return QuestionSetResponseDto.from(nextQuestionSet);
   }
 
   /**
