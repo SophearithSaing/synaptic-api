@@ -7,7 +7,6 @@ import {
   QuestionSetSchema,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
-import { AiModule } from '../ai/ai.module';
 import { Session, SessionSchema } from './schemas/session.schema';
 
 @Module({
@@ -17,7 +16,6 @@ import { Session, SessionSchema } from './schemas/session.schema';
       { name: Session.name, schema: SessionSchema },
       { name: Topic.name, schema: TopicSchema },
     ]),
-    AiModule,
   ],
   controllers: [SessionsController],
   providers: [SessionsService],
