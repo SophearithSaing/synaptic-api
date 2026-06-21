@@ -73,7 +73,7 @@ export class SessionsService {
     private readonly sessionEvaluationModel: Model<SessionEvaluationDocument>,
     private readonly configService: ConfigService,
   ) {
-    const apiKey = this.configService.get<string>('AI_API_KEY');
+    const apiKey = this.configService.get<string>('TOGETHER_API_KEY');
 
     this.togetherClient = apiKey ? new Together({ apiKey }) : null;
     this.evaluationModel =
