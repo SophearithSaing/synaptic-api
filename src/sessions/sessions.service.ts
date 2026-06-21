@@ -2,9 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import Together from 'together-ai';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   Question,
@@ -19,12 +22,23 @@ import {
   SubmitAnswerResponseDto,
 } from './dtos';
 import {
+  WRITTEN_EVALUATION_SYSTEM_PROMPT,
+  writtenAnswerEvaluationResponseFormat,
+  writtenAnswerEvaluationsSchema,
+} from './ai/sessions-ai.constant';
+import { EvaluationModel } from './ai/sessions-ai.enum';
+import {
+  SubmittedWrittenAnswer,
+  WrittenAnswerEvaluation,
+} from './ai/sessions-ai.types';
+import {
   calculateAttemptScore,
   calculateEvaluationScore,
   calculateSetScore,
   collectAttemptConcepts,
   collectConceptsByScore,
   createRecommendations,
+  roundScore,
 } from './sessions.util';
 import {
   SessionEvaluation,
@@ -55,7 +69,17 @@ export class SessionsService {
     private readonly setAttemptModel: Model<SetAttemptDocument>,
     @InjectModel(SessionEvaluation.name)
     private readonly sessionEvaluationModel: Model<SessionEvaluationDocument>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    const apiKey = this.configService.get<string>('AI_API_KEY');
+
+    this.togetherClient = apiKey ? new Together({ apiKey }) : null;
+    this.evaluationModel =
+      this.configService.get<string>('AI_MODEL') ?? EvaluationModel.GptOss120B;
+  }
+
+  private readonly togetherClient: Together | null;
+  private readonly evaluationModel: string;
 
   /**
    * Starts a learning session for a user on a topic.
@@ -163,8 +187,9 @@ export class SessionsService {
       throw new NotFoundException('Question set not found');
     }
 
-    const answers = submittedAnswers.map((submittedAnswer) =>
-      this.evaluateAnswer(submittedAnswer, questionSet.questions),
+    const answers = await this.evaluateAnswers(
+      submittedAnswers,
+      questionSet.questions,
     );
     const setScore = calculateSetScore(answers);
     const passed = setScore >= 0.8;
@@ -236,41 +261,198 @@ export class SessionsService {
   }
 
   /**
-   * Evaluates a submitted answer against matching question data.
+   * Evaluates submitted answers against matching question data.
    *
-   * @param submittedAnswer The submitted answer.
+   * @param submittedAnswers The submitted answers.
    * @param questions The question set questions.
-   * @returns The evaluated answer payload.
+   * @returns The evaluated answer payloads.
    */
-  private evaluateAnswer(
-    submittedAnswer: SubmitAnswerItemDto,
+  private async evaluateAnswers(
+    submittedAnswers: SubmitAnswerItemDto[],
     questions: Question[],
-  ): Answer {
-    const question = questions.find(
-      (item) => item.id === submittedAnswer.questionId,
-    );
+  ): Promise<Answer[]> {
+    const writtenAnswers: SubmittedWrittenAnswer[] = [];
+    const answers = submittedAnswers.map((submittedAnswer) => {
+      const question = this.findQuestion(questions, submittedAnswer.questionId);
+
+      if (question.type === QuestionType.MCQ) {
+        return this.evaluateMcqAnswer(submittedAnswer, question);
+      }
+
+      writtenAnswers.push({ submittedAnswer, question });
+      return null;
+    });
+
+    if (writtenAnswers.length === 0) {
+      return answers.filter((answer): answer is Answer => answer !== null);
+    }
+
+    const evaluations = await this.getWrittenAnswerEvaluations(writtenAnswers);
+
+    let writtenAnswerIndex = 0;
+
+    return answers.map((answer) => {
+      if (answer) {
+        return answer;
+      }
+
+      const writtenAnswer = writtenAnswers[writtenAnswerIndex];
+      writtenAnswerIndex += 1;
+
+      return this.createWrittenAnswer(writtenAnswer, evaluations);
+    });
+  }
+
+  /**
+   * Finds a question by ID.
+   *
+   * @param questions The question set questions.
+   * @param questionId The question ID to find.
+   * @returns The matching question.
+   */
+  private findQuestion(questions: Question[], questionId: string): Question {
+    const question = questions.find((item) => item.id === questionId);
 
     if (!question) {
       throw new BadRequestException('Question not found in question set');
     }
 
-    if (question.type === QuestionType.MCQ) {
-      return this.evaluateMcqAnswer(submittedAnswer, question);
+    return question;
+  }
+
+  /**
+   * Creates an evaluated written answer from an AI evaluation.
+   *
+   * @param writtenAnswer The submitted written answer and question.
+   * @param evaluations The AI evaluations.
+   * @returns The evaluated written answer payload.
+   */
+  private createWrittenAnswer(
+    writtenAnswer: SubmittedWrittenAnswer,
+    evaluations: WrittenAnswerEvaluation[],
+  ): Answer {
+    const evaluation = evaluations.find(
+      (item) => item.questionId === writtenAnswer.submittedAnswer.questionId,
+    );
+
+    if (!evaluation) {
+      throw new ServiceUnavailableException('AI response was incomplete');
     }
 
     return {
-      id: `ans-${submittedAnswer.questionId}`,
-      questionId: submittedAnswer.questionId,
-      questionType: question.type,
-      answer: submittedAnswer.answer,
-      correctAnswer: question.correctOptionId ?? '',
-      score: 0,
-      feedback: '',
-      targetConcepts: question.targetConcepts,
-      strength: [],
-      weakness: [],
+      id: `ans-${writtenAnswer.submittedAnswer.questionId}`,
+      questionId: writtenAnswer.submittedAnswer.questionId,
+      questionType: writtenAnswer.question.type,
+      answer: writtenAnswer.submittedAnswer.answer,
+      correctAnswer: writtenAnswer.question.rubric.keyPoints.join('; '),
+      score: roundScore(evaluation.score),
+      feedback: evaluation.feedback,
+      targetConcepts: writtenAnswer.question.targetConcepts,
+      strength: evaluation.strength,
+      weakness: evaluation.weakness,
       evaluatedBy: EvaluatedBy.AI,
     };
+  }
+
+  /**
+   * Gets written answer evaluations from AI.
+   *
+   * @param writtenAnswers The submitted written answers and questions.
+   * @returns The written answer evaluations.
+   */
+  private async getWrittenAnswerEvaluations(
+    writtenAnswers: SubmittedWrittenAnswer[],
+  ): Promise<WrittenAnswerEvaluation[]> {
+    if (!this.togetherClient) {
+      throw new ServiceUnavailableException('AI is not configured');
+    }
+
+    const completion = await this.togetherClient.chat.completions.create({
+      model: this.evaluationModel,
+      response_format: writtenAnswerEvaluationResponseFormat,
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: WRITTEN_EVALUATION_SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: this.createWrittenEvaluationUserPrompt(writtenAnswers),
+        },
+      ],
+    });
+    const content = completion.choices[0]?.message?.content;
+    const text = this.extractCompletionText(content);
+
+    return this.parseWrittenAnswerEvaluations(text);
+  }
+
+  /**
+   * Creates the user prompt for written answer evaluation.
+   *
+   * @param writtenAnswers The submitted written answers and questions.
+   * @returns The user prompt.
+   */
+  private createWrittenEvaluationUserPrompt(
+    writtenAnswers: SubmittedWrittenAnswer[],
+  ): string {
+    return JSON.stringify({
+      answers: writtenAnswers.map(({ submittedAnswer, question }) => ({
+        questionId: submittedAnswer.questionId,
+        prompt: question.prompt,
+        targetConcepts: question.targetConcepts,
+        keyPoints: question.rubric.keyPoints,
+        misconceptions: question.rubric.misconceptions,
+        studentAnswer: submittedAnswer.answer,
+      })),
+    });
+  }
+
+  /**
+   * Extracts completion text from an AI message content value.
+   *
+   * @param content The completion message content.
+   * @returns The extracted completion text.
+   */
+  private extractCompletionText(content: unknown): string {
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    throw new ServiceUnavailableException('AI response was empty');
+  }
+
+  /**
+   * Parses written answer evaluations from completion text.
+   *
+   * @param text The completion text to parse.
+   * @returns The parsed written answer evaluations.
+   */
+  private parseWrittenAnswerEvaluations(
+    text: string,
+  ): WrittenAnswerEvaluation[] {
+    const normalizedText = text
+      .trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+    let json: unknown;
+
+    try {
+      json = JSON.parse(normalizedText);
+    } catch {
+      throw new ServiceUnavailableException('AI response was invalid');
+    }
+
+    const parsed = writtenAnswerEvaluationsSchema.safeParse(json);
+
+    if (!parsed.success) {
+      throw new ServiceUnavailableException('AI response was invalid');
+    }
+
+    return parsed.data.evaluations;
   }
 
   /**

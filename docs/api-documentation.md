@@ -1,40 +1,18 @@
 # Synaptic API Documentation
 
-This document describes the currently implemented HTTP API in `synaptic-api`.
-It is intended as a handoff document for another coding agent integrating with
-or extending the backend.
+This document describes the currently implemented HTTP API in `synaptic-api` for
+frontend integration.
 
 ## Runtime basics
 
-- Framework: NestJS.
 - Default base URL: `http://localhost:3000` unless `PORT` is set.
-- Global validation is enabled in `src/main.ts` with:
-  - `whitelist: true` unknown DTO fields are stripped.
-  - `forbidNonWhitelisted: true` unknown DTO fields also cause `400` errors.
-  - `transform: true` DTO transformation is enabled.
-- Authentication uses JWT bearer tokens from the `Authorization` header.
-- CORS is enabled in `src/main.ts` for `CLIENT_URL`, defaulting to
-  `http://localhost:4200` for local Angular development.
+- Protected routes require `Authorization: Bearer <access_token>`.
+- Validation strips and rejects unknown DTO fields.
+- CORS allows `CLIENT_URL`, defaulting to `http://localhost:4200`.
 
 ## Authentication
 
-Protected endpoints require:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-JWT payloads are generated with:
-
-```json
-{
-  "email": "user@example.com",
-  "username": "student123",
-  "sub": "<mongo-user-id>"
-}
-```
-
-At request time, the JWT strategy loads the user from MongoDB and attaches:
+JWT-protected requests attach this user shape server-side:
 
 ```ts
 {
@@ -45,29 +23,31 @@ At request time, the JWT strategy loads the user from MongoDB and attaches:
 }
 ```
 
-Admin-only routes additionally require the stored user role to be `admin`.
-New registered users default to role `user`; there is no public role-management
-endpoint in the current API.
+Admin routes require `role: 'admin'`.
 
 ## Endpoint summary
 
-| Method | Path                          | Auth | Role       | Purpose                                    |
-| ------ | ----------------------------- | ---- | ---------- | ------------------------------------------ |
-| `GET`  | `/`                           | No   | Any        | Basic health/welcome response.             |
-| `POST` | `/auth/register`              | No   | Any        | Create a user.                             |
-| `POST` | `/auth/login`                 | No   | Any        | Return a JWT access token.                 |
-| `POST` | `/categories/category/create` | Yes  | Admin      | Create a topic category.                   |
-| `GET`  | `/categories/categories`      | Yes  | User/Admin | List all topic categories.                 |
-| `GET`  | `/categories/:id`             | Yes  | User/Admin | Fetch a category by Mongo ID.              |
-| `POST` | `/topics/create`              | Yes  | Admin      | Create a topic.                            |
-| `GET`  | `/topics`                     | Yes  | User/Admin | List all topics.                           |
-| `GET`  | `/topics/:id`                 | Yes  | User/Admin | Fetch a topic by Mongo ID.                 |
-| `POST` | `/sessions/start`             | Yes  | User/Admin | Generate a 3-question session for a topic. |
-| `POST` | `/sessions/:id/submit`        | Yes  | User/Admin | Submit answers for evaluation.             |
+| Method | Path                         | Auth | Role       | Purpose |
+| ------ | ---------------------------- | ---- | ---------- | ------- |
+| `GET` | `/` | No | Any | Health/welcome response. |
+| `POST` | `/auth/register` | No | Any | Register and return JWT. |
+| `POST` | `/auth/login` | No | Any | Login and return JWT. |
+| `POST` | `/categories/category/create` | Yes | Admin | Create category. |
+| `GET` | `/categories/categories` | Yes | User/Admin | List categories. |
+| `GET` | `/categories/:id` | Yes | User/Admin | Get category by ID. |
+| `POST` | `/topics/create` | Yes | Admin | Create topic. |
+| `GET` | `/topics` | Yes | User/Admin | List topics. |
+| `GET` | `/topics/:id` | Yes | User/Admin | Get topic by ID. |
+| `POST` | `/questions/create` | Yes | Admin | Create question set. |
+| `POST` | `/questions/create-many` | Yes | Admin | Create question sets. |
+| `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
+| `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
+| `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
+| `POST` | `/sessions/start` | Yes | User/Admin | Start session and return level 0 question set. |
+| `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
+| `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
 
-## Error behavior
-
-Common NestJS error shapes look like:
+## Common errors
 
 ```json
 {
@@ -77,33 +57,19 @@ Common NestJS error shapes look like:
 }
 ```
 
-Validation failures return `400 Bad Request`. Invalid or missing JWTs return
-`401 Unauthorized`. Authenticated non-admin users calling admin routes receive
-`403 Forbidden`.
-
-Mongo ID route parameters use `MongoIdPipe`; invalid IDs return `400`.
-
-## Endpoints
-
-### `GET /`
-
-Basic root endpoint implemented by `AppController`.
-
-#### Response
-
-```text
-Hello World!
-```
-
-The exact string comes from `AppService.getHello()`.
+- `400 Bad Request`: validation failure or invalid Mongo ID.
+- `401 Unauthorized`: missing/invalid JWT.
+- `403 Forbidden`: non-admin calling admin route.
+- `404 Not Found`: referenced resource does not exist.
+- `503 Service Unavailable`: AI evaluation unavailable or invalid AI response.
 
 ---
 
+## Auth endpoints
+
 ### `POST /auth/register`
 
-Registers a new user.
-
-#### Request body
+Request:
 
 ```json
 {
@@ -113,13 +79,7 @@ Registers a new user.
 }
 ```
 
-Validation:
-
-- `username`: required string, minimum length 3.
-- `email`: valid email.
-- `password`: required, minimum length 8.
-
-#### Response `201 Created`
+Response `201`:
 
 ```json
 {
@@ -127,26 +87,20 @@ Validation:
 }
 ```
 
-#### Important errors
+Validation:
 
-- `409 Conflict` with message `Email already exists` when the email is already
-  registered.
-- `409 Conflict` with message `Username already exists` when the username is
-  already registered.
-- `400 Bad Request` for invalid username, email, or password.
+- `username`: string, min length 3.
+- `email`: valid email.
+- `password`: string, min length 8.
 
-#### Usage notes
+Important errors:
 
-Registration returns an access token, so clients can immediately authenticate
-subsequent protected API requests without calling `/auth/login`.
-
----
+- `409 Email already exists`
+- `409 Username already exists`
 
 ### `POST /auth/login`
 
-Authenticates a user and returns a JWT access token.
-
-#### Request body
+Request:
 
 ```json
 {
@@ -155,12 +109,7 @@ Authenticates a user and returns a JWT access token.
 }
 ```
 
-Validation:
-
-- `email`: valid email.
-- `password`: required, minimum length 8.
-
-#### Response `201 Created`
+Response `201`:
 
 ```json
 {
@@ -168,27 +117,19 @@ Validation:
 }
 ```
 
-#### Important errors
+Important errors:
 
-- `401 Unauthorized` for unknown email or invalid password.
-
-#### Usage notes
-
-Store `access_token` client-side and send it as a bearer token to every
-protected endpoint.
+- `401 Unauthorized` for invalid credentials.
 
 ---
 
+## Category endpoints
+
 ### `POST /categories/category/create`
 
-Creates a topic category.
+Admin only.
 
-#### Auth
-
-- Requires JWT.
-- Requires user role `admin`.
-
-#### Request body
+Request:
 
 ```json
 {
@@ -199,13 +140,7 @@ Creates a topic category.
 }
 ```
 
-Validation:
-
-- All fields are required non-empty strings.
-
-#### Response `201 Created`
-
-Returns the category response DTO.
+Response `201`:
 
 ```json
 {
@@ -217,25 +152,35 @@ Returns the category response DTO.
 }
 ```
 
-#### Important errors
+### `GET /categories/categories`
 
-- `401 Unauthorized` if unauthenticated.
-- `403 Forbidden` if authenticated but not admin.
-- Mongo duplicate errors can occur for duplicate `slug` values; these are not
-  currently converted to a friendly API error.
+Response `200`:
+
+```json
+[
+  {
+    "id": "<category-id>",
+    "title": "Computer Science Concepts",
+    "slug": "cs-concepts",
+    "description": "Core theories and fundamental CS principles.",
+    "icon": "cs-concepts"
+  }
+]
+```
+
+### `GET /categories/:id`
+
+Response `200`: same shape as one category above.
 
 ---
 
+## Topic endpoints
+
 ### `POST /topics/create`
 
-Creates a topic inside a category.
+Admin only.
 
-#### Auth
-
-- Requires JWT.
-- Requires user role `admin`.
-
-#### Request body
+Request:
 
 ```json
 {
@@ -248,15 +193,7 @@ Creates a topic inside a category.
 }
 ```
 
-Validation:
-
-- `title`, `slug`, `description`, `icon`: required non-empty strings.
-- `tags`: required array of 1 or 2 non-empty strings.
-- `category`: required Mongo ObjectId string.
-
-#### Response `201 Created`
-
-Returns the topic response DTO with its category populated.
+Response `201`:
 
 ```json
 {
@@ -275,468 +212,403 @@ Returns the topic response DTO with its category populated.
   }
 }
 ```
-
-#### Important errors
-
-- `401 Unauthorized` if unauthenticated.
-- `403 Forbidden` if authenticated but not admin.
-- Mongo duplicate errors can occur for duplicate `slug` values; these are not
-  currently converted to a friendly API error.
-
----
 
 ### `GET /topics`
 
-Lists all topics sorted by title.
-
-#### Auth
-
-- Requires JWT.
-- Any authenticated role can call it.
-
-#### Response `200 OK`
-
-Each topic is returned as a response DTO with `category` populated.
-
-```json
-[
-  {
-    "id": "<topic-id>",
-    "title": "Memory Management",
-    "slug": "memory-management",
-    "description": "Understanding stack, heap, and garbage collection.",
-    "icon": "memory-management",
-    "tags": ["systems", "runtime"],
-    "category": {
-      "id": "<category-id>",
-      "title": "Computer Science Concepts",
-      "slug": "cs-concepts",
-      "description": "Core theories and fundamental CS principles.",
-      "icon": "cs-concepts"
-    }
-  }
-]
-```
-
-#### Important errors
-
-- `401 Unauthorized` if unauthenticated.
-
----
-
-### `GET /categories/categories`
-
-Lists all topic categories sorted by title.
-
-#### Auth
-
-- Requires JWT.
-- Any authenticated role can call it.
-
-#### Response `200 OK`
-
-```json
-[
-  {
-    "id": "<category-id>",
-    "title": "Computer Science Concepts",
-    "slug": "cs-concepts",
-    "description": "Core theories and fundamental CS principles.",
-    "icon": "cs-concepts"
-  }
-]
-```
-
-#### Important errors
-
-- `401 Unauthorized` if unauthenticated.
-
----
-
-### `GET /categories/:id`
-
-Fetches a category by Mongo ObjectId.
-
-#### Auth
-
-- Requires JWT.
-- Any authenticated role can call it.
-
-#### Path params
-
-- `id`: category Mongo ObjectId.
-
-#### Response `200 OK`
-
-```json
-{
-  "id": "<category-id>",
-  "title": "Computer Science Concepts",
-  "slug": "cs-concepts",
-  "description": "Core theories and fundamental CS principles.",
-  "icon": "cs-concepts"
-}
-```
-
-#### Important errors
-
-- `400 Bad Request` for invalid Mongo ID format.
-- `401 Unauthorized` if unauthenticated.
-- `404 Not Found` with message `Category not found` if the ID is valid but no
-  category exists.
-
----
+Response `200`: array of topic response DTOs.
 
 ### `GET /topics/:id`
 
-Fetches a topic by Mongo ObjectId.
+Response `200`: one topic response DTO.
 
-#### Auth
+---
 
-- Requires JWT.
-- Any authenticated role can call it.
+## Question set endpoints
 
-#### Path params
+Question sets are the rendered quiz payloads. They belong to a topic and a
+level. Multiple sets may exist for the same topic/level.
 
-- `id`: topic Mongo ObjectId.
+### Question shape
 
-#### Response `200 OK`
-
-The topic is returned as a response DTO with `category` populated.
-
-```json
+```ts
 {
-  "id": "<topic-id>",
-  "title": "Memory Management",
-  "slug": "memory-management",
-  "description": "Understanding stack, heap, and garbage collection.",
-  "icon": "memory-management",
-  "tags": ["systems", "runtime"],
-  "category": {
-    "id": "<category-id>",
-    "title": "Computer Science Concepts",
-    "slug": "cs-concepts",
-    "description": "Core theories and fundamental CS principles.",
-    "icon": "cs-concepts"
-  }
+  id: string;
+  type: 'mcq' | 'written';
+  prompt: string;
+  options: Array<{ id: string; text: string }>;
+  correctOptionId?: string;
+  targetConcepts: string[];
+  feedback: { correct: string; incorrect: string };
+  rubric: { keyPoints: string[]; misconceptions: string[] };
 }
 ```
 
-#### Important errors
+For MCQ answers, submit the selected option `id` as the answer.
 
-- `400 Bad Request` for invalid Mongo ID format.
-- `401 Unauthorized` if unauthenticated.
-- `404 Not Found` with message `Topic not found` if the ID is valid but no
-  topic exists.
+### Question set response shape
+
+```ts
+{
+  id: string;
+  topic: string | Topic;
+  setType: string;
+  level: number;
+  questions: Question[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+```
+
+### `POST /questions/create`
+
+Admin only.
+
+Request:
+
+```json
+{
+  "topic": "<topic-id>",
+  "setType": "practice",
+  "level": 0,
+  "questions": [
+    {
+      "id": "q1",
+      "type": "mcq",
+      "prompt": "Which memory area stores function call frames?",
+      "options": [
+        { "id": "a", "text": "Heap" },
+        { "id": "b", "text": "Stack" }
+      ],
+      "correctOptionId": "b",
+      "targetConcepts": ["stack-memory"],
+      "feedback": {
+        "correct": "Correct. The stack stores call frames.",
+        "incorrect": "Review stack vs heap memory."
+      },
+      "rubric": {
+        "keyPoints": ["Stack stores function call frames"],
+        "misconceptions": ["Heap stores call frames"]
+      }
+    }
+  ]
+}
+```
+
+Response `201`: question set response.
+
+### `POST /questions/create-many`
+
+Admin only. Body is an array of `CreateQuestionSetDto`.
+
+Response `201`: array of question set responses.
+
+### `PATCH /questions/:id`
+
+Admin only. Body supports partial question set fields.
+
+Response `200`: updated question set response.
+
+### `GET /questions/topic/:slug?populateTopic=true`
+
+Returns question sets for a topic slug.
+
+- `populateTopic=true`: topic is populated.
+- Any other value or omitted: topic is the topic ID string.
+
+Response `200`: array of question set responses.
+
+### `GET /questions/:id?populateTopic=true`
+
+Returns one question set by ID.
+
+- default behavior populates topic.
+- `populateTopic=false` returns topic as an ID string.
+
+Response `200`: question set response.
 
 ---
+
+## Session endpoints
 
 ### `POST /sessions/start`
 
-Starts a learning session for the authenticated user on a topic. The server
-currently uses difficulty `0` and asks the AI provider to generate exactly three
-questions.
+Starts a learning session for the authenticated user and returns a level `0`
+question set for the selected topic.
 
-#### Auth
-
-- Requires JWT.
-- Any authenticated role can call it.
-
-#### Request body
+Request:
 
 ```json
 {
-  "topicId": "<topic-id>",
-  "provider": "gemini"
+  "topicId": "<topic-id>"
 }
 ```
 
-Validation:
-
-- `topicId`: required Mongo ObjectId.
-- `provider`: optional enum, either `gemini` or `claude`.
-
-If `provider` is omitted, the AI service defaults to `gemini`.
-
-#### Response `201 Created`
-
-Returns the created `QuestionSet` with `topic` and `questions` populated.
+Response `201`: question set response.
 
 ```json
 {
-  "_id": "<question-set-id>",
-  "userId": "<user-id>",
-  "topic": {
-    "_id": "<topic-id>",
-    "title": "Memory Management",
-    "slug": "memory-management",
-    "description": "Understanding stack, heap, and garbage collection.",
-    "icon": "memory-management",
-    "tags": ["systems", "runtime"],
-    "category": "<category-id>",
-    "createdAt": "2026-06-03T00:00:00.000Z",
-    "updatedAt": "2026-06-03T00:00:00.000Z",
-    "__v": 0
-  },
-  "questions": [
-    {
-      "_id": "<question-id>",
-      "type": "mcq",
-      "text": "Which area of memory typically stores function call frames?",
-      "options": ["Heap", "Stack", "Code segment", "Disk"],
-      "correctOption": "Stack",
-      "idealAnswerPoints": ["Stack stores call frames"],
-      "difficulty": 1,
-      "score": 0,
-      "createdAt": "2026-06-03T00:00:00.000Z",
-      "updatedAt": "2026-06-03T00:00:00.000Z",
-      "__v": 0
-    }
-  ],
-  "score": 0,
-  "difficulty": 1,
-  "weakConcepts": [],
-  "strongConcepts": [],
-  "createdAt": "2026-06-03T00:00:00.000Z",
-  "updatedAt": "2026-06-03T00:00:00.000Z",
-  "__v": 0
+  "id": "<question-set-id>",
+  "topic": "<topic-id>",
+  "setType": "practice",
+  "level": 0,
+  "questions": []
 }
 ```
 
-#### Question mix by difficulty
+Side effects:
 
-The AI prompt chooses question type mix based on session difficulty:
+- Creates a `Session` with `currentLevel: 0` and `status: "active"`.
 
-- `< 40`: exactly 3 MCQs.
-- `40` to `69`: exactly 1 MCQ and 2 written questions.
-- `>= 70`: exactly 3 written questions with high technical complexity.
+Important caveat:
 
-#### Side effects
+- The current response does **not** include the created `sessionId`, but
+  `/sessions/continue` and `/sessions/submit-answer` require `sessionId`.
+  Frontend integration needs a way to obtain/store the session ID.
 
-- Creates a `Question` document for each generated question.
-- Creates a `QuestionSet` document for the session.
-- Does not currently update persisted student progress.
+### `POST /sessions/continue`
 
-#### Important errors
+Returns a question set for the session's current level.
 
-- `400 Bad Request` for invalid body or provider.
-- `401 Unauthorized` if unauthenticated.
-- `404 Not Found` with message `Topic not found` if the topic does not exist.
-- `500 Internal Server Error` if the AI provider call fails or returns invalid
-  JSON/schema data.
-
----
-
-### `POST /sessions/:id/submit`
-
-Submits answers for a previously generated question set. The server evaluates
-answers with the selected AI provider, stores per-question feedback, and updates
-the question set summary.
-
-#### Auth
-
-- Requires JWT.
-- Any authenticated role can call it.
-- The session must belong to the authenticated user.
-
-#### Path params
-
-- `id`: question set Mongo ObjectId returned by `/sessions/start`.
-
-#### Request body
+Request:
 
 ```json
 {
+  "sessionId": "<session-id>"
+}
+```
+
+Response `201`: question set response.
+
+Important errors:
+
+- `404 Session not found`
+- `404 Question set not found`
+
+### `POST /sessions/submit-answer`
+
+Submits answers for a question set. MCQ answers are evaluated locally. Written
+answers are batched and evaluated by AI in one request.
+
+Request:
+
+```json
+{
+  "sessionId": "<session-id>",
+  "questionSetId": "<question-set-id>",
   "answers": [
     {
-      "questionId": "<question-id>",
-      "studentAnswer": "Stack"
+      "questionId": "q1",
+      "answer": "b"
     },
     {
-      "questionId": "<question-id>",
-      "studentAnswer": "The heap stores dynamically allocated objects."
+      "questionId": "q2",
+      "answer": "The stack stores function call frames and local variables."
     }
-  ],
-  "provider": "gemini"
+  ]
 }
 ```
 
 Validation:
 
+- `sessionId`: required Mongo ObjectId.
+- `questionSetId`: required Mongo ObjectId.
 - `answers`: required non-empty array.
-- Each answer requires:
-  - `questionId`: Mongo ObjectId.
-  - `studentAnswer`: non-empty string.
-- `provider`: optional enum, either `gemini` or `claude`.
+- `answers[].questionId`: required non-empty string.
+- `answers[].answer`: required non-empty string.
 
-If `provider` is omitted, the AI service defaults to `gemini`.
-
-#### Response `201 Created`
+Response `201`:
 
 ```json
 {
-  "evaluation": {
-    "totalScore": 85,
-    "critique": "Strong understanding with minor terminology gaps.",
-    "weakConcepts": ["Garbage collection details"],
-    "strongConcepts": ["Stack vs heap", "Dynamic allocation"],
-    "questionEvaluations": [
+  "attempt": {
+    "id": "<set-attempt-id>",
+    "user": "<user-id>",
+    "session": "<session-id>",
+    "topic": "<topic-id>",
+    "questionSet": "<question-set-id>",
+    "level": 0,
+    "answers": [
       {
-        "questionId": "<question-id>",
-        "score": 100,
-        "isCorrect": true,
-        "feedback": "Correct. The stack stores function call frames."
+        "id": "ans-q1",
+        "questionId": "q1",
+        "questionType": "mcq",
+        "answer": "b",
+        "correctAnswer": "b",
+        "score": 1,
+        "feedback": "Correct. The stack stores call frames.",
+        "targetConcepts": ["stack-memory"],
+        "strength": ["stack-memory"],
+        "weakness": [],
+        "evaluatedBy": "system"
+      },
+      {
+        "id": "ans-q2",
+        "questionId": "q2",
+        "questionType": "written",
+        "answer": "The stack stores function call frames and local variables.",
+        "correctAnswer": "Stack stores function call frames; Stack stores local variables",
+        "score": 0.9,
+        "feedback": "Good explanation of stack usage.",
+        "targetConcepts": ["stack-memory"],
+        "strength": ["stack-memory"],
+        "weakness": [],
+        "evaluatedBy": "ai"
       }
-    ]
+    ],
+    "setScore": 1,
+    "passed": true,
+    "strength": ["stack-memory"],
+    "weakness": [],
+    "submittedAt": "2026-06-21T00:00:00.000Z",
+    "evaluatedAt": "2026-06-21T00:00:00.000Z",
+    "createdAt": "2026-06-21T00:00:00.000Z",
+    "updatedAt": "2026-06-21T00:00:00.000Z"
+  },
+  "nextQuestionSet": {
+    "id": "<next-question-set-id>",
+    "topic": "<topic-id>",
+    "setType": "practice",
+    "level": 1,
+    "questions": []
   }
 }
 ```
 
-#### Important errors
+`nextQuestionSet` is `null` when:
 
-- `400 Bad Request` for invalid question set ID, body, question IDs, or
-  provider.
-- `401 Unauthorized` if unauthenticated.
-- `404 Not Found` with message `Question set not found` if the session does not
-  exist or belongs to another user.
-- `404 Not Found` with message `Question <id> not found in this set` if an
-  answer references a question outside the session.
-- `500 Internal Server Error` if the AI provider call fails or returns invalid
-  JSON/schema data.
+- the student does not pass, or
+- no question set exists for `submittedQuestionSet.level + 1`.
+
+If the student passes any submitted set, the API tries to return the next set
+for the same session topic. If the submitted set is also the session's current
+level, the session `currentLevel` is incremented.
+
+Progress/evaluation rules:
+
+- Passing threshold is `setScore >= 0.8`.
+- Scores are rounded to 1 decimal place.
+- Passing a set whose level equals `session.currentLevel` increments
+  `currentLevel` by `1`.
+- When the completed level is divisible by `10`, a `SessionEvaluation` is
+  created:
+  - level `10` creates range `0-10`.
+  - level `20` creates range `11-20`.
+  - level `30` creates range `21-30`.
+- `session.overallEvaluation` is updated from all session evaluations.
+
+Important errors:
+
+- `400 Question not found in question set`
+- `401 Unauthorized`
+- `404 Session not found`
+- `404 Question set not found`
+- `503 AI is not configured`
+- `503 AI response was empty`
+- `503 AI response was invalid`
+- `503 AI response was incomplete`
+
+---
 
 ## Data model reference
 
-### User
+### Session
 
 ```ts
 {
   _id: string;
-  username: string;
-  email: string;
-  password: string; // hashed, never returned by auth endpoints
-  role: 'user' | 'admin';
+  student: string;
+  topic: string;
+  currentLevel: number;
+  status: string;
+  overallEvaluation?: {
+    summary: string;
+    stengths: string[];
+    weakness: string[];
+    recommendations: string[];
+  };
+  startAt?: string;
+  finishAt?: string;
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-### Category
+### SetAttempt
 
 ```ts
 {
   _id: string;
-  title: string;
-  slug: string;
-  description: string;
-  icon: string;
+  user: string;
+  session: string;
+  topic: string;
+  questionSet: string;
+  level: number;
+  answers: Answer[];
+  setScore: number;
+  passed: boolean;
+  strength: string[];
+  weakness: string[];
+  aiSummary?: string;
+  submittedAt: string;
+  evaluatedAt: string;
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-### Topic
+### Answer
 
 ```ts
 {
-  _id: string;
-  title: string;
-  slug: string;
-  description: string;
-  icon: string;
-  tags: string[];
-  category: string | Category;
-  createdAt: string;
-  updatedAt: string;
-}
-```
-
-### Question
-
-```ts
-{
-  _id: string;
-  type: 'mcq' | 'written';
-  text: string;
-  options: string[];
-  correctOption?: string;
-  idealAnswerPoints: string[];
-  studentAnswer?: string;
-  isCorrect?: boolean;
+  id: string;
+  questionId: string;
+  questionType: 'mcq' | 'written';
+  answer: string;
+  correctAnswer: string;
   score: number;
-  feedback?: string;
-  difficulty: number;
-  createdAt: string;
-  updatedAt: string;
+  feedback: string;
+  targetConcepts: string[];
+  strength: string[];
+  weakness: string[];
+  evaluatedBy: 'system' | 'ai';
 }
 ```
 
-### QuestionSet
+### SessionEvaluation
 
 ```ts
 {
   _id: string;
-  userId: string;
-  topic: string | Topic;
-  questions: Array<string | Question>;
-  score: number;
-  difficulty: number;
-  weakConcepts: string[];
-  strongConcepts: string[];
-  feedback?: string;
+  student: string;
+  session: string;
+  topic: string;
+  fromLevel: number;
+  toLevel: number;
+  overallScore: number;
+  summary: string;
+  stength: string[];
+  weakness: string[];
+  recommendation: string[];
+  attemptIds: string[];
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-## Suggested client flow
+## Suggested frontend flow
 
-1. Register a user with `POST /auth/register` and store the returned
-   `access_token`.
-2. Alternatively, login with `POST /auth/login` and store `access_token` for an
-   existing account.
-3. Call `GET /topics` to obtain the available topics and select a topic ID.
-4. Start a session with `POST /sessions/start`.
-5. Render the returned `questions`.
-   - For `mcq`, render `options` and submit the chosen option text/string.
-   - For `written`, render a text input/textarea.
-6. Submit all answers with `POST /sessions/:id/submit`.
-7. Use the returned `evaluation` for feedback.
+1. Register or login and store `access_token`.
+2. Fetch topics with `GET /topics`.
+3. Start a session with `POST /sessions/start`.
+4. Render the returned question set.
+5. Submit answers with `POST /sessions/submit-answer`.
+6. Show `attempt.answers` feedback.
+7. If `nextQuestionSet` is not `null`, render it next.
+8. If the user comes back later, call `POST /sessions/continue` with the
+   session ID to fetch their current-level question set.
 
-## Seeded content
+## Current frontend integration caveat
 
-`SeedService` automatically creates categories and topics on module init if none
-exist.
-
-Seeded categories:
-
-- `cs-concepts`: Computer Science Concepts.
-- `tech-stacks`: Languages & Tech Stacks.
-- `ops-infra`: Operations & Infrastructure.
-
-Seeded topics:
-
-- Memory Management: `systems`, `runtime`
-- Concurrency: `systems`, `parallelism`
-- Computer Networking: `networking`, `protocols`
-- Distributed Systems: `distributed`, `networking`
-- Graph Theory: `algorithms`, `graphs`
-- Node.js: `backend`, `runtime`
-- Go: `systems`, `backend`
-- Rust Fundamentals: `systems`, `memory-safety`
-- Go Concurrency: `concurrency`, `backend`
-- Hyperledger Fabric: `blockchain`, `enterprise`
-- Containerization (Docker): `containers`, `devops`
-- CI/CD Pipelines: `automation`, `devops`
-- Kubernetes: `orchestration`, `containers`
-
-## Integration gaps for another agent to consider
-
-- Add a student profile/progress endpoint for current user.
-- Add admin user role management or a documented seed admin path.
-- Consider tightening CORS origins per deployment environment.
-- Consider hiding `correctOption` and `idealAnswerPoints` from
-  `/sessions/start` responses to avoid exposing answers before submission.
-- Convert duplicate slug Mongo errors into friendly `409 Conflict` responses.
-- Consider returning `200 OK` for login/register/submit if preferred; Nest's
-  default for `POST` currently returns `201 Created` unless changed with
-  `@HttpCode`.
+`POST /sessions/start` creates a session but does not return the created session
+ID. Since `continue` and `submit-answer` both require `sessionId`, the frontend
+will need that ID exposed before a complete session flow is possible.
