@@ -1,8 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
-import { Session } from '@nestjs/common';
 import { Topic } from '../../topics/schemas/topic.schema';
+import { Session } from './session.schema';
 import {
   QuestionSet,
   QuestionType,

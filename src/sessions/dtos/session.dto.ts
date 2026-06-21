@@ -27,6 +27,38 @@ export class ContinueSessionDto {
 }
 
 /**
+ * Submitted answer for a question set question.
+ */
+export class SubmitAnswerItemDto {
+  @IsString()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  answer: string;
+}
+
+/**
+ * Request body for submitting answers for a question set.
+ */
+export class SubmitAnswerDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionSetId: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => SubmitAnswerItemDto)
+  answers: SubmitAnswerItemDto[];
+}
+
+/**
  * Student answer submitted for a generated question.
  */
 export class SessionAnswerDto {

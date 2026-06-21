@@ -2,7 +2,12 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { RequestWithUser } from '../auth/types/request-with-user.type';
 import { QuestionSetResponseDto } from '../questions/dtos';
-import { ContinueSessionDto, StartSessionDto } from './dtos';
+import {
+  ContinueSessionDto,
+  SetAttemptResponseDto,
+  StartSessionDto,
+  SubmitAnswerDto,
+} from './dtos';
 import { SessionsService } from './sessions.service';
 
 @Controller('sessions')
@@ -40,6 +45,26 @@ export class SessionsController {
     return this.sessionsService.continueSession(
       body.sessionId,
       request.user.userId,
+    );
+  }
+
+  /**
+   * Submits answers for the authenticated user's current question set.
+   *
+   * @param request The authenticated request.
+   * @param body The submitted answers request.
+   * @returns The created set attempt.
+   */
+  @Post('submit-answer')
+  async submitAnswer(
+    @Req() request: RequestWithUser,
+    @Body() body: SubmitAnswerDto,
+  ): Promise<SetAttemptResponseDto> {
+    return this.sessionsService.submitAnswer(
+      request.user.userId,
+      body.sessionId,
+      body.questionSetId,
+      body.answers,
     );
   }
 }
