@@ -77,5 +77,5 @@ export class QuestionDto {
 
   @ValidateNested()
   @Type(() => QuestionRubricDto)
-  rubric: QuestionRubricDto;
+  rubrics: QuestionRubricDto;
 }

@@ -28,7 +28,7 @@ export interface Question {
   correctOptionId: string;
   targetConcepts: string[];
   feedback: { correct: string; incorrect: string };
-  rubric: { keyPoints: string[]; misconceptions: string[] };
+  rubrics: { keyPoints: string[]; misconceptions: string[] };
 }
 
 export enum QuestionType {
