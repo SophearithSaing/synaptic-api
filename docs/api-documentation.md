@@ -43,7 +43,8 @@ Admin routes require `role: 'admin'`.
 | `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
 | `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
 | `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
-| `POST` | `/sessions/start` | Yes | User/Admin | Start session and return level 0 question set. |
+| `POST` | `/sessions/start` | Yes | User/Admin | Start session and return session ID plus level 0 question set. |
+| `GET` | `/sessions/in-progress` | Yes | User/Admin | List active sessions for the current user. |
 | `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
 | `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
 
@@ -332,8 +333,8 @@ Response `200`: question set response.
 
 ### `POST /sessions/start`
 
-Starts a learning session for the authenticated user and returns a level `0`
-question set for the selected topic.
+Starts a learning session for the authenticated user and returns the created
+session ID plus a level `0` question set for the selected topic.
 
 Request:
 
@@ -343,15 +344,18 @@ Request:
 }
 ```
 
-Response `201`: question set response.
+Response `201`:
 
 ```json
 {
-  "id": "<question-set-id>",
-  "topic": "<topic-id>",
-  "setType": "practice",
-  "level": 0,
-  "questions": []
+  "sessionId": "<session-id>",
+  "questionSet": {
+    "id": "<question-set-id>",
+    "topic": "<topic-id>",
+    "setType": "practice",
+    "level": 0,
+    "questions": []
+  }
 }
 ```
 
@@ -359,11 +363,44 @@ Side effects:
 
 - Creates a `Session` with `currentLevel: 0` and `status: "active"`.
 
-Important caveat:
+### `GET /sessions/in-progress`
 
-- The current response does **not** include the created `sessionId`, but
-  `/sessions/continue` and `/sessions/submit-answer` require `sessionId`.
-  Frontend integration needs a way to obtain/store the session ID.
+Returns active sessions for the authenticated user, sorted by most recently
+updated first.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "<session-id>",
+    "student": "<user-id>",
+    "topic": {
+      "_id": "<topic-id>",
+      "title": "Memory Management",
+      "slug": "memory-management",
+      "description": "Understanding stack, heap, and garbage collection.",
+      "icon": "memory-management",
+      "tags": ["systems", "runtime"],
+      "category": "<category-id>"
+    },
+    "currentLevel": 3,
+    "status": "active",
+    "overallEvaluation": {
+      "summary": "Completed through level 10 with 0.9 average score.",
+      "stengths": ["stack-memory"],
+      "weakness": [],
+      "recommendations": []
+    },
+    "startAt": "2026-06-21T00:00:00.000Z",
+    "createdAt": "2026-06-21T00:00:00.000Z",
+    "updatedAt": "2026-06-21T00:00:00.000Z"
+  }
+]
+```
+
+Use the returned `id` as `sessionId` for `/sessions/continue` and
+`/sessions/submit-answer`.
 
 ### `POST /sessions/continue`
 
@@ -599,16 +636,11 @@ Important errors:
 
 1. Register or login and store `access_token`.
 2. Fetch topics with `GET /topics`.
-3. Start a session with `POST /sessions/start`.
-4. Render the returned question set.
-5. Submit answers with `POST /sessions/submit-answer`.
+3. Start a session with `POST /sessions/start` and store `sessionId`.
+4. Render the returned `questionSet`.
+5. Submit answers with `POST /sessions/submit-answer` using `sessionId`.
 6. Show `attempt.answers` feedback.
 7. If `nextQuestionSet` is not `null`, render it next.
-8. If the user comes back later, call `POST /sessions/continue` with the
-   session ID to fetch their current-level question set.
-
-## Current frontend integration caveat
-
-`POST /sessions/start` creates a session but does not return the created session
-ID. Since `continue` and `submit-answer` both require `sessionId`, the frontend
-will need that ID exposed before a complete session flow is possible.
+8. If the user comes back later, call `GET /sessions/in-progress` to list
+   active sessions, then call `POST /sessions/continue` with the chosen session
+   ID to fetch its current-level question set.

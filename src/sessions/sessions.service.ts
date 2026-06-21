@@ -17,7 +17,9 @@ import {
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
+  SessionResponseDto,
   SetAttemptResponseDto,
+  StartSessionResponseDto,
   SubmitAnswerItemDto,
   SubmitAnswerResponseDto,
 } from './dtos';
@@ -86,12 +88,12 @@ export class SessionsService {
    *
    * @param topicId The topic ID to start.
    * @param studentId The authenticated student ID.
-   * @returns The level 0 question set for the selected topic.
+   * @returns The created session ID and level 0 question set.
    */
   async startSession(
     topicId: string,
     studentId: string,
-  ): Promise<QuestionSetResponseDto> {
+  ): Promise<StartSessionResponseDto> {
     const topic = await this.topicModel.findById(topicId).exec();
 
     if (!topic) {
@@ -106,7 +108,7 @@ export class SessionsService {
       throw new NotFoundException('Question set not found');
     }
 
-    await this.sessionModel.create({
+    const session = await this.sessionModel.create({
       student: Types.ObjectId.createFromHexString(studentId),
       topic: topic._id,
       currentLevel: 0,
@@ -114,7 +116,31 @@ export class SessionsService {
       startAt: new Date(),
     });
 
-    return QuestionSetResponseDto.from(questionSet);
+    return {
+      sessionId: session._id.toString(),
+      questionSet: QuestionSetResponseDto.from(questionSet),
+    };
+  }
+
+  /**
+   * Fetches in-progress sessions for a user.
+   *
+   * @param studentId The authenticated student ID.
+   * @returns The user's in-progress sessions.
+   */
+  async getInProgressSessions(
+    studentId: string,
+  ): Promise<SessionResponseDto[]> {
+    const sessions = await this.sessionModel
+      .find({
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: 'active',
+      })
+      .populate('topic')
+      .sort({ updatedAt: -1 })
+      .exec();
+
+    return SessionResponseDto.fromMany(sessions);
   }
 
   /**

@@ -1,10 +1,12 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { RequestWithUser } from '../auth/types/request-with-user.type';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueSessionDto,
+  SessionResponseDto,
   StartSessionDto,
+  StartSessionResponseDto,
   SubmitAnswerDto,
   SubmitAnswerResponseDto,
 } from './dtos';
@@ -20,14 +22,27 @@ export class SessionsController {
    *
    * @param request The authenticated request.
    * @param body The session start request.
-   * @returns The level 0 question set for the selected topic.
+   * @returns The created session ID and level 0 question set.
    */
   @Post('start')
   async startSession(
     @Req() request: RequestWithUser,
     @Body() body: StartSessionDto,
-  ): Promise<QuestionSetResponseDto> {
+  ): Promise<StartSessionResponseDto> {
     return this.sessionsService.startSession(body.topicId, request.user.userId);
+  }
+
+  /**
+   * Fetches in-progress sessions for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @returns The authenticated user's in-progress sessions.
+   */
+  @Get('in-progress')
+  async getInProgressSessions(
+    @Req() request: RequestWithUser,
+  ): Promise<SessionResponseDto[]> {
+    return this.sessionsService.getInProgressSessions(request.user.userId);
   }
 
   /**
