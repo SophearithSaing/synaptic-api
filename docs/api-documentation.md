@@ -240,7 +240,7 @@ level. Multiple sets may exist for the same topic/level.
   correctOptionId?: string;
   targetConcepts: string[];
   feedback: { correct: string; incorrect: string };
-  rubric: { keyPoints: string[]; misconceptions: string[] };
+  rubrics: { keyPoints: string[]; misconceptions: string[] };
 }
 ```
 
@@ -286,7 +286,7 @@ Request:
         "correct": "Correct. The stack stores call frames.",
         "incorrect": "Review stack vs heap memory."
       },
-      "rubric": {
+      "rubrics": {
         "keyPoints": ["Stack stores function call frames"],
         "misconceptions": ["Heap stores call frames"]
       }
