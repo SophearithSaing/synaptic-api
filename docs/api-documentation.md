@@ -38,8 +38,7 @@ Admin routes require `role: 'admin'`.
 | `POST` | `/topics/create` | Yes | Admin | Create topic. |
 | `GET` | `/topics` | Yes | User/Admin | List topics. |
 | `GET` | `/topics/:id` | Yes | User/Admin | Get topic by ID. |
-| `POST` | `/questions/create` | Yes | Admin | Create question set. |
-| `POST` | `/questions/create-many` | Yes | Admin | Create question sets. |
+| `POST` | `/questions/create` | Yes | Admin | Create question sets. |
 | `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
 | `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
 | `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
@@ -262,44 +261,41 @@ For MCQ answers, submit the selected option `id` as the answer.
 
 ### `POST /questions/create`
 
-Admin only.
+Admin only. Body is an array of `CreateQuestionSetDto`. To create a single
+question set, send an array with one item.
 
 Request:
 
 ```json
-{
-  "topic": "<topic-id>",
-  "setType": "practice",
-  "level": 0,
-  "questions": [
-    {
-      "id": "q1",
-      "type": "mcq",
-      "prompt": "Which memory area stores function call frames?",
-      "options": [
-        { "id": "a", "text": "Heap" },
-        { "id": "b", "text": "Stack" }
-      ],
-      "correctOptionId": "b",
-      "targetConcepts": ["stack-memory"],
-      "feedback": {
-        "correct": "Correct. The stack stores call frames.",
-        "incorrect": "Review stack vs heap memory."
-      },
-      "rubrics": {
-        "keyPoints": ["Stack stores function call frames"],
-        "misconceptions": ["Heap stores call frames"]
+[
+  {
+    "topic": "<topic-id>",
+    "setType": "practice",
+    "level": 0,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "mcq",
+        "prompt": "Which memory area stores function call frames?",
+        "options": [
+          { "id": "a", "text": "Heap" },
+          { "id": "b", "text": "Stack" }
+        ],
+        "correctOptionId": "b",
+        "targetConcepts": ["stack-memory"],
+        "feedback": {
+          "correct": "Correct. The stack stores call frames.",
+          "incorrect": "Review stack vs heap memory."
+        },
+        "rubrics": {
+          "keyPoints": ["Stack stores function call frames"],
+          "misconceptions": ["Heap stores call frames"]
+        }
       }
-    }
-  ]
-}
+    ]
+  }
+]
 ```
-
-Response `201`: question set response.
-
-### `POST /questions/create-many`
-
-Admin only. Body is an array of `CreateQuestionSetDto`.
 
 Response `201`: array of question set responses.
 
