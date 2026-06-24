@@ -23,24 +23,7 @@ export class QuestionsService {
   ) {}
 
   /**
-   * Creates a question set.
-   *
-   * @param dto The question set details.
-   * @returns The created question set.
-   */
-  async createQuestionSet(
-    dto: CreateQuestionSetDto,
-  ): Promise<QuestionSetResponseDto> {
-    const questionSet = await this.questionSetModel.create({
-      ...dto,
-      topic: Types.ObjectId.createFromHexString(dto.topic),
-    });
-
-    return QuestionSetResponseDto.from(questionSet);
-  }
-
-  /**
-   * Creates multiple question sets.
+   * Creates question sets.
    *
    * @param dtos The question set details.
    * @returns The created question sets.
