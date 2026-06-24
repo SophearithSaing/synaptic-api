@@ -6,7 +6,7 @@ import { Topic } from '../../topics/schemas/topic.schema';
 
 export type SessionEvaluationDocument = HydratedDocument<SessionEvaluation>;
 
-@Schema({ timestamps: true, collection: 'schemaEvaluations' })
+@Schema({ timestamps: true, collection: 'sessionEvaluations' })
 export class SessionEvaluation {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   student: Types.ObjectId;
