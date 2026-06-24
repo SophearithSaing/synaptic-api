@@ -19,7 +19,8 @@ import { QuestionsModule } from './questions/questions.module';
     }),
     MongooseModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('DB_URL'),
+        uri: configService.get<string>('DB_URI'),
+        dbName: configService.get<string>('DB_NAME'),
       }),
       inject: [ConfigService],
     }),
