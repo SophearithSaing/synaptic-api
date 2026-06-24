@@ -101,7 +101,7 @@ export class SessionsService {
     }
 
     const questionSet = await this.questionSetModel
-      .findOne({ topic: topic._id.toString(), level: 0 })
+      .findOne({ topic: topic._id, level: 0 })
       .exec();
 
     if (!questionSet) {
@@ -167,7 +167,7 @@ export class SessionsService {
 
     const questionSet = await this.questionSetModel
       .findOne({
-        topic: session.topic.toString(),
+        topic: session.topic,
         level: session.currentLevel,
       })
       .exec();
@@ -274,7 +274,7 @@ export class SessionsService {
   ): Promise<QuestionSetResponseDto | null> {
     const nextQuestionSet = await this.questionSetModel
       .findOne({
-        topic: session.topic.toString(),
+        topic: session.topic,
         level: completedLevel + 1,
       })
       .exec();

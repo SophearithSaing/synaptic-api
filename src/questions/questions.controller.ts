@@ -30,26 +30,12 @@ export class QuestionsController {
   constructor(private questionsService: QuestionsService) {}
 
   /**
-   * Creates a question set.
-   *
-   * @param body The question set details.
-   * @returns The created question set.
-   */
-  @Post('create')
-  @Roles(UserRole.Admin)
-  async createQuestionSet(
-    @Body() body: CreateQuestionSetDto,
-  ): Promise<QuestionSetResponseDto> {
-    return this.questionsService.createQuestionSet(body);
-  }
-
-  /**
-   * Creates multiple question sets.
+   * Creates question sets.
    *
    * @param body The question set details.
    * @returns The created question sets.
    */
-  @Post('create-many')
+  @Post('create')
   @Roles(UserRole.Admin)
   async createQuestionSets(
     @Body(new ParseArrayPipe({ items: CreateQuestionSetDto }))

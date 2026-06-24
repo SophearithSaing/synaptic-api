@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   CreateQuestionSetDto,
   QuestionSetResponseDto,
@@ -23,20 +23,7 @@ export class QuestionsService {
   ) {}
 
   /**
-   * Creates a question set.
-   *
-   * @param dto The question set details.
-   * @returns The created question set.
-   */
-  async createQuestionSet(
-    dto: CreateQuestionSetDto,
-  ): Promise<QuestionSetResponseDto> {
-    const questionSet = await this.questionSetModel.create(dto);
-    return QuestionSetResponseDto.from(questionSet);
-  }
-
-  /**
-   * Creates multiple question sets.
+   * Creates question sets.
    *
    * @param dtos The question set details.
    * @returns The created question sets.
@@ -44,7 +31,13 @@ export class QuestionsService {
   async createQuestionSets(
     dtos: CreateQuestionSetDto[],
   ): Promise<QuestionSetResponseDto[]> {
-    const questionSets = await this.questionSetModel.create(dtos);
+    const questionSets = await this.questionSetModel.create(
+      dtos.map((dto) => ({
+        ...dto,
+        topic: Types.ObjectId.createFromHexString(dto.topic),
+      })),
+    );
+
     return QuestionSetResponseDto.fromMany(questionSets);
   }
 
@@ -60,7 +53,10 @@ export class QuestionsService {
     dto: UpdateQuestionSetDto,
   ): Promise<QuestionSetResponseDto> {
     const questionSet = await this.questionSetModel
-      .findByIdAndUpdate(id, dto, { new: true, runValidators: true })
+      .findByIdAndUpdate(id, this.toQuestionSetUpdate(dto), {
+        new: true,
+        runValidators: true,
+      })
       .exec();
 
     if (!questionSet) {
@@ -122,6 +118,27 @@ export class QuestionsService {
     const questionSets = await query.exec();
 
     return QuestionSetResponseDto.fromMany(questionSets);
+  }
+
+  /**
+   * Converts question set updates into persistence-safe values.
+   *
+   * @param dto The question set updates.
+   * @returns The question set updates with object references cast.
+   */
+  private toQuestionSetUpdate(
+    dto: UpdateQuestionSetDto,
+  ): Omit<UpdateQuestionSetDto, 'topic'> & { topic?: Types.ObjectId } {
+    const { topic, ...update } = dto;
+
+    if (!topic) {
+      return update;
+    }
+
+    return {
+      ...update,
+      topic: Types.ObjectId.createFromHexString(topic),
+    };
   }
 
   /**

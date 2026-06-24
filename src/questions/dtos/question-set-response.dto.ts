@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { QuestionDto } from './question.dto';
 import { QuestionSetDocument } from '../schemas/question-set.schema';
 
@@ -57,6 +58,10 @@ export class QuestionSetResponseDto {
    * @returns The topic response value.
    */
   private static transformTopic(topic: unknown): unknown {
+    if (topic instanceof Types.ObjectId) {
+      return topic.toString();
+    }
+
     if (
       topic &&
       typeof topic === 'object' &&
