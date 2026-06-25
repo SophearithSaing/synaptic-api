@@ -13,13 +13,13 @@ export enum UserRole {
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true, unique: true, index: true, trim: true })
+  @Prop({ required: true, trim: true })
   username: string;
 
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, select: false })
   password: string;
 
   @Prop({ enum: Object.values(UserRole), default: UserRole.User })
@@ -27,3 +27,9 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index(
+  { username: 1 },
+  { unique: true, collation: { locale: 'en', strength: 2 } },
+);
+UserSchema.index({ email: 1 }, { unique: true });
