@@ -67,7 +67,7 @@ export class AuthController {
   /**
    * Handles user login requests.
    *
-   * @param authDto Login credentials.
+   * @param authDto Login identifier and password.
    * @returns A JWT access token.
    */
   @Post('login')
@@ -79,7 +79,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponse> {
     const authResponse = await this.authService.login(
-      authDto.email,
+      authDto.identifier,
       authDto.password,
     );
 

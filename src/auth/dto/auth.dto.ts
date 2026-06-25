@@ -31,10 +31,12 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @IsEmail()
+  @IsString()
+  @IsNotEmpty()
   @MaxLength(254)
-  @Transform(normalizeEmailInput)
-  email: string;
+  @Matches(/^\S+$/)
+  @Transform(trimInput)
+  identifier: string;
 
   @IsNotEmpty()
   @MinLength(8)

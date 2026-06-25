@@ -63,18 +63,36 @@ export class AuthService {
   /**
    * Authenticates a user and generates a JWT access token.
    *
-   * @param email User email address.
+   * @param identifier User email address or username.
    * @param pass Plaintext password.
    * @returns A JWT access token.
    */
-  async login(email: string, pass: string): Promise<AuthResponse> {
-    const user = await this.userModel
-      .findOne({ email: this.normalizeEmail(email) })
-      .select('+password');
+  async login(identifier: string, pass: string): Promise<AuthResponse> {
+    const userQuery = this.userModel.findOne(this.createLoginQuery(identifier));
+
+    if (!identifier.includes('@')) {
+      userQuery.collation({ locale: 'en', strength: 2 });
+    }
+
+    const user = await userQuery.select('+password');
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();
     }
     return this.createAuthResponse(user);
+  }
+
+  /**
+   * Creates a user lookup query for a login identifier.
+   *
+   * @param identifier User email address or username.
+   * @returns Mongoose query filter for login.
+   */
+  private createLoginQuery(identifier: string): Record<string, string> {
+    if (identifier.includes('@')) {
+      return { email: this.normalizeEmail(identifier) };
+    }
+
+    return { username: this.normalizeUsername(identifier) };
   }
 
   /**
