@@ -370,7 +370,7 @@ export class SessionsService {
       questionId: writtenAnswer.submittedAnswer.questionId,
       questionType: writtenAnswer.question.type,
       answer: writtenAnswer.submittedAnswer.answer,
-      correctAnswer: writtenAnswer.question.rubrics.keyPoints.join('; '),
+      correctAnswer: evaluation.correctAnswer,
       score: roundScore(evaluation.score),
       feedback: evaluation.feedback,
       targetConcepts: writtenAnswer.question.targetConcepts,

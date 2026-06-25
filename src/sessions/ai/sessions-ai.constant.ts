@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
-export const WRITTEN_EVALUATION_SYSTEM_PROMPT = `You are evaluating written answers for a computing theory learning session. Score each answer from 0 to 1 based on how well it covers the expected key points while avoiding listed misconceptions. Return one evaluation for every submitted answer, using the provided questionId for each result. Keep feedback concise and helpful, and use short concept labels for strengths and weaknesses.`;
+export const WRITTEN_EVALUATION_SYSTEM_PROMPT = `You are evaluating written answers for a computing theory learning session. Score each answer from 0 to 1 based on how well it covers the expected key points while avoiding listed misconceptions. Return one evaluation for every submitted answer, using the provided questionId for each result. Include a concise correctAnswer for each question. Keep feedback concise and helpful, and use short concept labels for strengths and weaknesses.`;
 
 export const writtenAnswerEvaluationSchema = z.object({
   questionId: z.string(),
   score: z.number().min(0).max(1),
+  correctAnswer: z.string(),
   feedback: z.string(),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
@@ -36,6 +37,7 @@ export const writtenAnswerEvaluationResponseFormat = {
                 minimum: 0,
                 maximum: 1,
               },
+              correctAnswer: { type: 'string' },
               feedback: { type: 'string' },
               strengths: {
                 type: 'array',
@@ -49,6 +51,7 @@ export const writtenAnswerEvaluationResponseFormat = {
             required: [
               'questionId',
               'score',
+              'correctAnswer',
               'feedback',
               'strengths',
               'weaknesses',
