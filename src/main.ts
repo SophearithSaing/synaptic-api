@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 /**
@@ -9,10 +10,13 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.use(cookieParser());
+
   app.useBodyParser('json', { limit: '5mb' });
   app.useBodyParser('urlencoded', { limit: '5mb', extended: true });
 
   app.enableCors({
+    credentials: true,
     origin: process.env.CLIENT_URL ?? 'http://localhost:4200',
   });
 
