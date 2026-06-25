@@ -10,9 +10,9 @@ export class SessionEvaluationResponseDto {
   toLevel: number;
   overallScore: number;
   summary: string;
-  stength: string[];
-  weakness: string[];
-  recommendation: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
   attemptIds: string[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -37,9 +37,9 @@ export class SessionEvaluationResponseDto {
       toLevel: source.toLevel,
       overallScore: source.overallScore,
       summary: source.summary,
-      stength: source.stength,
-      weakness: source.weakness,
-      recommendation: source.recommendation,
+      strengths: source.strengths,
+      weaknesses: source.weaknesses,
+      recommendations: source.recommendations,
       attemptIds: source.attemptIds,
       createdAt: source.createdAt,
       updatedAt: source.updatedAt,

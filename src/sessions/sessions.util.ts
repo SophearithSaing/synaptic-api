@@ -78,7 +78,7 @@ export function collectConceptsByScore(
  */
 export function collectAttemptConcepts(
   attempts: SetAttemptDocument[],
-  field: 'strength' | 'weakness',
+  field: 'strengths' | 'weaknesses',
 ): string[] {
   return [...new Set(attempts.flatMap((attempt) => attempt[field] ?? []))];
 }
@@ -86,11 +86,11 @@ export function collectAttemptConcepts(
 /**
  * Creates recommendations from weaknesses.
  *
- * @param weakness The weak concepts to recommend practice for.
+ * @param weaknesses The weak concepts to recommend practice for.
  * @returns The generated recommendations.
  */
-export function createRecommendations(weakness: string[]): string[] {
-  return weakness.map((concept) => `Review ${concept}.`);
+export function createRecommendations(weaknesses: string[]): string[] {
+  return weaknesses.map((concept) => `Review ${concept}.`);
 }
 
 /**

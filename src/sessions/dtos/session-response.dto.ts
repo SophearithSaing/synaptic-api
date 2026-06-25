@@ -55,13 +55,58 @@ export class SessionResponseDto {
    */
   private static transformReference(reference: unknown): unknown {
     if (hasToObject(reference)) {
-      return reference.toObject();
+      return SessionResponseDto.transformDocumentObject(reference.toObject());
     }
 
-    if (reference && typeof reference === 'object') {
-      return reference;
+    if (SessionResponseDto.isPlainObject(reference)) {
+      return SessionResponseDto.transformDocumentObject(reference);
     }
 
     return String(reference);
+  }
+
+  /**
+   * Converts Mongo document objects into API response objects.
+   *
+   * @param value The object to transform.
+   * @returns The transformed response object.
+   */
+  private static transformDocumentObject(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        SessionResponseDto.transformDocumentObject(item),
+      );
+    }
+
+    if (!SessionResponseDto.isPlainObject(value)) {
+      return value;
+    }
+
+    const source = value as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+
+    if (source['_id']) {
+      result['id'] = String(source['_id']);
+    }
+
+    for (const [key, item] of Object.entries(source)) {
+      if (key === '_id') {
+        continue;
+      }
+
+      result[key] = SessionResponseDto.transformDocumentObject(item);
+    }
+
+    return result;
+  }
+
+  /**
+   * Determines whether a value is a plain object.
+   *
+   * @param value The value to inspect.
+   * @returns Whether the value is a plain object.
+   */
+  private static isPlainObject(value: unknown): boolean {
+    return Object.prototype.toString.call(value) === '[object Object]';
   }
 }

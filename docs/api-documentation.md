@@ -6,11 +6,27 @@ frontend integration.
 ## Runtime basics
 
 - Default base URL: `http://localhost:3000` unless `PORT` is set.
-- Protected routes require `Authorization: Bearer <access_token>`.
+- Protected routes use the `access_token` HttpOnly cookie.
+- Bearer tokens are still accepted for API testing.
+- Browser clients must send requests with credentials enabled.
+- Mutating requests require a CSRF token header.
 - Validation strips and rejects unknown DTO fields.
-- CORS allows `CLIENT_URL`, defaulting to `http://localhost:4200`.
+- CORS allows `CLIENT_URL`, defaulting to `http://localhost:4200`, with
+  credentials enabled.
 
 ## Authentication
+
+Authentication is cookie-based for browser clients. Login, registration, and
+refresh responses set these cookies:
+
+| Cookie | HttpOnly | Purpose |
+| ------ | -------- | ------- |
+| `access_token` | Yes | Short-lived JWT used for protected routes. |
+| `refresh_token` | Yes | Long-lived opaque session token used by `/auth/refresh`. |
+| `csrf_token` | No | Read by the frontend and sent as `X-CSRF-Token`. |
+
+The API does not return access or refresh tokens in JSON responses. Protected
+requests can also use `Authorization: Bearer <access_token>` for API testing.
 
 JWT-protected requests attach this user shape server-side:
 
@@ -25,13 +41,30 @@ JWT-protected requests attach this user shape server-side:
 
 Admin routes require `role: 'admin'`.
 
+### CSRF requirements
+
+Call `GET /auth/csrf` before mutating requests. The response sets a readable
+`csrf_token` cookie and returns the same token in JSON. For every mutating
+request, send the token in this header:
+
+```http
+X-CSRF-Token: <csrf_token>
+```
+
+This applies to `POST`, `PUT`, `PATCH`, and `DELETE` requests. `GET`, `HEAD`,
+and `OPTIONS` requests do not require the CSRF header.
+
 ## Endpoint summary
 
 | Method | Path                         | Auth | Role       | Purpose |
 | ------ | ---------------------------- | ---- | ---------- | ------- |
 | `GET` | `/` | No | Any | Health/welcome response. |
-| `POST` | `/auth/register` | No | Any | Register and return JWT. |
-| `POST` | `/auth/login` | No | Any | Login and return JWT. |
+| `GET` | `/auth/csrf` | No | Any | Create a CSRF token cookie. |
+| `POST` | `/auth/register` | No | Any | Register, create auth cookies, and log in. |
+| `POST` | `/auth/login` | No | Any | Login with username/email and create auth cookies. |
+| `GET` | `/auth/me` | Yes | User/Admin | Return current authenticated user. |
+| `POST` | `/auth/refresh` | No | Any | Rotate refresh session and auth cookies. |
+| `POST` | `/auth/logout` | No | Any | Revoke current refresh session and clear auth cookies. |
 | `POST` | `/categories/category/create` | Yes | Admin | Create category. |
 | `GET` | `/categories/categories` | Yes | User/Admin | List categories. |
 | `GET` | `/categories/:id` | Yes | User/Admin | Get category by ID. |
@@ -59,15 +92,36 @@ Admin routes require `role: 'admin'`.
 
 - `400 Bad Request`: validation failure or invalid Mongo ID.
 - `401 Unauthorized`: missing/invalid JWT.
-- `403 Forbidden`: non-admin calling admin route.
+- `403 Forbidden`: non-admin calling admin route or invalid CSRF token.
 - `404 Not Found`: referenced resource does not exist.
+- `429 Too Many Requests`: rate limit exceeded.
 - `503 Service Unavailable`: AI evaluation unavailable or invalid AI response.
 
 ---
 
 ## Auth endpoints
 
+### `GET /auth/csrf`
+
+Creates a CSRF token for browser clients.
+
+Response `200`:
+
+```json
+{
+  "csrf_token": "<csrf-token>"
+}
+```
+
+Side effects:
+
+- Sets a readable `csrf_token` cookie.
+
+Use the returned token or cookie value as `X-CSRF-Token` on mutating requests.
+
 ### `POST /auth/register`
+
+Requires `X-CSRF-Token`.
 
 Request:
 
@@ -75,7 +129,7 @@ Request:
 {
   "username": "student123",
   "email": "student@example.com",
-  "password": "password123"
+  "password": "Password123"
 }
 ```
 
@@ -83,29 +137,49 @@ Response `201`:
 
 ```json
 {
-  "access_token": "<jwt>"
+  "authenticated": true
 }
 ```
+
+Side effects:
+
+- Creates the user.
+- Creates a refresh session.
+- Sets `access_token` and `refresh_token` HttpOnly cookies.
 
 Validation:
 
-- `username`: string, min length 3.
-- `email`: valid email.
-- `password`: string, min length 8.
+- `username`: string, trimmed, length 3-32, letters/numbers/`_`/`.`/`-` only.
+- `email`: valid email, trimmed, lowercased, max length 254.
+- `password`: length 8-72, with at least one lowercase letter, uppercase
+  letter, and number.
 
 Important errors:
 
+- `403 Invalid CSRF token`
 - `409 Email already exists`
 - `409 Username already exists`
+- `429 Too Many Requests`
 
 ### `POST /auth/login`
 
-Request:
+Requires `X-CSRF-Token`.
+
+Request with email:
 
 ```json
 {
-  "email": "student@example.com",
-  "password": "password123"
+  "identifier": "student@example.com",
+  "password": "Password123"
+}
+```
+
+Request with username:
+
+```json
+{
+  "identifier": "student123",
+  "password": "Password123"
 }
 ```
 
@@ -113,13 +187,73 @@ Response `201`:
 
 ```json
 {
-  "access_token": "<jwt>"
+  "authenticated": true
 }
 ```
+
+Side effects:
+
+- Creates a refresh session.
+- Sets `access_token` and `refresh_token` HttpOnly cookies.
 
 Important errors:
 
 - `401 Unauthorized` for invalid credentials.
+- `403 Invalid CSRF token`
+- `429 Too Many Requests`
+
+### `GET /auth/me`
+
+Requires authentication.
+
+Response `200`:
+
+```json
+{
+  "email": "student@example.com",
+  "username": "student123",
+  "userId": "<user-id>",
+  "role": "user"
+}
+```
+
+### `POST /auth/refresh`
+
+Requires `X-CSRF-Token` and a valid `refresh_token` cookie.
+
+Response `201`:
+
+```json
+{
+  "authenticated": true
+}
+```
+
+Side effects:
+
+- Validates the current refresh session.
+- Rotates the refresh token.
+- Sets new `access_token` and `refresh_token` cookies.
+
+Important errors:
+
+- `401 Unauthorized` for invalid, expired, or revoked refresh sessions.
+- `403 Invalid CSRF token`
+
+### `POST /auth/logout`
+
+Requires `X-CSRF-Token`.
+
+Response `201`: empty body.
+
+Side effects:
+
+- Revokes the current refresh session when a refresh cookie is present.
+- Clears `access_token` and `refresh_token` cookies.
+
+Important errors:
+
+- `403 Invalid CSRF token`
 
 ---
 
@@ -372,7 +506,7 @@ Response `200`:
     "id": "<session-id>",
     "student": "<user-id>",
     "topic": {
-      "_id": "<topic-id>",
+      "id": "<topic-id>",
       "title": "Memory Management",
       "slug": "memory-management",
       "description": "Understanding stack, heap, and garbage collection.",
@@ -384,8 +518,8 @@ Response `200`:
     "status": "active",
     "overallEvaluation": {
       "summary": "Completed through level 10 with 0.9 average score.",
-      "stengths": ["stack-memory"],
-      "weakness": [],
+      "strengths": ["stack-memory"],
+      "weaknesses": [],
       "recommendations": []
     },
     "startAt": "2026-06-21T00:00:00.000Z",
@@ -470,8 +604,8 @@ Response `201`:
         "score": 1,
         "feedback": "Correct. The stack stores call frames.",
         "targetConcepts": ["stack-memory"],
-        "strength": ["stack-memory"],
-        "weakness": [],
+        "strengths": ["stack-memory"],
+        "weaknesses": [],
         "evaluatedBy": "system"
       },
       {
@@ -483,15 +617,15 @@ Response `201`:
         "score": 0.9,
         "feedback": "Good explanation of stack usage.",
         "targetConcepts": ["stack-memory"],
-        "strength": ["stack-memory"],
-        "weakness": [],
+        "strengths": ["stack-memory"],
+        "weaknesses": [],
         "evaluatedBy": "ai"
       }
     ],
     "setScore": 1,
     "passed": true,
-    "strength": ["stack-memory"],
-    "weakness": [],
+    "strengths": ["stack-memory"],
+    "weaknesses": [],
     "submittedAt": "2026-06-21T00:00:00.000Z",
     "evaluatedAt": "2026-06-21T00:00:00.000Z",
     "createdAt": "2026-06-21T00:00:00.000Z",
@@ -548,15 +682,15 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   student: string;
   topic: string;
   currentLevel: number;
   status: string;
   overallEvaluation?: {
     summary: string;
-    stengths: string[];
-    weakness: string[];
+    strengths: string[];
+    weaknesses: string[];
     recommendations: string[];
   };
   startAt?: string;
@@ -570,7 +704,7 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   user: string;
   session: string;
   topic: string;
@@ -579,8 +713,8 @@ Important errors:
   answers: Answer[];
   setScore: number;
   passed: boolean;
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   aiSummary?: string;
   submittedAt: string;
   evaluatedAt: string;
@@ -601,8 +735,8 @@ Important errors:
   score: number;
   feedback: string;
   targetConcepts: string[];
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   evaluatedBy: 'system' | 'ai';
 }
 ```
@@ -611,7 +745,7 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   student: string;
   session: string;
   topic: string;
@@ -619,9 +753,9 @@ Important errors:
   toLevel: number;
   overallScore: number;
   summary: string;
-  stength: string[];
-  weakness: string[];
-  recommendation: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
   attemptIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -630,13 +764,20 @@ Important errors:
 
 ## Suggested frontend flow
 
-1. Register or login and store `access_token`.
-2. Fetch topics with `GET /topics`.
-3. Start a session with `POST /sessions/start` and store `sessionId`.
-4. Render the returned `questionSet`.
-5. Submit answers with `POST /sessions/submit-answer` using `sessionId`.
-6. Show `attempt.answers` feedback.
-7. If `nextQuestionSet` is not `null`, render it next.
-8. If the user comes back later, call `GET /sessions/in-progress` to list
+1. Configure HTTP requests with credentials enabled, e.g. Angular
+   `withCredentials: true`.
+2. Call `GET /auth/csrf` and store the returned `csrf_token` in memory.
+3. Send `X-CSRF-Token: <csrf_token>` on all mutating requests.
+4. Register or login. The API sets auth cookies automatically.
+5. Call `GET /auth/me` to load the current authenticated user.
+6. If `GET /auth/me` returns `401`, call `POST /auth/refresh` with the CSRF
+   header, then retry `GET /auth/me`.
+7. Fetch topics with `GET /topics`.
+8. Start a session with `POST /sessions/start` and store `sessionId`.
+9. Render the returned `questionSet`.
+10. Submit answers with `POST /sessions/submit-answer` using `sessionId`.
+11. Show `attempt.answers` feedback.
+12. If `nextQuestionSet` is not `null`, render it next.
+13. If the user comes back later, call `GET /sessions/in-progress` to list
    active sessions, then call `POST /sessions/continue` with the chosen session
    ID to fetch its current-level question set.

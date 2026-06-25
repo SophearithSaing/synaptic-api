@@ -6,17 +6,17 @@ export class SetAttemptResponseDto {
   session: string;
   topic: string;
   questionSet: string;
-  level?: number;
-  answers?: Answer[];
-  setScore?: number;
-  passed?: boolean;
-  strength?: string[];
-  weakness?: string[];
+  level: number;
+  answers: Answer[];
+  setScore: number;
+  passed: boolean;
+  strengths: string[];
+  weaknesses: string[];
   aiSummary?: string;
-  submittedAt?: Date;
-  evaluatedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  submittedAt: Date;
+  evaluatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 
   /**
    * Creates a response DTO from a set attempt document.
@@ -37,8 +37,8 @@ export class SetAttemptResponseDto {
       answers: source.answers,
       setScore: source.setScore,
       passed: source.passed,
-      strength: source.strength,
-      weakness: source.weakness,
+      strengths: source.strengths,
+      weaknesses: source.weaknesses,
       aiSummary: source.aiSummary,
       submittedAt: source.submittedAt,
       evaluatedAt: source.evaluatedAt,

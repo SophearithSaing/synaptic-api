@@ -4,6 +4,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import type { Request } from 'express';
+import { ACCESS_TOKEN_COOKIE_NAME } from '../auth-cookie';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { AuthenticatedUser } from '../types/request-with-user.type';
 
@@ -13,6 +15,22 @@ interface JwtPayload {
   sub: string;
 }
 
+interface CookieAuthRequest extends Request {
+  cookies: Record<string, string | undefined>;
+}
+
+/**
+ * Extracts a JWT from the access token cookie.
+ *
+ * @param request Incoming request.
+ * @returns Access token from cookies, or null when unavailable.
+ */
+function extractJwtFromAccessTokenCookie(
+  request: CookieAuthRequest,
+): string | null {
+  return request.cookies?.[ACCESS_TOKEN_COOKIE_NAME] ?? null;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -20,8 +38,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        extractJwtFromAccessTokenCookie,
+      ]),
+      audience: configService.getOrThrow<string>('JWT_AUDIENCE'),
       ignoreExpiration: false,
+      issuer: configService.getOrThrow<string>('JWT_ISSUER'),
       secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });
   }

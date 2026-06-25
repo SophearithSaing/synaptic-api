@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { MongoIdPipe } from './mongo-id.pipe';
+import { MongoIdPipe } from '../../../src/common/pipes/mongo-id.pipe';
 
 describe('MongoIdPipe', () => {
   let pipe: MongoIdPipe;

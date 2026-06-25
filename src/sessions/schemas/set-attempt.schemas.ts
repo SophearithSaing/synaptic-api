@@ -24,31 +24,31 @@ export class SetAttempt {
   @Prop({ type: Types.ObjectId, ref: QuestionSet.name, required: true })
   questionSet: Types.ObjectId;
 
-  @Prop()
+  @Prop({ required: true })
   level: number;
 
-  @Prop({ type: [Object] })
+  @Prop({ type: [Object], required: true })
   answers: Answer[];
 
-  @Prop()
+  @Prop({ required: true })
   setScore: number;
 
-  @Prop()
+  @Prop({ required: true })
   passed: boolean;
 
-  @Prop({ type: [String] })
-  strength: string[];
+  @Prop({ type: [String], required: true })
+  strengths: string[];
 
-  @Prop({ type: [String] })
-  weakness: string[];
+  @Prop({ type: [String], required: true })
+  weaknesses: string[];
 
   @Prop()
   aiSummary: string;
 
-  @Prop()
+  @Prop({ required: true })
   submittedAt: Date;
 
-  @Prop()
+  @Prop({ required: true })
   evaluatedAt: Date;
 
   createdAt: Date;
@@ -66,8 +66,8 @@ export interface Answer {
   score: number;
   feedback: string;
   targetConcepts: string[];
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   evaluatedBy: EvaluatedBy;
 }
 

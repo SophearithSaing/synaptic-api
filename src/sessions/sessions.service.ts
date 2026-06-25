@@ -219,8 +219,8 @@ export class SessionsService {
     );
     const setScore = calculateSetScore(answers);
     const passed = setScore >= 0.8;
-    const strength = collectConceptsByScore(answers, 1);
-    const weakness = collectConceptsByScore(answers, 0);
+    const strengths = collectConceptsByScore(answers, 1);
+    const weaknesses = collectConceptsByScore(answers, 0);
     const submittedAt = new Date();
     let nextQuestionSet: QuestionSetResponseDto | null = null;
     const attempt = await this.setAttemptModel.create({
@@ -232,8 +232,8 @@ export class SessionsService {
       answers,
       setScore,
       passed,
-      strength,
-      weakness,
+      strengths,
+      weaknesses,
       submittedAt,
       evaluatedAt: submittedAt,
     });
@@ -374,8 +374,8 @@ export class SessionsService {
       score: roundScore(evaluation.score),
       feedback: evaluation.feedback,
       targetConcepts: writtenAnswer.question.targetConcepts,
-      strength: evaluation.strength,
-      weakness: evaluation.weakness,
+      strengths: evaluation.strengths,
+      weaknesses: evaluation.weaknesses,
       evaluatedBy: EvaluatedBy.AI,
     };
   }
@@ -505,8 +505,8 @@ export class SessionsService {
         ? question.feedback.correct
         : question.feedback.incorrect,
       targetConcepts: question.targetConcepts,
-      strength: isCorrect ? question.targetConcepts : [],
-      weakness: isCorrect ? [] : question.targetConcepts,
+      strengths: isCorrect ? question.targetConcepts : [],
+      weaknesses: isCorrect ? [] : question.targetConcepts,
       evaluatedBy: EvaluatedBy.System,
     };
   }
@@ -529,14 +529,14 @@ export class SessionsService {
       })
       .exec();
     const overallScore = calculateAttemptScore(attempts);
-    const stength = collectAttemptConcepts(attempts, 'strength');
-    const weakness = collectAttemptConcepts(attempts, 'weakness');
-    const recommendation = createRecommendations(weakness);
+    const strengths = collectAttemptConcepts(attempts, 'strengths');
+    const weaknesses = collectAttemptConcepts(attempts, 'weaknesses');
+    const recommendations = createRecommendations(weaknesses);
     const summary = this.createEvaluationSummary(
       fromLevel,
       toLevel,
       overallScore,
-      weakness,
+      weaknesses,
     );
 
     await this.sessionEvaluationModel.create({
@@ -547,9 +547,9 @@ export class SessionsService {
       toLevel,
       overallScore,
       summary,
-      stength,
-      weakness,
-      recommendation,
+      strengths,
+      weaknesses,
+      recommendations,
       attemptIds: attempts.map((attempt) => attempt._id.toString()),
     });
 
@@ -569,15 +569,15 @@ export class SessionsService {
       .exec();
     const overallEvaluation: OverallEvaluation = {
       summary: this.createOverallSummary(evaluations),
-      stengths: [
-        ...new Set(evaluations.flatMap((evaluation) => evaluation.stength)),
+      strengths: [
+        ...new Set(evaluations.flatMap((evaluation) => evaluation.strengths)),
       ],
-      weakness: [
-        ...new Set(evaluations.flatMap((evaluation) => evaluation.weakness)),
+      weaknesses: [
+        ...new Set(evaluations.flatMap((evaluation) => evaluation.weaknesses)),
       ],
       recommendations: [
         ...new Set(
-          evaluations.flatMap((evaluation) => evaluation.recommendation),
+          evaluations.flatMap((evaluation) => evaluation.recommendations),
         ),
       ],
     };
@@ -593,20 +593,20 @@ export class SessionsService {
    * @param fromLevel The first evaluated level.
    * @param toLevel The last evaluated level.
    * @param overallScore The average score for the range.
-   * @param weakness The weak concepts in the range.
+   * @param weaknesses The weak concepts in the range.
    * @returns The generated summary.
    */
   private createEvaluationSummary(
     fromLevel: number,
     toLevel: number,
     overallScore: number,
-    weakness: string[],
+    weaknesses: string[],
   ): string {
-    if (weakness.length === 0) {
+    if (weaknesses.length === 0) {
       return `Completed levels ${fromLevel}-${toLevel} with ${overallScore} score.`;
     }
 
-    return `Completed levels ${fromLevel}-${toLevel} with ${overallScore} score. Review ${weakness.join(', ')}.`;
+    return `Completed levels ${fromLevel}-${toLevel} with ${overallScore} score. Review ${weaknesses.join(', ')}.`;
   }
 
   /**
