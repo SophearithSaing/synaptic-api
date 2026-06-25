@@ -9,18 +9,26 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   ACCESS_TOKEN_COOKIE_NAME,
+  getAccessTokenClearCookieOptions,
   getAccessTokenCookieOptions,
+  getRefreshTokenClearCookieOptions,
+  getRefreshTokenCookieOptions,
+  REFRESH_TOKEN_COOKIE_NAME,
 } from './auth-cookie';
-import { AuthResponse, AuthService } from './auth.service';
+import { AuthResponse, AuthService, AuthSessionResponse } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type {
   AuthenticatedUser,
   RequestWithUser,
 } from './types/request-with-user.type';
+
+interface AuthCookieRequest extends Request {
+  cookies: Record<string, string | undefined>;
+}
 
 @Controller('auth')
 export class AuthController {
@@ -65,6 +73,47 @@ export class AuthController {
   }
 
   /**
+   * Refreshes the current auth session.
+   *
+   * @param request Request containing the refresh token cookie.
+   * @param response Express response used to set cookies.
+   * @returns A JWT access token.
+   */
+  @Post('refresh')
+  async refresh(
+    @Req() request: AuthCookieRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthResponse> {
+    const authResponse = await this.authService.refresh(
+      request.cookies[REFRESH_TOKEN_COOKIE_NAME] ?? '',
+    );
+
+    return this.createCookieAuthResponse(response, authResponse);
+  }
+
+  /**
+   * Logs out the current auth session.
+   *
+   * @param request Request containing the refresh token cookie.
+   * @param response Express response used to clear cookies.
+   */
+  @Post('logout')
+  async logout(
+    @Req() request: AuthCookieRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.authService.logout(request.cookies[REFRESH_TOKEN_COOKIE_NAME]);
+    response.clearCookie(
+      ACCESS_TOKEN_COOKIE_NAME,
+      getAccessTokenClearCookieOptions(),
+    );
+    response.clearCookie(
+      REFRESH_TOKEN_COOKIE_NAME,
+      getRefreshTokenClearCookieOptions(),
+    );
+  }
+
+  /**
    * Handles user login requests.
    *
    * @param authDto Login identifier and password.
@@ -95,14 +144,19 @@ export class AuthController {
    */
   private createCookieAuthResponse(
     response: Response,
-    authResponse: AuthResponse,
+    authResponse: AuthSessionResponse,
   ): AuthResponse {
     response.cookie(
       ACCESS_TOKEN_COOKIE_NAME,
       authResponse.access_token,
       getAccessTokenCookieOptions(this.configService),
     );
+    response.cookie(
+      REFRESH_TOKEN_COOKIE_NAME,
+      authResponse.refresh_token,
+      getRefreshTokenCookieOptions(this.configService),
+    );
 
-    return authResponse;
+    return { access_token: authResponse.access_token };
   }
 }

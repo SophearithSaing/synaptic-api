@@ -2,6 +2,21 @@ import { ConfigService } from '@nestjs/config';
 import type { CookieOptions } from 'express';
 
 export const ACCESS_TOKEN_COOKIE_NAME = 'access_token';
+export const REFRESH_TOKEN_COOKIE_NAME = 'refresh_token';
+
+/**
+ * Creates options for clearing the access token auth cookie.
+ *
+ * @returns Access token clear-cookie options.
+ */
+export function getAccessTokenClearCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'none',
+    secure: true,
+  };
+}
 
 /**
  * Creates options for the access token auth cookie.
@@ -13,23 +28,51 @@ export function getAccessTokenCookieOptions(
   configService: ConfigService,
 ): CookieOptions {
   return {
+    ...getAccessTokenClearCookieOptions(),
+    maxAge: parseDuration(
+      configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
+    ),
+  };
+}
+
+/**
+ * Creates options for clearing the refresh token auth cookie.
+ *
+ * @returns Refresh token clear-cookie options.
+ */
+export function getRefreshTokenClearCookieOptions(): CookieOptions {
+  return {
     httpOnly: true,
-    maxAge: getAccessTokenMaxAge(configService),
-    path: '/',
+    path: '/auth',
     sameSite: 'none',
     secure: true,
   };
 }
 
 /**
- * Gets the access token cookie max age from JWT expiry config.
+ * Creates options for the refresh token auth cookie.
  *
  * @param configService Application configuration service.
- * @returns Access token max age in milliseconds.
+ * @returns Refresh token cookie options.
  */
-function getAccessTokenMaxAge(configService: ConfigService): number {
+export function getRefreshTokenCookieOptions(
+  configService: ConfigService,
+): CookieOptions {
+  return {
+    ...getRefreshTokenClearCookieOptions(),
+    maxAge: getRefreshTokenMaxAge(configService),
+  };
+}
+
+/**
+ * Gets the refresh token max age from config.
+ *
+ * @param configService Application configuration service.
+ * @returns Refresh token max age in milliseconds.
+ */
+export function getRefreshTokenMaxAge(configService: ConfigService): number {
   return parseDuration(
-    configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
+    configService.getOrThrow<string>('JWT_REFRESH_EXPIRES_IN'),
   );
 }
 
