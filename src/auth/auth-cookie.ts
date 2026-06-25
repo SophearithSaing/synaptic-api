@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import type { CookieOptions } from 'express';
 
 export const ACCESS_TOKEN_COOKIE_NAME = 'access_token';
+export const CSRF_TOKEN_COOKIE_NAME = 'csrf_token';
+export const CSRF_TOKEN_HEADER_NAME = 'x-csrf-token';
 export const REFRESH_TOKEN_COOKIE_NAME = 'refresh_token';
 
 /**
@@ -32,6 +34,20 @@ export function getAccessTokenCookieOptions(
     maxAge: parseDuration(
       configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     ),
+  };
+}
+
+/**
+ * Creates options for the readable CSRF token cookie.
+ *
+ * @returns CSRF token cookie options.
+ */
+export function getCsrfTokenCookieOptions(): CookieOptions {
+  return {
+    httpOnly: false,
+    path: '/',
+    sameSite: 'none',
+    secure: true,
   };
 }
 

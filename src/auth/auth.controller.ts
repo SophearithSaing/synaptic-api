@@ -9,16 +9,19 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
 import {
   ACCESS_TOKEN_COOKIE_NAME,
+  CSRF_TOKEN_COOKIE_NAME,
   getAccessTokenClearCookieOptions,
   getAccessTokenCookieOptions,
+  getCsrfTokenCookieOptions,
   getRefreshTokenClearCookieOptions,
   getRefreshTokenCookieOptions,
   REFRESH_TOKEN_COOKIE_NAME,
 } from './auth-cookie';
-import { AuthResponse, AuthService, AuthSessionResponse } from './auth.service';
+import { AuthService, AuthSessionResponse } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type {
@@ -28,6 +31,14 @@ import type {
 
 interface AuthCookieRequest extends Request {
   cookies: Record<string, string | undefined>;
+}
+
+interface AuthStatusResponse {
+  authenticated: boolean;
+}
+
+interface CsrfTokenResponse {
+  csrf_token: string;
 }
 
 @Controller('auth')
@@ -41,7 +52,8 @@ export class AuthController {
    * Handles user registration requests.
    *
    * @param authDto Registration data.
-   * @returns A JWT access token.
+   * @param response Express response used to set cookies.
+   * @returns Authentication status.
    */
   @Post('register')
   @Throttle({
@@ -50,7 +62,7 @@ export class AuthController {
   async register(
     @Body() authDto: RegisterDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<AuthResponse> {
+  ): Promise<AuthStatusResponse> {
     const authResponse = await this.authService.register(
       authDto.email,
       authDto.username,
@@ -58,6 +70,26 @@ export class AuthController {
     );
 
     return this.createCookieAuthResponse(response, authResponse);
+  }
+
+  /**
+   * Creates a CSRF token for subsequent mutating requests.
+   *
+   * @param response Express response used to set cookies.
+   * @returns The CSRF token value.
+   */
+  @Get('csrf')
+  getCsrfToken(
+    @Res({ passthrough: true }) response: Response,
+  ): CsrfTokenResponse {
+    const csrfToken = randomBytes(32).toString('base64url');
+    response.cookie(
+      CSRF_TOKEN_COOKIE_NAME,
+      csrfToken,
+      getCsrfTokenCookieOptions(),
+    );
+
+    return { csrf_token: csrfToken };
   }
 
   /**
@@ -77,13 +109,13 @@ export class AuthController {
    *
    * @param request Request containing the refresh token cookie.
    * @param response Express response used to set cookies.
-   * @returns A JWT access token.
+   * @returns Authentication status.
    */
   @Post('refresh')
   async refresh(
     @Req() request: AuthCookieRequest,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<AuthResponse> {
+  ): Promise<AuthStatusResponse> {
     const authResponse = await this.authService.refresh(
       request.cookies[REFRESH_TOKEN_COOKIE_NAME] ?? '',
     );
@@ -117,7 +149,8 @@ export class AuthController {
    * Handles user login requests.
    *
    * @param authDto Login identifier and password.
-   * @returns A JWT access token.
+   * @param response Express response used to set cookies.
+   * @returns Authentication status.
    */
   @Post('login')
   @Throttle({
@@ -126,7 +159,7 @@ export class AuthController {
   async login(
     @Body() authDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<AuthResponse> {
+  ): Promise<AuthStatusResponse> {
     const authResponse = await this.authService.login(
       authDto.identifier,
       authDto.password,
@@ -136,16 +169,16 @@ export class AuthController {
   }
 
   /**
-   * Sets the access token cookie and returns the auth response body.
+   * Sets auth cookies and returns auth status.
    *
    * @param response Express response used to set cookies.
-   * @param authResponse Auth response containing the access token.
-   * @returns The unchanged auth response body.
+   * @param authResponse Auth response containing generated tokens.
+   * @returns Authentication status.
    */
   private createCookieAuthResponse(
     response: Response,
     authResponse: AuthSessionResponse,
-  ): AuthResponse {
+  ): AuthStatusResponse {
     response.cookie(
       ACCESS_TOKEN_COOKIE_NAME,
       authResponse.access_token,
@@ -157,6 +190,6 @@ export class AuthController {
       getRefreshTokenCookieOptions(this.configService),
     );
 
-    return { access_token: authResponse.access_token };
+    return { authenticated: true };
   }
 }

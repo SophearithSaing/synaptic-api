@@ -10,6 +10,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { TopicsModule } from './topics/topics.module';
 import { CategoriesModule } from './categories/categories.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { QuestionsModule } from './questions/questions.module';
 
@@ -48,6 +49,10 @@ import { QuestionsModule } from './questions/questions.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
   ],
 })
