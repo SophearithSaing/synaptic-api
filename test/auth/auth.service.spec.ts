@@ -1,6 +1,8 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Types } from 'mongoose';
 import { AuthService } from '../../src/auth/auth.service';
 import { UserRole } from '../../src/auth/schemas/user.schema';
 
@@ -21,30 +23,57 @@ interface MockUserDocument {
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: jest.Mocked<Pick<JwtService, 'sign'>>;
+  let configService: jest.Mocked<Pick<ConfigService, 'getOrThrow'>>;
   let save: jest.Mock;
+  let sessionSave: jest.Mock;
   let findOne: jest.Mock;
-  let userModel: jest.Mock & { findOne: jest.Mock };
+  let findById: jest.Mock;
+  let findSessionById: jest.Mock;
+  let findByIdAndUpdate: jest.Mock;
+  let userModel: jest.Mock & { findOne: jest.Mock; findById: jest.Mock };
+  let authSessionModel: jest.Mock & {
+    findById: jest.Mock;
+    findByIdAndUpdate: jest.Mock;
+  };
 
   beforeEach(() => {
     save = jest.fn();
+    sessionSave = jest.fn().mockResolvedValue({ id: 'session-id' });
     findOne = jest.fn();
+    findById = jest.fn();
+    findSessionById = jest.fn();
+    findByIdAndUpdate = jest.fn();
     userModel = Object.assign(
       jest.fn().mockImplementation((data: Record<string, unknown>) => ({
         ...data,
         save,
       })),
-      { findOne },
+      { findById, findOne },
+    );
+    authSessionModel = Object.assign(
+      jest.fn().mockImplementation((data: Record<string, unknown>) => ({
+        ...data,
+        save: sessionSave,
+      })),
+      { findById: findSessionById, findByIdAndUpdate },
     );
     jwtService = {
       sign: jest.fn().mockReturnValue('signed-token'),
     };
+    configService = {
+      getOrThrow: jest.fn().mockReturnValue('7d'),
+    };
     service = new AuthService(
       userModel as never,
+      authSessionModel as never,
       jwtService as unknown as JwtService,
+      configService as unknown as ConfigService,
     );
 
     jest.mocked(bcrypt.genSalt).mockResolvedValue('salt' as never);
-    jest.mocked(bcrypt.hash).mockResolvedValue('hashed-password' as never);
+    jest
+      .mocked(bcrypt.hash)
+      .mockImplementation(async (value: string) => `hashed-${value}` as never);
     jest.mocked(bcrypt.compare).mockResolvedValue(true as never);
   });
 
@@ -52,31 +81,33 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
-  it('hashes passwords and normalizes user input during registration', async () => {
+  it('hashes passwords, normalizes input, and creates sessions', async () => {
     const savedUser: MockUserDocument = {
-      _id: { toString: () => 'user-id' },
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
       email: 'student@example.com',
       username: 'student-user',
-      password: 'hashed-password',
+      password: 'hashed-Password1',
       role: UserRole.User,
     };
     save.mockResolvedValue(savedUser);
 
-    await expect(
-      service.register(' Student@Example.COM ', ' student-user ', 'Password1'),
-    ).resolves.toEqual({ access_token: 'signed-token' });
+    const result = await service.register(
+      ' Student@Example.COM ',
+      ' student-user ',
+      'Password1',
+    );
 
-    expect(bcrypt.genSalt).toHaveBeenCalled();
-    expect(bcrypt.hash).toHaveBeenCalledWith('Password1', 'salt');
+    expect(result.access_token).toBe('signed-token');
+    expect(result.refresh_token).toMatch(/^session-id\./);
     expect(userModel).toHaveBeenCalledWith({
       email: 'student@example.com',
       username: 'student-user',
-      password: 'hashed-password',
+      password: 'hashed-Password1',
     });
-    expect(jwtService.sign).toHaveBeenCalledWith({
-      email: 'student@example.com',
-      username: 'student-user',
-      sub: 'user-id',
+    expect(authSessionModel).toHaveBeenCalledWith({
+      expiresAt: expect.any(Date),
+      refreshTokenHash: expect.stringMatching(/^hashed-/),
+      userId: expect.any(Types.ObjectId),
     });
   });
 
@@ -98,7 +129,7 @@ describe('AuthService', () => {
 
   it('normalizes email identifiers and selects passwords during login', async () => {
     const user: MockUserDocument = {
-      _id: { toString: () => 'user-id' },
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
       email: 'student@example.com',
       username: 'student-user',
       password: 'hashed-password',
@@ -107,23 +138,18 @@ describe('AuthService', () => {
     const select = jest.fn().mockResolvedValue(user);
     findOne.mockReturnValue({ select });
 
-    await expect(
-      service.login(' Student@Example.COM ', 'Password1'),
-    ).resolves.toEqual({ access_token: 'signed-token' });
+    const result = await service.login(' Student@Example.COM ', 'Password1');
 
+    expect(result.access_token).toBe('signed-token');
+    expect(result.refresh_token).toMatch(/^session-id\./);
     expect(findOne).toHaveBeenCalledWith({ email: 'student@example.com' });
     expect(select).toHaveBeenCalledWith('+password');
     expect(bcrypt.compare).toHaveBeenCalledWith('Password1', 'hashed-password');
-    expect(jwtService.sign).toHaveBeenCalledWith({
-      email: 'student@example.com',
-      username: 'student-user',
-      sub: 'user-id',
-    });
   });
 
   it('uses username identifiers with case-insensitive collation', async () => {
     const user: MockUserDocument = {
-      _id: { toString: () => 'user-id' },
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
       email: 'student@example.com',
       username: 'student-user',
       password: 'hashed-password',
@@ -134,13 +160,60 @@ describe('AuthService', () => {
     findOne.mockReturnValue({ collation, select });
 
     await expect(service.login(' Student-User ', 'Password1')).resolves.toEqual(
-      { access_token: 'signed-token' },
+      expect.objectContaining({ access_token: 'signed-token' }),
     );
 
     expect(findOne).toHaveBeenCalledWith({ username: 'Student-User' });
     expect(collation).toHaveBeenCalledWith({ locale: 'en', strength: 2 });
     expect(select).toHaveBeenCalledWith('+password');
-    expect(bcrypt.compare).toHaveBeenCalledWith('Password1', 'hashed-password');
+  });
+
+  it('refreshes sessions and rotates refresh tokens', async () => {
+    const session = {
+      id: 'session-id',
+      userId: 'user-id',
+      refreshTokenHash: 'hashed-old-secret',
+      expiresAt: new Date(Date.now() + 60000),
+      save: jest.fn(),
+    };
+    const user: MockUserDocument = {
+      _id: { toString: () => 'user-id' },
+      email: 'student@example.com',
+      username: 'student-user',
+      password: 'hashed-password',
+    };
+    findSessionById.mockReturnValue({
+      select: jest.fn().mockResolvedValue(session),
+    });
+    findById.mockResolvedValue(user);
+
+    const result = await service.refresh('session-id.old-secret');
+
+    expect(result.access_token).toBe('signed-token');
+    expect(result.refresh_token).toMatch(/^session-id\./);
+    expect(bcrypt.compare).toHaveBeenCalledWith(
+      'old-secret',
+      'hashed-old-secret',
+    );
+    expect(session.save).toHaveBeenCalled();
+  });
+
+  it('rejects invalid refresh sessions', async () => {
+    findSessionById.mockReturnValue({
+      select: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(service.refresh('session-id.secret')).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('revokes refresh sessions during logout', async () => {
+    await service.logout('session-id.secret');
+
+    expect(findByIdAndUpdate).toHaveBeenCalledWith('session-id', {
+      revokedAt: expect.any(Date),
+    });
   });
 
   it('rejects login when no user exists', async () => {
@@ -154,7 +227,7 @@ describe('AuthService', () => {
 
   it('rejects login when the password does not match', async () => {
     const user: MockUserDocument = {
-      _id: { toString: () => 'user-id' },
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
       email: 'student@example.com',
       username: 'student-user',
       password: 'hashed-password',
