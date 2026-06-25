@@ -518,8 +518,8 @@ Response `200`:
     "status": "active",
     "overallEvaluation": {
       "summary": "Completed through level 10 with 0.9 average score.",
-      "stengths": ["stack-memory"],
-      "weakness": [],
+      "strengths": ["stack-memory"],
+      "weaknesses": [],
       "recommendations": []
     },
     "startAt": "2026-06-21T00:00:00.000Z",
@@ -604,8 +604,8 @@ Response `201`:
         "score": 1,
         "feedback": "Correct. The stack stores call frames.",
         "targetConcepts": ["stack-memory"],
-        "strength": ["stack-memory"],
-        "weakness": [],
+        "strengths": ["stack-memory"],
+        "weaknesses": [],
         "evaluatedBy": "system"
       },
       {
@@ -617,15 +617,15 @@ Response `201`:
         "score": 0.9,
         "feedback": "Good explanation of stack usage.",
         "targetConcepts": ["stack-memory"],
-        "strength": ["stack-memory"],
-        "weakness": [],
+        "strengths": ["stack-memory"],
+        "weaknesses": [],
         "evaluatedBy": "ai"
       }
     ],
     "setScore": 1,
     "passed": true,
-    "strength": ["stack-memory"],
-    "weakness": [],
+    "strengths": ["stack-memory"],
+    "weaknesses": [],
     "submittedAt": "2026-06-21T00:00:00.000Z",
     "evaluatedAt": "2026-06-21T00:00:00.000Z",
     "createdAt": "2026-06-21T00:00:00.000Z",
@@ -689,8 +689,8 @@ Important errors:
   status: string;
   overallEvaluation?: {
     summary: string;
-    stengths: string[];
-    weakness: string[];
+    strengths: string[];
+    weaknesses: string[];
     recommendations: string[];
   };
   startAt?: string;
@@ -713,8 +713,8 @@ Important errors:
   answers: Answer[];
   setScore: number;
   passed: boolean;
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   aiSummary?: string;
   submittedAt: string;
   evaluatedAt: string;
@@ -735,8 +735,8 @@ Important errors:
   score: number;
   feedback: string;
   targetConcepts: string[];
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   evaluatedBy: 'system' | 'ai';
 }
 ```
@@ -753,9 +753,9 @@ Important errors:
   toLevel: number;
   overallScore: number;
   summary: string;
-  stength: string[];
-  weakness: string[];
-  recommendation: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
   attemptIds: string[];
   createdAt: string;
   updatedAt: string;
