@@ -36,8 +36,8 @@ export class AuthService {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(pass, salt);
     const user = new this.userModel({
-      email,
-      username,
+      email: this.normalizeEmail(email),
+      username: this.normalizeUsername(username),
       password: hashedPassword,
     });
     try {
@@ -68,11 +68,33 @@ export class AuthService {
    * @returns A JWT access token.
    */
   async login(email: string, pass: string): Promise<AuthResponse> {
-    const user = await this.userModel.findOne({ email });
+    const user = await this.userModel
+      .findOne({ email: this.normalizeEmail(email) })
+      .select('+password');
     if (!user || !(await bcrypt.compare(pass, user.password))) {
       throw new UnauthorizedException();
     }
     return this.createAuthResponse(user);
+  }
+
+  /**
+   * Normalizes an email for auth lookups and persistence.
+   *
+   * @param email User email address.
+   * @returns Normalized email address.
+   */
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  /**
+   * Normalizes a username for persistence.
+   *
+   * @param username Public username.
+   * @returns Trimmed username.
+   */
+  private normalizeUsername(username: string): string {
+    return username.trim();
   }
 
   /**
