@@ -33,35 +33,29 @@ export class SetAttemptAnswerDto {
   answer: string;
 
   @IsString()
-  @IsOptional()
-  correctAnswer?: string;
+  @IsNotEmpty()
+  correctAnswer: string;
 
   @IsNumber()
-  @IsOptional()
-  score?: number;
+  score: number;
 
   @IsString()
-  @IsOptional()
-  feedback?: string;
+  feedback: string;
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  targetConcepts?: string[];
+  targetConcepts: string[];
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  strengths?: string[];
+  strengths: string[];
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  weaknesses?: string[];
+  weaknesses: string[];
 
   @IsEnum(EvaluatedBy)
-  @IsOptional()
-  evaluatedBy?: EvaluatedBy;
+  evaluatedBy: EvaluatedBy;
 }
 
 export class CreateSetAttemptDto {
@@ -82,33 +76,27 @@ export class CreateSetAttemptDto {
   questionSet: string;
 
   @IsNumber()
-  @IsOptional()
-  level?: number;
+  level: number;
 
   @IsArray()
   @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => SetAttemptAnswerDto)
-  @IsOptional()
-  answers?: SetAttemptAnswerDto[];
+  answers: SetAttemptAnswerDto[];
 
   @IsNumber()
-  @IsOptional()
-  setScore?: number;
+  setScore: number;
 
   @IsBoolean()
-  @IsOptional()
-  passed?: boolean;
+  passed: boolean;
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  strengths?: string[];
+  strengths: string[];
 
   @IsArray()
   @IsString({ each: true })
-  @IsOptional()
-  weaknesses?: string[];
+  weaknesses: string[];
 
   @IsString()
   @IsOptional()
@@ -116,11 +104,9 @@ export class CreateSetAttemptDto {
 
   @IsDate()
   @Type(() => Date)
-  @IsOptional()
-  submittedAt?: Date;
+  submittedAt: Date;
 
   @IsDate()
   @Type(() => Date)
-  @IsOptional()
-  evaluatedAt?: Date;
+  evaluatedAt: Date;
 }
