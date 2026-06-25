@@ -96,7 +96,7 @@ describe('AuthService', () => {
     ).rejects.toThrow(new ConflictException('Email already exists'));
   });
 
-  it('normalizes email lookups and selects passwords during login', async () => {
+  it('normalizes email identifiers and selects passwords during login', async () => {
     const user: MockUserDocument = {
       _id: { toString: () => 'user-id' },
       email: 'student@example.com',
@@ -119,6 +119,28 @@ describe('AuthService', () => {
       username: 'student-user',
       sub: 'user-id',
     });
+  });
+
+  it('uses username identifiers with case-insensitive collation', async () => {
+    const user: MockUserDocument = {
+      _id: { toString: () => 'user-id' },
+      email: 'student@example.com',
+      username: 'student-user',
+      password: 'hashed-password',
+      role: UserRole.User,
+    };
+    const select = jest.fn().mockResolvedValue(user);
+    const collation = jest.fn();
+    findOne.mockReturnValue({ collation, select });
+
+    await expect(service.login(' Student-User ', 'Password1')).resolves.toEqual(
+      { access_token: 'signed-token' },
+    );
+
+    expect(findOne).toHaveBeenCalledWith({ username: 'Student-User' });
+    expect(collation).toHaveBeenCalledWith({ locale: 'en', strength: 2 });
+    expect(select).toHaveBeenCalledWith('+password');
+    expect(bcrypt.compare).toHaveBeenCalledWith('Password1', 'hashed-password');
   });
 
   it('rejects login when no user exists', async () => {

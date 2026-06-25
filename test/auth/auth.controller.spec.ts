@@ -77,13 +77,13 @@ describe('AuthController', () => {
     expect(controller.getCurrentUser(request)).toEqual(request.user);
   });
 
-  it('logs users in with email and password', async () => {
+  it('logs users in with identifier and password', async () => {
     service.login.mockResolvedValue(authResponse);
 
     await expect(
       controller.login(
         {
-          email: 'student@example.com',
+          identifier: 'student@example.com',
           password: 'password123',
         },
         response as unknown as Response,
