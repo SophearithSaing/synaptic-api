@@ -506,7 +506,7 @@ Response `200`:
     "id": "<session-id>",
     "student": "<user-id>",
     "topic": {
-      "_id": "<topic-id>",
+      "id": "<topic-id>",
       "title": "Memory Management",
       "slug": "memory-management",
       "description": "Understanding stack, heap, and garbage collection.",
@@ -682,7 +682,7 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   student: string;
   topic: string;
   currentLevel: number;
@@ -704,7 +704,7 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   user: string;
   session: string;
   topic: string;
@@ -745,7 +745,7 @@ Important errors:
 
 ```ts
 {
-  _id: string;
+  id: string;
   student: string;
   session: string;
   topic: string;
