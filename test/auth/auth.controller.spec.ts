@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import {
   ACCESS_TOKEN_COOKIE_NAME,
+  CSRF_TOKEN_COOKIE_NAME,
   REFRESH_TOKEN_COOKIE_NAME,
 } from '../../src/auth/auth-cookie';
 import { AuthController } from '../../src/auth/auth.controller';
@@ -56,7 +57,7 @@ describe('AuthController', () => {
         },
         response as unknown as Response,
       ),
-    ).resolves.toEqual({ access_token: 'signed-token' });
+    ).resolves.toEqual({ authenticated: true });
 
     expect(service.register).toHaveBeenCalledWith(
       'student@example.com',
@@ -72,6 +73,22 @@ describe('AuthController', () => {
       REFRESH_TOKEN_COOKIE_NAME,
       'refresh-token',
       expect.any(Object),
+    );
+  });
+
+  it('creates CSRF tokens', () => {
+    const result = controller.getCsrfToken(response as unknown as Response);
+
+    expect(result.csrf_token).toEqual(expect.any(String));
+    expect(response.cookie).toHaveBeenCalledWith(
+      CSRF_TOKEN_COOKIE_NAME,
+      result.csrf_token,
+      {
+        httpOnly: false,
+        path: '/',
+        sameSite: 'none',
+        secure: true,
+      },
     );
   });
 
@@ -96,7 +113,7 @@ describe('AuthController', () => {
 
     await expect(
       controller.refresh(request as never, response as unknown as Response),
-    ).resolves.toEqual({ access_token: 'signed-token' });
+    ).resolves.toEqual({ authenticated: true });
 
     expect(service.refresh).toHaveBeenCalledWith('old-refresh-token');
     expect(response.cookie).toHaveBeenCalledWith(
@@ -140,7 +157,7 @@ describe('AuthController', () => {
         },
         response as unknown as Response,
       ),
-    ).resolves.toEqual({ access_token: 'signed-token' });
+    ).resolves.toEqual({ authenticated: true });
 
     expect(service.login).toHaveBeenCalledWith(
       'student@example.com',
