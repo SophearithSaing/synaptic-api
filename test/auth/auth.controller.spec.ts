@@ -1,7 +1,7 @@
-import { AuthController } from './auth.controller';
-import { AuthResponse, AuthService } from './auth.service';
-import { UserRole } from './schemas/user.schema';
-import { RequestWithUser } from './types/request-with-user.type';
+import { AuthController } from '../../src/auth/auth.controller';
+import { AuthResponse, AuthService } from '../../src/auth/auth.service';
+import { UserRole } from '../../src/auth/schemas/user.schema';
+import { RequestWithUser } from '../../src/auth/types/request-with-user.type';
 
 describe('AuthController', () => {
   let controller: AuthController;

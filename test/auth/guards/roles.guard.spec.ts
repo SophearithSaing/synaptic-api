@@ -1,8 +1,8 @@
 import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RolesGuard } from './roles.guard';
-import { UserRole } from '../schemas/user.schema';
-import { RequestWithUser } from '../types/request-with-user.type';
+import { RolesGuard } from '../../../src/auth/guards/roles.guard';
+import { UserRole } from '../../../src/auth/schemas/user.schema';
+import { RequestWithUser } from '../../../src/auth/types/request-with-user.type';
 
 describe('RolesGuard', () => {
   const getContext = (role?: UserRole): ExecutionContext =>
