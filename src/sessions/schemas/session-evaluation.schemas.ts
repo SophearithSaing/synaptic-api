@@ -30,13 +30,13 @@ export class SessionEvaluation {
   summary: string;
 
   @Prop({ type: [String] })
-  stength: string[];
+  strengths: string[];
 
   @Prop({ type: [String] })
-  weakness: string[];
+  weaknesses: string[];
 
   @Prop({ type: [String] })
-  recommendation: string[];
+  recommendations: string[];
 
   @Prop({ type: [String] })
   attemptIds: string[];

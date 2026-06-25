@@ -52,12 +52,12 @@ export class SetAttemptAnswerDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  strength?: string[];
+  strengths?: string[];
 
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  weakness?: string[];
+  weaknesses?: string[];
 
   @IsEnum(EvaluatedBy)
   @IsOptional()
@@ -103,12 +103,12 @@ export class CreateSetAttemptDto {
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  strength?: string[];
+  strengths?: string[];
 
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
-  weakness?: string[];
+  weaknesses?: string[];
 
   @IsString()
   @IsOptional()

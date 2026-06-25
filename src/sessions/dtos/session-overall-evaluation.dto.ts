@@ -8,12 +8,12 @@ export class SessionOverallEvaluationDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  stengths: string[];
+  strengths: string[];
 
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  weakness: string[];
+  weaknesses: string[];
 
   @IsArray()
   @ArrayNotEmpty()

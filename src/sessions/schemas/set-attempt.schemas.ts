@@ -37,10 +37,10 @@ export class SetAttempt {
   passed: boolean;
 
   @Prop({ type: [String] })
-  strength: string[];
+  strengths: string[];
 
   @Prop({ type: [String] })
-  weakness: string[];
+  weaknesses: string[];
 
   @Prop()
   aiSummary: string;
@@ -66,8 +66,8 @@ export interface Answer {
   score: number;
   feedback: string;
   targetConcepts: string[];
-  strength: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   evaluatedBy: EvaluatedBy;
 }
 

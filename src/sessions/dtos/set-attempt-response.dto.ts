@@ -10,8 +10,8 @@ export class SetAttemptResponseDto {
   answers?: Answer[];
   setScore?: number;
   passed?: boolean;
-  strength?: string[];
-  weakness?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
   aiSummary?: string;
   submittedAt?: Date;
   evaluatedAt?: Date;
@@ -37,8 +37,8 @@ export class SetAttemptResponseDto {
       answers: source.answers,
       setScore: source.setScore,
       passed: source.passed,
-      strength: source.strength,
-      weakness: source.weakness,
+      strengths: source.strengths,
+      weaknesses: source.weaknesses,
       aiSummary: source.aiSummary,
       submittedAt: source.submittedAt,
       evaluatedAt: source.evaluatedAt,

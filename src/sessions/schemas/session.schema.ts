@@ -36,7 +36,7 @@ export const SessionSchema = SchemaFactory.createForClass(Session);
 
 export interface OverallEvaluation {
   summary: string;
-  stengths: string[];
-  weakness: string[];
+  strengths: string[];
+  weaknesses: string[];
   recommendations: string[];
 }
