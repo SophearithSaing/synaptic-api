@@ -1,5 +1,7 @@
 import { AuthController } from './auth.controller';
 import { AuthResponse, AuthService } from './auth.service';
+import { UserRole } from './schemas/user.schema';
+import { RequestWithUser } from './types/request-with-user.type';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -32,6 +34,19 @@ describe('AuthController', () => {
       'student-user',
       'password123',
     );
+  });
+
+  it('returns the current authenticated user', () => {
+    const request = {
+      user: {
+        email: 'student@example.com',
+        username: 'student-user',
+        userId: 'authenticated-user-id',
+        role: UserRole.User,
+      },
+    } as RequestWithUser;
+
+    expect(controller.getCurrentUser(request)).toEqual(request.user);
   });
 
   it('logs users in with email and password', async () => {

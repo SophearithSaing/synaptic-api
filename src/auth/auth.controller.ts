@@ -1,7 +1,12 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AuthResponse, AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import type {
+  AuthenticatedUser,
+  RequestWithUser,
+} from './types/request-with-user.type';
 
 @Controller('auth')
 export class AuthController {
@@ -23,6 +28,18 @@ export class AuthController {
       authDto.username,
       authDto.password,
     );
+  }
+
+  /**
+   * Fetches the current authenticated user.
+   *
+   * @param request The authenticated request.
+   * @returns The current authenticated user.
+   */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getCurrentUser(@Req() request: RequestWithUser): AuthenticatedUser {
+    return request.user;
   }
 
   /**
