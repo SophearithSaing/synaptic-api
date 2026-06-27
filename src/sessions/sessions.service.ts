@@ -40,6 +40,7 @@ import {
   collectAttemptConcepts,
   collectConceptsByScore,
   createRecommendations,
+  hasPassingAnswers,
   roundScore,
 } from './sessions.util';
 import {
@@ -218,7 +219,7 @@ export class SessionsService {
       questionSet.questions,
     );
     const setScore = calculateSetScore(answers);
-    const passed = setScore >= 0.8;
+    const passed = hasPassingAnswers(answers);
     const strengths = collectConceptsByScore(answers, 1);
     const weaknesses = collectConceptsByScore(answers, 0);
     const submittedAt = new Date();

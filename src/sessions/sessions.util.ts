@@ -14,6 +14,16 @@ export function calculateSetScore(answers: Answer[]): number {
 }
 
 /**
+ * Checks whether every answer reaches the passing threshold.
+ *
+ * @param answers The evaluated answers.
+ * @returns Whether all answers are passing.
+ */
+export function hasPassingAnswers(answers: Answer[]): boolean {
+  return answers.every((answer) => answer.score >= 0.5);
+}
+
+/**
  * Calculates the average score from attempts.
  *
  * @param attempts The attempts to score.
