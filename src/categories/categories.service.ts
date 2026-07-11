@@ -53,6 +53,19 @@ export class CategoriesService {
   }
 
   /**
+   * Deletes a category by its unique ID.
+   *
+   * @param id The category ID to delete.
+   */
+  async deleteCategory(id: string): Promise<void> {
+    const category = await this.categoryModel.findByIdAndDelete(id).exec();
+
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+  }
+
+  /**
    * Converts a category document to an API response.
    *
    * @param category The category document.

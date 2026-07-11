@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { TopicResponseDto } from './dto/topic-response.dto';
@@ -49,5 +59,17 @@ export class TopicsController {
     @Param('id', MongoIdPipe) id: string,
   ): Promise<TopicResponseDto> {
     return this.topicsService.getTopicById(id);
+  }
+
+  /**
+   * Deletes a topic by its ID.
+   *
+   * @param id The topic ID to delete.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.Admin)
+  async deleteTopic(@Param('id', MongoIdPipe) id: string): Promise<void> {
+    await this.topicsService.deleteTopic(id);
   }
 }

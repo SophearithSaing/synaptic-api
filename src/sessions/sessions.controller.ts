@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { RequestWithUser } from '../auth/types/request-with-user.type';
+import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueSessionDto,
@@ -43,6 +55,21 @@ export class SessionsController {
     @Req() request: RequestWithUser,
   ): Promise<SessionResponseDto[]> {
     return this.sessionsService.getInProgressSessions(request.user.userId);
+  }
+
+  /**
+   * Deletes a learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param id The session ID to delete.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSession(
+    @Req() request: RequestWithUser,
+    @Param('id', MongoIdPipe) id: string,
+  ): Promise<void> {
+    await this.sessionsService.deleteSession(id, request.user.userId);
   }
 
   /**

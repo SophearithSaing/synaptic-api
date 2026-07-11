@@ -145,6 +145,25 @@ export class SessionsService {
   }
 
   /**
+   * Deletes a learning session owned by a user.
+   *
+   * @param sessionId The session ID to delete.
+   * @param studentId The authenticated student ID.
+   */
+  async deleteSession(sessionId: string, studentId: string): Promise<void> {
+    const session = await this.sessionModel
+      .findOneAndDelete({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+      })
+      .exec();
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+  }
+
+  /**
    * Continues a learning session for a user.
    *
    * @param sessionId The session ID to continue.

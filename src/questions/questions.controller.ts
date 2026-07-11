@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseArrayPipe,
   Patch,
@@ -15,6 +18,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/schemas/user.schema';
 import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import {
+  BulkUpdateQuestionSetDto,
   CreateQuestionSetDto,
   QuestionSetResponseDto,
   UpdateQuestionSetDto,
@@ -45,6 +49,21 @@ export class QuestionsController {
   }
 
   /**
+   * Updates question sets in bulk.
+   *
+   * @param body The question set updates.
+   * @returns The updated question sets.
+   */
+  @Patch('update')
+  @Roles(UserRole.Admin)
+  async bulkUpdateQuestionSets(
+    @Body(new ParseArrayPipe({ items: BulkUpdateQuestionSetDto }))
+    body: BulkUpdateQuestionSetDto[],
+  ): Promise<QuestionSetResponseDto[]> {
+    return this.questionsService.bulkUpdateQuestionSets(body);
+  }
+
+  /**
    * Updates a question set by ID.
    *
    * @param id The question set ID.
@@ -58,6 +77,18 @@ export class QuestionsController {
     @Body() body: UpdateQuestionSetDto,
   ): Promise<QuestionSetResponseDto> {
     return this.questionsService.updateQuestionSet(id, body);
+  }
+
+  /**
+   * Deletes a question set by ID.
+   *
+   * @param id The question set ID to delete.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.Admin)
+  async deleteQuestionSet(@Param('id', MongoIdPipe) id: string): Promise<void> {
+    await this.questionsService.deleteQuestionSet(id);
   }
 
   /**
