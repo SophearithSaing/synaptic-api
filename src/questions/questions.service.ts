@@ -82,6 +82,21 @@ export class QuestionsService {
   }
 
   /**
+   * Deletes a question set by ID.
+   *
+   * @param id The question set ID to delete.
+   */
+  async deleteQuestionSet(id: string): Promise<void> {
+    const questionSet = await this.questionSetModel
+      .findByIdAndDelete(id)
+      .exec();
+
+    if (!questionSet) {
+      throw new NotFoundException('Question set not found');
+    }
+  }
+
+  /**
    * Fetches a question set by ID.
    *
    * @param id The question set ID.

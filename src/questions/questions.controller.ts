@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseArrayPipe,
   Patch,
@@ -74,6 +77,18 @@ export class QuestionsController {
     @Body() body: UpdateQuestionSetDto,
   ): Promise<QuestionSetResponseDto> {
     return this.questionsService.updateQuestionSet(id, body);
+  }
+
+  /**
+   * Deletes a question set by ID.
+   *
+   * @param id The question set ID to delete.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.Admin)
+  async deleteQuestionSet(@Param('id', MongoIdPipe) id: string): Promise<void> {
+    await this.questionsService.deleteQuestionSet(id);
   }
 
   /**
