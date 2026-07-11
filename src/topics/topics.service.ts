@@ -68,6 +68,19 @@ export class TopicsService {
   }
 
   /**
+   * Deletes a topic by its unique ID.
+   *
+   * @param id The topic ID to delete.
+   */
+  async deleteTopic(id: string): Promise<void> {
+    const topic = await this.topicModel.findByIdAndDelete(id).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+  }
+
+  /**
    * Converts a topic document to an API response.
    *
    * @param topic The topic document.
