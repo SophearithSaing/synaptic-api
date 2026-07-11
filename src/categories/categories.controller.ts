@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -51,5 +61,17 @@ export class CategoriesController {
     @Param('id', MongoIdPipe) id: string,
   ): Promise<CategoryResponseDto> {
     return this.categoriesService.getCategoryById(id);
+  }
+
+  /**
+   * Deletes a category by its ID.
+   *
+   * @param id The category ID to delete.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.Admin)
+  async deleteCategory(@Param('id', MongoIdPipe) id: string): Promise<void> {
+    await this.categoriesService.deleteCategory(id);
   }
 }
