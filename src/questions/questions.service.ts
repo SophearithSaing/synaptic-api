@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
+  BulkUpdateQuestionSetDto,
   CreateQuestionSetDto,
   QuestionSetResponseDto,
   UpdateQuestionSetDto,
@@ -39,6 +40,20 @@ export class QuestionsService {
     );
 
     return QuestionSetResponseDto.fromMany(questionSets);
+  }
+
+  /**
+   * Updates question sets in bulk.
+   *
+   * @param dtos The question set updates.
+   * @returns The updated question sets.
+   */
+  async bulkUpdateQuestionSets(
+    dtos: BulkUpdateQuestionSetDto[],
+  ): Promise<QuestionSetResponseDto[]> {
+    return Promise.all(
+      dtos.map(({ id, ...dto }) => this.updateQuestionSet(id, dto)),
+    );
   }
 
   /**

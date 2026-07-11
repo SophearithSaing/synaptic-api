@@ -15,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/schemas/user.schema';
 import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import {
+  BulkUpdateQuestionSetDto,
   CreateQuestionSetDto,
   QuestionSetResponseDto,
   UpdateQuestionSetDto,
@@ -42,6 +43,21 @@ export class QuestionsController {
     body: CreateQuestionSetDto[],
   ): Promise<QuestionSetResponseDto[]> {
     return this.questionsService.createQuestionSets(body);
+  }
+
+  /**
+   * Updates question sets in bulk.
+   *
+   * @param body The question set updates.
+   * @returns The updated question sets.
+   */
+  @Patch('update')
+  @Roles(UserRole.Admin)
+  async bulkUpdateQuestionSets(
+    @Body(new ParseArrayPipe({ items: BulkUpdateQuestionSetDto }))
+    body: BulkUpdateQuestionSetDto[],
+  ): Promise<QuestionSetResponseDto[]> {
+    return this.questionsService.bulkUpdateQuestionSets(body);
   }
 
   /**
