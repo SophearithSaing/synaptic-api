@@ -68,15 +68,20 @@ and `OPTIONS` requests do not require the CSRF header.
 | `POST` | `/categories/category/create` | Yes | Admin | Create category. |
 | `GET` | `/categories/categories` | Yes | User/Admin | List categories. |
 | `GET` | `/categories/:id` | Yes | User/Admin | Get category by ID. |
+| `DELETE` | `/categories/:id` | Yes | Admin | Delete category by ID. |
 | `POST` | `/topics/create` | Yes | Admin | Create topic. |
 | `GET` | `/topics` | Yes | User/Admin | List topics. |
 | `GET` | `/topics/:id` | Yes | User/Admin | Get topic by ID. |
+| `DELETE` | `/topics/:id` | Yes | Admin | Delete topic by ID. |
 | `POST` | `/questions/create` | Yes | Admin | Create question sets. |
+| `PATCH` | `/questions/update` | Yes | Admin | Update question sets in bulk. |
 | `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
+| `DELETE` | `/questions/:id` | Yes | Admin | Delete question set by ID. |
 | `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
 | `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
 | `POST` | `/sessions/start` | Yes | User/Admin | Start session and return session ID plus level 0 question set. |
 | `GET` | `/sessions/in-progress` | Yes | User/Admin | List active sessions for the current user. |
+| `DELETE` | `/sessions/:id` | Yes | User/Admin | Delete owned session by ID. |
 | `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
 | `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
 
@@ -306,6 +311,16 @@ Response `200`:
 
 Response `200`: same shape as one category above.
 
+### `DELETE /categories/:id`
+
+Admin only. Requires `X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Category not found`
+
 ---
 
 ## Topic endpoints
@@ -354,6 +369,16 @@ Response `200`: array of topic response DTOs.
 ### `GET /topics/:id`
 
 Response `200`: one topic response DTO.
+
+### `DELETE /topics/:id`
+
+Admin only. Requires `X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Topic not found`
 
 ---
 
@@ -433,11 +458,46 @@ Request:
 
 Response `201`: array of question set responses.
 
+### `PATCH /questions/update`
+
+Admin only. Requires `X-CSRF-Token`. Body is an array of
+`BulkUpdateQuestionSetDto`. Each item must include `id` and may include any
+partial question set fields supported by `PATCH /questions/:id`.
+
+Request:
+
+```json
+[
+  {
+    "id": "<question-set-id>",
+    "topic": "<topic-id>",
+    "setType": "practice",
+    "level": 1
+  }
+]
+```
+
+Response `200`: array of updated question set responses.
+
+Important errors:
+
+- `404 Question set not found`
+
 ### `PATCH /questions/:id`
 
 Admin only. Body supports partial question set fields.
 
 Response `200`: updated question set response.
+
+### `DELETE /questions/:id`
+
+Admin only. Requires `X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Question set not found`
 
 ### `GET /questions/topic/:slug?populateTopic=true`
 
@@ -531,6 +591,17 @@ Response `200`:
 
 Use the returned `id` as `sessionId` for `/sessions/continue` and
 `/sessions/submit-answer`.
+
+### `DELETE /sessions/:id`
+
+Deletes an in-progress or completed learning session owned by the authenticated
+user. Requires `X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Session not found`
 
 ### `POST /sessions/continue`
 
@@ -781,3 +852,8 @@ Important errors:
 13. If the user comes back later, call `GET /sessions/in-progress` to list
    active sessions, then call `POST /sessions/continue` with the chosen session
    ID to fetch its current-level question set.
+
+## Endpoint coverage summary
+
+- Implemented endpoints documented: 26.
+- Missing endpoints added in this update: 5.
