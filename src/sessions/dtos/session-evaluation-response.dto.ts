@@ -4,7 +4,8 @@ import { SessionEvaluationDocument } from '../schemas/session-evaluation.schemas
 export class SessionEvaluationResponseDto {
   id: string;
   student: unknown;
-  session: unknown;
+  session?: unknown;
+  liveSession?: unknown;
   topic: unknown;
   fromLevel: number;
   toLevel: number;
@@ -31,7 +32,12 @@ export class SessionEvaluationResponseDto {
     return {
       id: source._id.toString(),
       student: SessionEvaluationResponseDto.transformReference(source.student),
-      session: SessionEvaluationResponseDto.transformReference(source.session),
+      session: source.session
+        ? SessionEvaluationResponseDto.transformReference(source.session)
+        : undefined,
+      liveSession: source.liveSession
+        ? SessionEvaluationResponseDto.transformReference(source.liveSession)
+        : undefined,
       topic: SessionEvaluationResponseDto.transformReference(source.topic),
       fromLevel: source.fromLevel,
       toLevel: source.toLevel,

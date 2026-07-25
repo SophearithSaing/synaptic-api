@@ -1102,9 +1102,12 @@ export class SessionsService {
     isLiveSession = false,
   ): Promise<void> {
     const fromLevel = toLevel === 10 ? 0 : toLevel - 9;
+    const sessionFilter = isLiveSession
+      ? { liveSession: session._id }
+      : { session: session._id };
     const attempts = await this.setAttemptModel
       .find({
-        session: session._id,
+        ...sessionFilter,
         level: { $gte: fromLevel, $lte: toLevel },
       })
       .exec();
@@ -1121,7 +1124,7 @@ export class SessionsService {
 
     await this.sessionEvaluationModel.create({
       student: session.student,
-      session: session._id,
+      ...sessionFilter,
       topic: session.topic,
       fromLevel,
       toLevel,
@@ -1146,8 +1149,11 @@ export class SessionsService {
     session: SessionDocument | LiveSessionDocument,
     isLiveSession = false,
   ): Promise<void> {
+    const sessionFilter = isLiveSession
+      ? { liveSession: session._id }
+      : { session: session._id };
     const evaluations = await this.sessionEvaluationModel
-      .find({ session: session._id })
+      .find(sessionFilter)
       .exec();
     const overallEvaluation: OverallEvaluation = {
       summary: this.createOverallSummary(evaluations),

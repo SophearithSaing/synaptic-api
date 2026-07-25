@@ -395,6 +395,71 @@ describe('SessionsService', () => {
     expect(result.nextQuestion?.question).toEqual(nextLevelQuestion);
   });
 
+  it('creates live session evaluations with a live session reference', async () => {
+    const attempt = createAttempt(
+      [questionOne, questionTwo, questionThree],
+      true,
+    );
+    const evaluation = {
+      strengths: ['paging'],
+      weaknesses: [],
+      recommendations: [],
+    };
+
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({
+        _id: liveSessionId,
+        student: new Types.ObjectId(studentId),
+        topic: topicId,
+        currentLevel: 10,
+      }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveQuestionId, question: questionThree }),
+    );
+    liveQuestionModel.updateOne.mockReturnValue(
+      execQuery({ modifiedCount: 1 }),
+    );
+    liveQuestionModel.find.mockReturnValue(
+      sortableQuery([
+        { question: questionOne, answer: createAnswer(questionOne, 'o1') },
+        { question: questionTwo, answer: createAnswer(questionTwo, 'o1') },
+        { question: questionThree, answer: createAnswer(questionThree, 'o1') },
+      ]),
+    );
+    questionSetModel.create.mockResolvedValue(createQuestionSet(10));
+    setAttemptModel.create.mockResolvedValue(attempt);
+    setAttemptModel.find.mockReturnValue(execQuery([attempt]));
+    sessionEvaluationModel.create.mockImplementation(
+      (payload: { liveSession?: Types.ObjectId; session?: Types.ObjectId }) => {
+        expect(payload.liveSession).toEqual(liveSessionId);
+        expect(payload).not.toHaveProperty('session');
+
+        return Promise.resolve(evaluation);
+      },
+    );
+    sessionEvaluationModel.find.mockReturnValue(execQuery([evaluation]));
+    topicModel.findById.mockReturnValue(execQuery(topic));
+    liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
+    generateLiveQuestion.mockResolvedValue(nextLevelQuestion);
+    liveSessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
+
+    await service.submitLiveAnswer(
+      studentId,
+      liveSessionId.toString(),
+      liveQuestionId.toString(),
+      'o1',
+    );
+
+    expect(setAttemptModel.find).toHaveBeenCalledWith({
+      liveSession: liveSessionId,
+      level: { $gte: 0, $lte: 10 },
+    });
+    expect(sessionEvaluationModel.find).toHaveBeenCalledWith({
+      liveSession: liveSessionId,
+    });
+  });
+
   it('returns completed failing live sets without a next question', async () => {
     const failedAnswer = createAnswer(questionThree, 'o2');
 
