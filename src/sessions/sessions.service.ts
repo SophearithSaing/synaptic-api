@@ -249,7 +249,9 @@ export class SessionsService {
       .find({
         liveSession: liveSession._id,
         level: liveSession.currentLevel,
-        status: LiveQuestionStatus.Accepted,
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
       })
       .exec();
     const acceptedQuestions = acceptedLiveQuestions.map(
@@ -273,15 +275,18 @@ export class SessionsService {
       rejectedQuestion: rejectedQuestion.question,
       rejectionReason: reason,
     });
-    const deletedQuestion = await this.liveQuestionModel
-      .findOneAndDelete({
-        _id: rejectedQuestion._id,
-        liveSession: liveSession._id,
-        status: LiveQuestionStatus.Pending,
-      })
+    const updateResult = await this.liveQuestionModel
+      .updateOne(
+        {
+          _id: rejectedQuestion._id,
+          liveSession: liveSession._id,
+          status: LiveQuestionStatus.Pending,
+        },
+        { $set: { status: LiveQuestionStatus.Rejected } },
+      )
       .exec();
 
-    if (!deletedQuestion) {
+    if (updateResult.modifiedCount === 0) {
       throw new NotFoundException('Live question not found');
     }
 
@@ -352,7 +357,10 @@ export class SessionsService {
         },
         {
           $set: {
-            status: LiveQuestionStatus.Accepted,
+            status:
+              answer.score >= 0.5
+                ? LiveQuestionStatus.Passed
+                : LiveQuestionStatus.Failed,
             answer,
             answeredAt: new Date(),
           },
@@ -368,7 +376,9 @@ export class SessionsService {
       .find({
         liveSession: liveSession._id,
         level: liveSession.currentLevel,
-        status: LiveQuestionStatus.Accepted,
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
       })
       .sort({ createdAt: 1 })
       .exec();
@@ -561,7 +571,9 @@ export class SessionsService {
       .find({
         liveSession: liveSession._id,
         level: liveSession.currentLevel,
-        status: LiveQuestionStatus.Accepted,
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
       })
       .sort({ createdAt: 1 })
       .exec();

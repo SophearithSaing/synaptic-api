@@ -8,7 +8,9 @@ export type LiveQuestionDocument = HydratedDocument<LiveQuestion>;
 
 export enum LiveQuestionStatus {
   Pending = 'pending',
-  Accepted = 'accepted',
+  Rejected = 'rejected',
+  Passed = 'passed',
+  Failed = 'failed',
 }
 
 @Schema({ timestamps: true, collection: 'liveQuestions' })

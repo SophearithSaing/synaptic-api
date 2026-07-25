@@ -234,7 +234,7 @@ describe('SessionsService', () => {
     liveQuestionModel.findOne.mockReturnValue(sortableQuery(null));
     liveQuestionModel.find.mockReturnValue(
       sortableQuery([
-        { question: questionOne, status: LiveQuestionStatus.Accepted },
+        { question: questionOne, status: LiveQuestionStatus.Passed },
       ]),
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
@@ -259,8 +259,8 @@ describe('SessionsService', () => {
     liveQuestionModel.findOne.mockReturnValue(
       execQuery({ _id: liveQuestionId, question: questionOne }),
     );
-    liveQuestionModel.findOneAndDelete.mockReturnValue(
-      execQuery({ _id: liveQuestionId, question: questionOne }),
+    liveQuestionModel.updateOne.mockReturnValue(
+      execQuery({ modifiedCount: 1 }),
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.find.mockReturnValue(sortableQuery([]));
@@ -275,11 +275,15 @@ describe('SessionsService', () => {
     );
 
     expect(result.questionId).toBe(replacementQuestionId.toString());
-    expect(liveQuestionModel.findOneAndDelete).toHaveBeenCalledWith(
-      expect.objectContaining({ status: LiveQuestionStatus.Pending }),
+    expect(liveQuestionModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: liveQuestionId,
+        status: LiveQuestionStatus.Pending,
+      }),
+      { $set: { status: LiveQuestionStatus.Rejected } },
     );
     expect(generateLiveQuestion.mock.invocationCallOrder[0]).toBeLessThan(
-      liveQuestionModel.findOneAndDelete.mock.invocationCallOrder[0],
+      liveQuestionModel.updateOne.mock.invocationCallOrder[0],
     );
   });
 
@@ -303,7 +307,7 @@ describe('SessionsService', () => {
       ),
     ).rejects.toThrow('AI failed');
 
-    expect(liveQuestionModel.findOneAndDelete).not.toHaveBeenCalled();
+    expect(liveQuestionModel.updateOne).not.toHaveBeenCalled();
     expect(liveQuestionModel.create).not.toHaveBeenCalled();
   });
 
