@@ -3,13 +3,18 @@ import { Document, Types } from 'mongoose';
 
 export type QuestionSetDocument = QuestionSet & Document;
 
+export enum QuestionSetType {
+  Regular = 'regular',
+  Live = 'live',
+}
+
 @Schema({ timestamps: true, collection: 'questionSets' })
 export class QuestionSet {
   @Prop({ type: Types.ObjectId, ref: 'Topic', required: true })
   topic: Types.ObjectId;
 
-  @Prop({ required: true })
-  setType: string;
+  @Prop({ required: true, enum: Object.values(QuestionSetType) })
+  setType: QuestionSetType;
 
   @Prop({ required: true })
   level: number;
