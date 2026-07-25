@@ -8,6 +8,11 @@ import {
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicSchema } from '../topics/schemas/topic.schema';
 import {
+  LiveQuestion,
+  LiveQuestionSchema,
+} from './schemas/live-question.schema';
+import { LiveSession, LiveSessionSchema } from './schemas/live-session.schema';
+import {
   SessionEvaluation,
   SessionEvaluationSchema,
 } from './schemas/session-evaluation.schemas';
@@ -18,6 +23,8 @@ import { SetAttempt, SetAttemptSchema } from './schemas/set-attempt.schemas';
   imports: [
     MongooseModule.forFeature([
       { name: QuestionSet.name, schema: QuestionSetSchema },
+      { name: LiveQuestion.name, schema: LiveQuestionSchema },
+      { name: LiveSession.name, schema: LiveSessionSchema },
       { name: Session.name, schema: SessionSchema },
       { name: SessionEvaluation.name, schema: SessionEvaluationSchema },
       { name: SetAttempt.name, schema: SetAttemptSchema },
