@@ -21,6 +21,7 @@ describe('SessionsController', () => {
       | 'submitLiveAnswer'
       | 'continueLiveSession'
       | 'getInProgressSessions'
+      | 'getInProgressLiveSessions'
       | 'deleteSession'
       | 'continueSession'
       | 'submitAnswer'
@@ -35,6 +36,7 @@ describe('SessionsController', () => {
       submitLiveAnswer: jest.fn(),
       continueLiveSession: jest.fn(),
       getInProgressSessions: jest.fn(),
+      getInProgressLiveSessions: jest.fn(),
       deleteSession: jest.fn(),
       continueSession: jest.fn(),
       submitAnswer: jest.fn(),
@@ -115,6 +117,16 @@ describe('SessionsController', () => {
     await controller.getInProgressSessions(request);
 
     expect(service.getInProgressSessions).toHaveBeenCalledWith(
+      request.user.userId,
+    );
+  });
+
+  it('fetches in-progress live sessions with the authenticated user', async () => {
+    service.getInProgressLiveSessions.mockResolvedValue([]);
+
+    await controller.getInProgressLiveSessions(request);
+
+    expect(service.getInProgressLiveSessions).toHaveBeenCalledWith(
       request.user.userId,
     );
   });

@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import Together from 'together-ai';
 import { QuestionSetResponseDto } from '../questions/dtos';
+import { LiveSessionResponseDto } from './dtos/live-session-response.dto';
 import {
   Question,
   QuestionSet,
@@ -628,6 +629,27 @@ export class SessionsService {
       .exec();
 
     return SessionResponseDto.fromMany(sessions);
+  }
+
+  /**
+   * Fetches in-progress live sessions for a user.
+   *
+   * @param studentId The authenticated student ID.
+   * @returns The user's in-progress live sessions.
+   */
+  async getInProgressLiveSessions(
+    studentId: string,
+  ): Promise<LiveSessionResponseDto[]> {
+    const sessions = await this.liveSessionModel
+      .find({
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .populate('topic')
+      .sort({ updatedAt: -1 })
+      .exec();
+
+    return sessions.map((session) => LiveSessionResponseDto.from(session));
   }
 
   /**

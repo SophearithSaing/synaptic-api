@@ -108,6 +108,7 @@ describe('SessionsService', () => {
     };
     liveSessionModel = {
       create: jest.fn(),
+      find: jest.fn(),
       findOne: jest.fn(),
       updateOne: jest.fn(),
     };
@@ -193,6 +194,37 @@ describe('SessionsService', () => {
     expect(result.questionId).toBe(liveQuestionId.toString());
     expect(result.question).toEqual(questionOne);
     expect(generateLiveQuestion).not.toHaveBeenCalled();
+  });
+
+  it('fetches in-progress live sessions for the authenticated user', async () => {
+    const query = populateSortableQuery([
+      {
+        _id: liveSessionId,
+        student: new Types.ObjectId(studentId),
+        topic,
+        currentLevel: 0,
+        status: SessionStatus.Active,
+      },
+    ]);
+
+    liveSessionModel.find.mockReturnValue(query);
+
+    const result = await service.getInProgressLiveSessions(studentId);
+
+    expect(liveSessionModel.find).toHaveBeenCalledWith({
+      student: new Types.ObjectId(studentId),
+      status: SessionStatus.Active,
+    });
+    expect(query.populate).toHaveBeenCalledWith('topic');
+    expect(query.sort).toHaveBeenCalledWith({ updatedAt: -1 });
+    expect(result[0].id).toBe(liveSessionId.toString());
+    expect(result[0].topic).toEqual({
+      id: topicId.toString(),
+      slug: 'memory-management',
+      title: 'Memory Management',
+      description: 'Memory concepts.',
+      tags: ['systems'],
+    });
   });
 
   it('continues a live session by generating the next required question', async () => {
@@ -539,6 +571,21 @@ describe('SessionsService', () => {
       sort: jest.fn(),
     };
 
+    query.sort.mockReturnValue(query);
+
+    return query;
+  };
+
+  const populateSortableQuery = (
+    value: unknown,
+  ): { exec: jest.Mock; populate: jest.Mock; sort: jest.Mock } => {
+    const query = {
+      exec: jest.fn().mockResolvedValue(value),
+      populate: jest.fn(),
+      sort: jest.fn(),
+    };
+
+    query.populate.mockReturnValue(query);
     query.sort.mockReturnValue(query);
 
     return query;

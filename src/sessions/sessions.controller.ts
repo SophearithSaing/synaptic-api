@@ -17,6 +17,7 @@ import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueLiveSessionDto,
   ContinueSessionDto,
+  LiveSessionResponseDto,
   RejectLiveQuestionDto,
   SessionResponseDto,
   StartLiveSessionDto,
@@ -137,6 +138,19 @@ export class SessionsController {
     @Req() request: RequestWithUser,
   ): Promise<SessionResponseDto[]> {
     return this.sessionsService.getInProgressSessions(request.user.userId);
+  }
+
+  /**
+   * Fetches in-progress live sessions for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @returns The authenticated user's in-progress live sessions.
+   */
+  @Get('live/in-progress')
+  async getInProgressLiveSessions(
+    @Req() request: RequestWithUser,
+  ): Promise<LiveSessionResponseDto[]> {
+    return this.sessionsService.getInProgressLiveSessions(request.user.userId);
   }
 
   /**

@@ -1,4 +1,5 @@
 export * from './create-set-attempt.dto';
+export * from './live-session-response.dto';
 export * from './session.dto';
 export * from './session-evaluation-response.dto';
 export * from './session-overall-evaluation.dto';
