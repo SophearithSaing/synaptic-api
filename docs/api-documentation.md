@@ -84,6 +84,10 @@ and `OPTIONS` requests do not require the CSRF header.
 | `DELETE` | `/sessions/:id` | Yes | User/Admin | Delete owned session by ID. |
 | `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
 | `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
+| `POST` | `/sessions/live/start` | Yes | User/Admin | Start live session and return one pending question. |
+| `POST` | `/sessions/live/continue` | Yes | User/Admin | Return current or next pending live question. |
+| `POST` | `/sessions/live/reject` | Yes | User/Admin | Reject pending live question and return replacement. |
+| `POST` | `/sessions/live/submit-answer` | Yes | User/Admin | Submit one live answer and receive feedback. |
 
 ## Common errors
 
@@ -742,6 +746,229 @@ Important errors:
 - `404 Question set not found`
 - `503 AI is not configured`
 - `503 AI response was empty`
+- `503 AI response was invalid`
+- `503 AI response was incomplete`
+
+### Live session endpoints
+
+Live sessions are standalone persisted sessions. They do not reuse regular
+`Session` records, and generated questions are persisted as live-question
+records linked to the live session. A live set still contains exactly three
+accepted questions, but the API returns only one pending generated question at
+a time.
+
+Live question composition by level:
+
+- levels `0-10`: three MCQ questions.
+- levels `11-20`: two MCQ questions and one written question.
+- levels `21-30`: one MCQ question and two written questions.
+- levels `31+`: three written questions.
+
+#### `POST /sessions/live/start`
+
+Starts a live learning session for the authenticated user and returns the first
+pending generated question for level `0`.
+
+Request:
+
+```json
+{
+  "topicId": "<topic-id>"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "question": {
+    "id": "memory-management-l0-q1",
+    "type": "mcq",
+    "prompt": "What does paging divide virtual memory into?",
+    "options": [
+      {
+        "id": "memory-management-l0-q1-o1",
+        "text": "Pages"
+      },
+      {
+        "id": "memory-management-l0-q1-o2",
+        "text": "Threads"
+      },
+      {
+        "id": "memory-management-l0-q1-o3",
+        "text": "Registers"
+      }
+    ],
+    "correctOptionId": "memory-management-l0-q1-o1",
+    "targetConcepts": ["paging"],
+    "feedback": {
+      "correct": "Correct. Paging divides memory into pages.",
+      "incorrect": "Review how paging structures virtual memory."
+    },
+    "rubrics": {
+      "keyPoints": ["Pages", "Fixed-size blocks"],
+      "misconceptions": ["Paging uses CPU registers as memory blocks"]
+    }
+  }
+}
+```
+
+Side effects:
+
+- Creates a persisted live session with `currentLevel: 0`.
+- Creates one persisted pending live question linked to the live session.
+
+Important errors:
+
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `POST /sessions/live/continue`
+
+Returns the current pending generated question for an active live session. When
+there is no pending question and the current level has fewer than three
+accepted questions, the API generates and persists the next required question.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>"
+}
+```
+
+Response `201`: same shape as `/sessions/live/start`.
+
+Important errors:
+
+- `400 Live session already has three questions`
+- `404 Live session not found`
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `POST /sessions/live/reject`
+
+Rejects a pending generated live question with a reason. The rejected pending
+question is deleted, and a replacement pending question is generated for the
+same live session level and question number.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "reason": "The question was ambiguous."
+}
+```
+
+Response `201`: same shape as `/sessions/live/start`.
+
+Important errors:
+
+- `404 Live session not found`
+- `404 Live question not found`
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `POST /sessions/live/submit-answer`
+
+Submits one answer for the current pending generated live question. MCQ answers
+are evaluated locally, and written answers use the same AI evaluation path as
+regular sessions.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "answer": "memory-management-l0-q1-o1"
+}
+```
+
+Response `201` for an incomplete live set:
+
+```json
+{
+  "answers": [
+    {
+      "id": "ans-memory-management-l0-q1",
+      "questionId": "memory-management-l0-q1",
+      "questionType": "mcq",
+      "answer": "memory-management-l0-q1-o1",
+      "correctAnswer": "memory-management-l0-q1-o1",
+      "score": 1,
+      "feedback": "Correct. Paging divides memory into pages.",
+      "targetConcepts": ["paging"],
+      "strengths": ["paging"],
+      "weaknesses": [],
+      "evaluatedBy": "system"
+    }
+  ],
+  "nextQuestion": {
+    "sessionId": "<live-session-id>",
+    "questionId": "<next-live-question-id>",
+    "question": {
+      "id": "memory-management-l0-q2",
+      "type": "mcq",
+      "prompt": "What maps virtual pages to physical frames?",
+      "options": [
+        {
+          "id": "memory-management-l0-q2-o1",
+          "text": "Page table"
+        },
+        {
+          "id": "memory-management-l0-q2-o2",
+          "text": "Call stack"
+        },
+        {
+          "id": "memory-management-l0-q2-o3",
+          "text": "Instruction register"
+        }
+      ],
+      "correctOptionId": "memory-management-l0-q2-o1",
+      "targetConcepts": ["page-table"],
+      "feedback": {
+        "correct": "Correct.",
+        "incorrect": "Review page tables."
+      },
+      "rubrics": {
+        "keyPoints": ["Page table"],
+        "misconceptions": ["The stack maps pages to frames"]
+      }
+    }
+  }
+}
+```
+
+Completed-set behavior:
+
+- After three accepted live questions, the generated set is saved to
+  `questionSets` with `setType: "live"` for regular session reuse.
+- The API creates a `SetAttempt` with the same scoring, pass/fail, strengths,
+  weaknesses, and periodic evaluation rules as regular sessions.
+- If the completed live set fails, `answers` contains all three evaluated
+  answers and `nextQuestion` is `null`.
+- If the completed live set passes below level `100`, `answers` contains all
+  three evaluated answers and `nextQuestion` contains the first generated
+  question for the next level.
+- If level `100` passes, the live session is marked completed and
+  `nextQuestion` is `null`.
+
+Important errors:
+
+- `400 Live session already has three questions`
+- `400 Question not found in question set`
+- `404 Live session not found`
+- `404 Live question not found`
+- `404 Topic not found`
+- `503 AI is not configured`
 - `503 AI response was invalid`
 - `503 AI response was incomplete`
 
