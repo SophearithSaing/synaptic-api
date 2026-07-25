@@ -27,6 +27,23 @@ export class StartLiveSessionDto {
 }
 
 /**
+ * Request body for rejecting a live generated question.
+ */
+export class RejectLiveQuestionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+}
+
+/**
  * Request body for continuing a learning session.
  */
 export class ContinueSessionDto {

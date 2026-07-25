@@ -16,6 +16,7 @@ import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueSessionDto,
+  RejectLiveQuestionDto,
   SessionResponseDto,
   StartLiveSessionDto,
   StartLiveSessionResponseDto,
@@ -61,6 +62,26 @@ export class SessionsController {
     return this.sessionsService.startLiveSession(
       body.topicId,
       request.user.userId,
+    );
+  }
+
+  /**
+   * Rejects a live generated question for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live question rejection request.
+   * @returns The replacement pending generated question.
+   */
+  @Post('live/reject')
+  async rejectLiveQuestion(
+    @Req() request: RequestWithUser,
+    @Body() body: RejectLiveQuestionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.rejectLiveQuestion(
+      request.user.userId,
+      body.sessionId,
+      body.questionId,
+      body.reason,
     );
   }
 

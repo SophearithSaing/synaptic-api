@@ -171,7 +171,7 @@ export class SessionsService {
       level,
       questionNumber: 1,
       questionType,
-      acceptedQuestions: [],
+      acceptedQuestionPrompts: [],
     });
     const liveSession = await this.liveSessionModel.create({
       student: Types.ObjectId.createFromHexString(studentId),
@@ -188,6 +188,86 @@ export class SessionsService {
     return {
       sessionId: liveSession._id.toString(),
       questionId: pendingQuestion._id.toString(),
+      question,
+    };
+  }
+
+  /**
+   * Rejects a pending live question and generates a replacement.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID.
+   * @param questionId The live question document ID to reject.
+   * @param reason The reason the question was rejected.
+   * @returns The live session and replacement pending question.
+   */
+  async rejectLiveQuestion(
+    studentId: string,
+    sessionId: string,
+    questionId: string,
+    reason: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: 'active',
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const rejectedQuestion = await this.liveQuestionModel
+      .findOneAndDelete({
+        _id: Types.ObjectId.createFromHexString(questionId),
+        liveSession: liveSession._id,
+      })
+      .exec();
+
+    if (!rejectedQuestion) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({ liveSession: liveSession._id })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (liveQuestion) => liveQuestion.question,
+    );
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+      rejectedQuestion: rejectedQuestion.question,
+      rejectionReason: reason,
+    });
+    const replacementQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: replacementQuestion._id.toString(),
       question,
     };
   }

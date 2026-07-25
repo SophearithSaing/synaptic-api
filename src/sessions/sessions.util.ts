@@ -72,27 +72,23 @@ export function getNextLiveQuestionType(
 export function createLiveGenerationUserPrompt(
   context: LiveGenerationPromptContext,
 ): string {
-  return JSON.stringify({
-    topic: {
-      title: context.topicTitle,
-      description: context.topicDescription,
-      tags: context.topicTags,
-    },
-    level: context.level,
-    questionNumber: context.questionNumber,
-    requiredQuestionType: context.questionType,
-    acceptedQuestions: context.acceptedQuestions.map((question) => ({
-      id: question.id,
-      type: question.type,
-      prompt: question.prompt,
-      targetConcepts: question.targetConcepts,
-    })),
-    instructions: [
-      'Generate exactly one question for the requiredQuestionType.',
-      'Do not repeat acceptedQuestions.',
-      'Use short option IDs such as o1, o2, and o3 for MCQ questions.',
-    ],
-  });
+  const instructions = [
+    'Generate exactly one question for the questionType.',
+    'Do not repeat acceptedQuestionPrompts.',
+    'Use short option IDs such as o1, o2, and o3 for MCQ questions.',
+  ];
+  const prompt = {
+    ...context,
+    instructions,
+  };
+
+  if (context.rejectedQuestion && context.rejectionReason) {
+    instructions.push(
+      'Use rejectedQuestion and rejectionReason to avoid the same issue.',
+    );
+  }
+
+  return JSON.stringify(prompt);
 }
 
 /**

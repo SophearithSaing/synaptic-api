@@ -27,5 +27,7 @@ export type LiveGenerationPromptContext = {
   level: number;
   questionNumber: number;
   questionType: QuestionType;
-  acceptedQuestions: Question[];
+  acceptedQuestionPrompts: string[];
+  rejectedQuestion?: Question;
+  rejectionReason?: string;
 };
