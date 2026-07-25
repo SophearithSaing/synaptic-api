@@ -19,11 +19,11 @@ frontend integration.
 Authentication is cookie-based for browser clients. Login, registration, and
 refresh responses set these cookies:
 
-| Cookie | HttpOnly | Purpose |
-| ------ | -------- | ------- |
-| `access_token` | Yes | Short-lived JWT used for protected routes. |
-| `refresh_token` | Yes | Long-lived opaque session token used by `/auth/refresh`. |
-| `csrf_token` | No | Read by the frontend and sent as `X-CSRF-Token`. |
+| Cookie          | HttpOnly | Purpose                                                  |
+| --------------- | -------- | -------------------------------------------------------- |
+| `access_token`  | Yes      | Short-lived JWT used for protected routes.               |
+| `refresh_token` | Yes      | Long-lived opaque session token used by `/auth/refresh`. |
+| `csrf_token`    | No       | Read by the frontend and sent as `X-CSRF-Token`.         |
 
 The API does not return access or refresh tokens in JSON responses. Protected
 requests can also use `Authorization: Bearer <access_token>` for API testing.
@@ -56,38 +56,39 @@ and `OPTIONS` requests do not require the CSRF header.
 
 ## Endpoint summary
 
-| Method | Path                         | Auth | Role       | Purpose |
-| ------ | ---------------------------- | ---- | ---------- | ------- |
-| `GET` | `/` | No | Any | Health/welcome response. |
-| `GET` | `/auth/csrf` | No | Any | Create a CSRF token cookie. |
-| `POST` | `/auth/register` | No | Any | Register, create auth cookies, and log in. |
-| `POST` | `/auth/login` | No | Any | Login with username/email and create auth cookies. |
-| `GET` | `/auth/me` | Yes | User/Admin | Return current authenticated user. |
-| `POST` | `/auth/refresh` | No | Any | Rotate refresh session and auth cookies. |
-| `POST` | `/auth/logout` | No | Any | Revoke current refresh session and clear auth cookies. |
-| `POST` | `/categories/category/create` | Yes | Admin | Create category. |
-| `GET` | `/categories/categories` | Yes | User/Admin | List categories. |
-| `GET` | `/categories/:id` | Yes | User/Admin | Get category by ID. |
-| `DELETE` | `/categories/:id` | Yes | Admin | Delete category by ID. |
-| `POST` | `/topics/create` | Yes | Admin | Create topic. |
-| `GET` | `/topics` | Yes | User/Admin | List topics. |
-| `GET` | `/topics/:id` | Yes | User/Admin | Get topic by ID. |
-| `DELETE` | `/topics/:id` | Yes | Admin | Delete topic by ID. |
-| `POST` | `/questions/create` | Yes | Admin | Create question sets. |
-| `PATCH` | `/questions/update` | Yes | Admin | Update question sets in bulk. |
-| `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
-| `DELETE` | `/questions/:id` | Yes | Admin | Delete question set by ID. |
-| `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
-| `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
-| `POST` | `/sessions/start` | Yes | User/Admin | Start session and return session ID plus level 0 question set. |
-| `GET` | `/sessions/in-progress` | Yes | User/Admin | List active sessions for the current user. |
-| `DELETE` | `/sessions/:id` | Yes | User/Admin | Delete owned session by ID. |
-| `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
-| `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
-| `POST` | `/sessions/live/start` | Yes | User/Admin | Start live session and return one pending question. |
-| `POST` | `/sessions/live/continue` | Yes | User/Admin | Return current or next pending live question. |
-| `POST` | `/sessions/live/reject` | Yes | User/Admin | Reject pending live question and return replacement. |
-| `POST` | `/sessions/live/submit-answer` | Yes | User/Admin | Submit one live answer and receive feedback. |
+| Method   | Path                           | Auth | Role       | Purpose                                                        |
+| -------- | ------------------------------ | ---- | ---------- | -------------------------------------------------------------- |
+| `GET`    | `/`                            | No   | Any        | Health/welcome response.                                       |
+| `GET`    | `/auth/csrf`                   | No   | Any        | Create a CSRF token cookie.                                    |
+| `POST`   | `/auth/register`               | No   | Any        | Register, create auth cookies, and log in.                     |
+| `POST`   | `/auth/login`                  | No   | Any        | Login with username/email and create auth cookies.             |
+| `GET`    | `/auth/me`                     | Yes  | User/Admin | Return current authenticated user.                             |
+| `POST`   | `/auth/refresh`                | No   | Any        | Rotate refresh session and auth cookies.                       |
+| `POST`   | `/auth/logout`                 | No   | Any        | Revoke current refresh session and clear auth cookies.         |
+| `POST`   | `/categories/category/create`  | Yes  | Admin      | Create category.                                               |
+| `GET`    | `/categories/categories`       | Yes  | User/Admin | List categories.                                               |
+| `GET`    | `/categories/:id`              | Yes  | User/Admin | Get category by ID.                                            |
+| `DELETE` | `/categories/:id`              | Yes  | Admin      | Delete category by ID.                                         |
+| `POST`   | `/topics/create`               | Yes  | Admin      | Create topic.                                                  |
+| `GET`    | `/topics`                      | Yes  | User/Admin | List topics.                                                   |
+| `GET`    | `/topics/:id`                  | Yes  | User/Admin | Get topic by ID.                                               |
+| `DELETE` | `/topics/:id`                  | Yes  | Admin      | Delete topic by ID.                                            |
+| `POST`   | `/questions/create`            | Yes  | Admin      | Create question sets.                                          |
+| `PATCH`  | `/questions/update`            | Yes  | Admin      | Update question sets in bulk.                                  |
+| `PATCH`  | `/questions/:id`               | Yes  | Admin      | Update question set.                                           |
+| `DELETE` | `/questions/:id`               | Yes  | Admin      | Delete question set by ID.                                     |
+| `GET`    | `/questions/topic/:slug`       | Yes  | User/Admin | Get question sets by topic slug.                               |
+| `GET`    | `/questions/:id`               | Yes  | User/Admin | Get question set by ID.                                        |
+| `POST`   | `/sessions/start`              | Yes  | User/Admin | Start session and return session ID plus level 0 question set. |
+| `GET`    | `/sessions/in-progress`        | Yes  | User/Admin | List active sessions for the current user.                     |
+| `DELETE` | `/sessions/:id`                | Yes  | User/Admin | Delete owned session by ID.                                    |
+| `POST`   | `/sessions/continue`           | Yes  | User/Admin | Return current-level question set.                             |
+| `POST`   | `/sessions/submit-answer`      | Yes  | User/Admin | Submit answers and receive feedback.                           |
+| `POST`   | `/sessions/live/start`         | Yes  | User/Admin | Start live session and return one pending question.            |
+| `GET`    | `/sessions/live/in-progress`   | Yes  | User/Admin | List active live sessions for the current user.                |
+| `POST`   | `/sessions/live/continue`      | Yes  | User/Admin | Return current or next pending live question.                  |
+| `POST`   | `/sessions/live/reject`        | Yes  | User/Admin | Reject pending live question and return replacement.           |
+| `POST`   | `/sessions/live/submit-answer` | Yes  | User/Admin | Submit one live answer and receive feedback.                   |
 
 ## Common errors
 
@@ -826,6 +827,45 @@ Important errors:
 - `503 AI is not configured`
 - `503 AI response was invalid`
 
+#### `GET /sessions/live/in-progress`
+
+Returns active live sessions for the authenticated user, sorted by most
+recently updated first.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "<live-session-id>",
+    "student": "<user-id>",
+    "topic": {
+      "id": "<topic-id>",
+      "title": "Memory Management",
+      "slug": "memory-management",
+      "description": "Understanding stack, heap, and garbage collection.",
+      "icon": "memory-management",
+      "tags": ["systems", "runtime"],
+      "category": "<category-id>"
+    },
+    "currentLevel": 3,
+    "status": "active",
+    "overallEvaluation": {
+      "summary": "Completed through level 10 with 0.9 average score.",
+      "strengths": ["stack-memory"],
+      "weaknesses": [],
+      "recommendations": []
+    },
+    "startedAt": "2026-06-21T00:00:00.000Z",
+    "createdAt": "2026-06-21T00:00:00.000Z",
+    "updatedAt": "2026-06-21T00:00:00.000Z"
+  }
+]
+```
+
+Use the returned `id` as `sessionId` for `/sessions/live/continue`,
+`/sessions/live/reject`, and `/sessions/live/submit-answer`.
+
 #### `POST /sessions/live/continue`
 
 Returns the current pending generated question for an active live session. When
@@ -1077,8 +1117,8 @@ Important errors:
 11. Show `attempt.answers` feedback.
 12. If `nextQuestionSet` is not `null`, render it next.
 13. If the user comes back later, call `GET /sessions/in-progress` to list
-   active sessions, then call `POST /sessions/continue` with the chosen session
-   ID to fetch its current-level question set.
+    active sessions, then call `POST /sessions/continue` with the chosen session
+    ID to fetch its current-level question set.
 
 ## Endpoint coverage summary
 
