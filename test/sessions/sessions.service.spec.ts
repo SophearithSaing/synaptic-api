@@ -224,6 +224,9 @@ describe('SessionsService', () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
     );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveQuestionId, question: questionOne }),
+    );
     liveQuestionModel.findOneAndDelete.mockReturnValue(
       execQuery({ _id: liveQuestionId, question: questionOne }),
     );
@@ -243,13 +246,40 @@ describe('SessionsService', () => {
     expect(liveQuestionModel.findOneAndDelete).toHaveBeenCalledWith(
       expect.objectContaining({ status: LiveQuestionStatus.Pending }),
     );
+    expect(generateLiveQuestion.mock.invocationCallOrder[0]).toBeLessThan(
+      liveQuestionModel.findOneAndDelete.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('keeps the pending question when replacement generation fails', async () => {
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveQuestionId, question: questionOne }),
+    );
+    topicModel.findById.mockReturnValue(execQuery(topic));
+    liveQuestionModel.find.mockReturnValue(sortableQuery([]));
+    generateLiveQuestion.mockRejectedValue(new Error('AI failed'));
+
+    await expect(
+      service.rejectLiveQuestion(
+        studentId,
+        liveSessionId.toString(),
+        liveQuestionId.toString(),
+        'Ambiguous.',
+      ),
+    ).rejects.toThrow('AI failed');
+
+    expect(liveQuestionModel.findOneAndDelete).not.toHaveBeenCalled();
+    expect(liveQuestionModel.create).not.toHaveBeenCalled();
   });
 
   it('rejects stale live question rejection requests', async () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, currentLevel: 0 }),
     );
-    liveQuestionModel.findOneAndDelete.mockReturnValue(execQuery(null));
+    liveQuestionModel.findOne.mockReturnValue(execQuery(null));
 
     await expect(
       service.rejectLiveQuestion(

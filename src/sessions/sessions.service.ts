@@ -227,7 +227,7 @@ export class SessionsService {
     }
 
     const rejectedQuestion = await this.liveQuestionModel
-      .findOneAndDelete({
+      .findOne({
         _id: Types.ObjectId.createFromHexString(questionId),
         liveSession: liveSession._id,
         status: LiveQuestionStatus.Pending,
@@ -272,6 +272,18 @@ export class SessionsService {
       rejectedQuestion: rejectedQuestion.question,
       rejectionReason: reason,
     });
+    const deletedQuestion = await this.liveQuestionModel
+      .findOneAndDelete({
+        _id: rejectedQuestion._id,
+        liveSession: liveSession._id,
+        status: LiveQuestionStatus.Pending,
+      })
+      .exec();
+
+    if (!deletedQuestion) {
+      throw new NotFoundException('Live question not found');
+    }
+
     const replacementQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
       question,
