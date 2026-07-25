@@ -78,7 +78,10 @@ describe('SessionsService', () => {
   let liveSessionModel: Record<string, jest.Mock>;
   let setAttemptModel: Record<string, jest.Mock>;
   let sessionEvaluationModel: Record<string, jest.Mock>;
-  let generateLiveQuestion: jest.Mock;
+  let generateLiveQuestion: jest.SpyInstance<
+    Promise<Question>,
+    [context: unknown]
+  >;
 
   beforeEach(() => {
     sessionModel = {
