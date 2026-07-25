@@ -18,7 +18,7 @@ export class LiveSession {
   @Prop()
   currentLevel: number;
 
-  @Prop({ enum: Object.values(SessionStatus) })
+  @Prop({ type: String, enum: Object.values(SessionStatus) })
   status: SessionStatus;
 
   @Prop({ type: Object })
