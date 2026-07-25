@@ -15,8 +15,8 @@ describe('SessionResponseDto', () => {
       },
       currentLevel: 1,
       status: 'active',
-      startAt: new Date('2026-01-01T00:00:00.000Z'),
-      finishAt: undefined,
+      startedAt: new Date('2026-01-01T00:00:00.000Z'),
+      finishedAt: undefined,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     } as never;

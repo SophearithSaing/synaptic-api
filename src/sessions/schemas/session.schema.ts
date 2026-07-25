@@ -23,10 +23,10 @@ export class Session {
   overallEvaluation: OverallEvaluation;
 
   @Prop()
-  startAt: Date;
+  startedAt: Date;
 
   @Prop()
-  finishAt: Date;
+  finishedAt: Date;
 
   createdAt: Date;
   updatedAt: Date;

@@ -582,7 +582,7 @@ Response `200`:
       "weaknesses": [],
       "recommendations": []
     },
-    "startAt": "2026-06-21T00:00:00.000Z",
+    "startedAt": "2026-06-21T00:00:00.000Z",
     "createdAt": "2026-06-21T00:00:00.000Z",
     "updatedAt": "2026-06-21T00:00:00.000Z"
   }
@@ -764,8 +764,8 @@ Important errors:
     weaknesses: string[];
     recommendations: string[];
   };
-  startAt?: string;
-  finishAt?: string;
+  startedAt?: string;
+  finishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

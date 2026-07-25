@@ -9,8 +9,8 @@ export class SessionResponseDto {
   currentLevel: number;
   status: string;
   overallEvaluation?: SessionOverallEvaluationDto;
-  startAt?: Date;
-  finishAt?: Date;
+  startedAt?: Date;
+  finishedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -30,8 +30,8 @@ export class SessionResponseDto {
       currentLevel: source.currentLevel,
       status: source.status,
       overallEvaluation: source.overallEvaluation,
-      startAt: source.startAt,
-      finishAt: source.finishAt,
+      startedAt: source.startedAt,
+      finishedAt: source.finishedAt,
       createdAt: source.createdAt,
       updatedAt: source.updatedAt,
     };
