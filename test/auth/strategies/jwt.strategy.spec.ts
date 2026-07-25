@@ -4,7 +4,7 @@ import { JwtStrategy } from '../../../src/auth/strategies/jwt.strategy';
 import { UserRole } from '../../../src/auth/schemas/user.schema';
 
 describe('JwtStrategy', () => {
-  let configService: jest.Mocked<Pick<ConfigService, 'getOrThrow'>>;
+  let configService: { getOrThrow: jest.Mock<string, [key: string]> };
   let findById: jest.Mock;
   let strategy: JwtStrategy;
 
