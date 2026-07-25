@@ -17,6 +17,8 @@ import { QuestionSetResponseDto } from '../questions/dtos';
 import {
   ContinueSessionDto,
   SessionResponseDto,
+  StartLiveSessionDto,
+  StartLiveSessionResponseDto,
   StartSessionDto,
   StartSessionResponseDto,
   SubmitAnswerDto,
@@ -42,6 +44,24 @@ export class SessionsController {
     @Body() body: StartSessionDto,
   ): Promise<StartSessionResponseDto> {
     return this.sessionsService.startSession(body.topicId, request.user.userId);
+  }
+
+  /**
+   * Starts a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live session start request.
+   * @returns The created live session and pending generated question.
+   */
+  @Post('live/start')
+  async startLiveSession(
+    @Req() request: RequestWithUser,
+    @Body() body: StartLiveSessionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.startLiveSession(
+      body.topicId,
+      request.user.userId,
+    );
   }
 
   /**

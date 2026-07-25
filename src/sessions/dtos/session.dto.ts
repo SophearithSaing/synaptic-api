@@ -18,6 +18,15 @@ export class StartSessionDto {
 }
 
 /**
+ * Request body for starting a live learning session.
+ */
+export class StartLiveSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  topicId: string;
+}
+
+/**
  * Request body for continuing a learning session.
  */
 export class ContinueSessionDto {

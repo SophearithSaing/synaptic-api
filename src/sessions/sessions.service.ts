@@ -19,17 +19,21 @@ import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
   SessionResponseDto,
   SetAttemptResponseDto,
+  StartLiveSessionResponseDto,
   StartSessionResponseDto,
   SubmitAnswerItemDto,
   SubmitAnswerResponseDto,
 } from './dtos';
 import {
+  QUESTION_GENERATION_SYSTEM_PROMPT,
   WRITTEN_EVALUATION_SYSTEM_PROMPT,
+  generatedLiveQuestionResponseFormat,
   writtenAnswerEvaluationResponseFormat,
   writtenAnswerEvaluationsSchema,
 } from './ai/sessions-ai.constant';
-import { EvaluationModel } from './ai/sessions-ai.enum';
+import { AiModel } from './ai/sessions-ai.enum';
 import {
+  LiveGenerationPromptContext,
   SubmittedWrittenAnswer,
   WrittenAnswerEvaluation,
 } from './ai/sessions-ai.types';
@@ -39,10 +43,23 @@ import {
   calculateSetScore,
   collectAttemptConcepts,
   collectConceptsByScore,
+  createLiveGenerationUserPrompt,
   createRecommendations,
+  formatGeneratedLiveQuestionIds,
+  getNextLiveQuestionType,
   hasPassingAnswers,
+  parseGeneratedLiveQuestion,
   roundScore,
+  validateGeneratedLiveQuestion,
 } from './sessions.util';
+import {
+  LiveQuestion,
+  LiveQuestionDocument,
+} from './schemas/live-question.schema';
+import {
+  LiveSession,
+  LiveSessionDocument,
+} from './schemas/live-session.schema';
 import {
   SessionEvaluation,
   SessionEvaluationDocument,
@@ -68,6 +85,10 @@ export class SessionsService {
     private readonly topicModel: Model<TopicDocument>,
     @InjectModel(QuestionSet.name)
     private readonly questionSetModel: Model<QuestionSetDocument>,
+    @InjectModel(LiveQuestion.name)
+    private readonly liveQuestionModel: Model<LiveQuestionDocument>,
+    @InjectModel(LiveSession.name)
+    private readonly liveSessionModel: Model<LiveSessionDocument>,
     @InjectModel(SetAttempt.name)
     private readonly setAttemptModel: Model<SetAttemptDocument>,
     @InjectModel(SessionEvaluation.name)
@@ -114,12 +135,60 @@ export class SessionsService {
       topic: topic._id,
       currentLevel: 0,
       status: 'active',
-      startAt: new Date(),
+      startedAt: new Date(),
     });
 
     return {
       sessionId: session._id.toString(),
       questionSet: QuestionSetResponseDto.from(questionSet),
+    };
+  }
+
+  /**
+   * Starts a live learning session for a user on a topic.
+   *
+   * @param topicId The topic ID to start.
+   * @param studentId The authenticated student ID.
+   * @returns The created live session and pending generated question.
+   */
+  async startLiveSession(
+    topicId: string,
+    studentId: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const topic = await this.topicModel.findById(topicId).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const level = 0;
+    const questionType = getNextLiveQuestionType(level, []);
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level,
+      questionNumber: 1,
+      questionType,
+      acceptedQuestions: [],
+    });
+    const liveSession = await this.liveSessionModel.create({
+      student: Types.ObjectId.createFromHexString(studentId),
+      topic: topic._id,
+      currentLevel: level,
+      status: 'active',
+      startedAt: new Date(),
+    });
+    const pendingQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: pendingQuestion._id.toString(),
+      question,
     };
   }
 
@@ -304,6 +373,47 @@ export class SessionsService {
     }
 
     return QuestionSetResponseDto.from(nextQuestionSet);
+  }
+
+  /**
+   * Generates one live-session question with AI.
+   *
+   * @param context The live generation prompt context.
+   * @returns The generated question.
+   */
+  private async generateLiveQuestion(
+    context: LiveGenerationPromptContext,
+  ): Promise<Question> {
+    if (!this.togetherClient) {
+      throw new ServiceUnavailableException('AI is not configured');
+    }
+
+    const completion = await this.togetherClient.chat.completions.create({
+      model: this.aiModel,
+      response_format: generatedLiveQuestionResponseFormat,
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: QUESTION_GENERATION_SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: createLiveGenerationUserPrompt(context),
+        },
+      ],
+    });
+    const content = completion.choices[0]?.message?.content;
+    const text = this.extractCompletionText(content);
+    const generatedQuestion = parseGeneratedLiveQuestion(text);
+    const question = formatGeneratedLiveQuestionIds(
+      generatedQuestion.question,
+      context,
+    );
+
+    validateGeneratedLiveQuestion(question, context.questionType);
+
+    return question;
   }
 
   /**
