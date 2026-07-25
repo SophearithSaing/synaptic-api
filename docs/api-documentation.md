@@ -414,7 +414,7 @@ For MCQ answers, submit the selected option `id` as the answer.
 {
   id: string;
   topic: string | Topic;
-  setType: string;
+  setType: 'regular' | 'live';
   level: number;
   questions: Question[];
   createdAt?: string;
@@ -433,7 +433,7 @@ Request:
 [
   {
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 0,
     "questions": [
       {
@@ -475,7 +475,7 @@ Request:
   {
     "id": "<question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 1
   }
 ]
@@ -546,7 +546,7 @@ Response `201`:
   "questionSet": {
     "id": "<question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 0,
     "questions": []
   }
@@ -709,7 +709,7 @@ Response `201`:
   "nextQuestionSet": {
     "id": "<next-question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 1,
     "questions": []
   }
