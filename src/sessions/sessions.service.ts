@@ -368,14 +368,31 @@ export class SessionsService {
     }
 
     if (acceptedQuestions.length === 3) {
-      await this.questionSetModel.create({
+      const questionSet = await this.questionSetModel.create({
         topic: liveSession.topic,
         setType: QuestionSetType.Live,
         level: liveSession.currentLevel,
         questions: acceptedQuestions,
       });
       const answers = acceptedLiveQuestions.map((item) => item.answer);
-      const passed = hasPassingAnswers(answers);
+      const { passed } = await this.createSetAttempt(
+        studentId,
+        liveSession._id,
+        questionSet,
+        answers,
+      );
+
+      if (
+        passed &&
+        liveSession.currentLevel > 0 &&
+        liveSession.currentLevel % 10 === 0
+      ) {
+        await this.createSessionEvaluation(
+          liveSession,
+          liveSession.currentLevel,
+          true,
+        );
+      }
 
       if (!passed) {
         return {
@@ -693,26 +710,14 @@ export class SessionsService {
       submittedAnswers,
       questionSet.questions,
     );
-    const setScore = calculateSetScore(answers);
-    const passed = hasPassingAnswers(answers);
-    const strengths = collectConceptsByScore(answers, 1);
-    const weaknesses = collectConceptsByScore(answers, 0);
-    const submittedAt = new Date();
     let nextQuestionSet: QuestionSetResponseDto | null = null;
-    const attempt = await this.setAttemptModel.create({
-      user: Types.ObjectId.createFromHexString(studentId),
-      session: session._id,
-      topic: questionSet.topic,
-      questionSet: questionSet._id,
-      level: questionSet.level,
+    const attempt = await this.createSetAttempt(
+      studentId,
+      session._id,
+      questionSet,
       answers,
-      setScore,
-      passed,
-      strengths,
-      weaknesses,
-      submittedAt,
-      evaluatedAt: submittedAt,
-    });
+    );
+    const { passed } = attempt;
 
     if (passed && questionSet.level === session.currentLevel) {
       await this.sessionModel
@@ -735,6 +740,43 @@ export class SessionsService {
       attempt: SetAttemptResponseDto.from(attempt),
       nextQuestionSet,
     };
+  }
+
+  /**
+   * Creates a completed set attempt using the standard evaluation aggregates.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The regular or live session ID.
+   * @param questionSet The completed question set.
+   * @param answers The evaluated answers for the completed set.
+   * @returns The created set attempt.
+   */
+  private async createSetAttempt(
+    studentId: string,
+    sessionId: Types.ObjectId,
+    questionSet: QuestionSetDocument,
+    answers: Answer[],
+  ): Promise<SetAttemptDocument> {
+    const setScore = calculateSetScore(answers);
+    const passed = hasPassingAnswers(answers);
+    const strengths = collectConceptsByScore(answers, 1);
+    const weaknesses = collectConceptsByScore(answers, 0);
+    const submittedAt = new Date();
+
+    return this.setAttemptModel.create({
+      user: Types.ObjectId.createFromHexString(studentId),
+      session: sessionId,
+      topic: questionSet.topic,
+      questionSet: questionSet._id,
+      level: questionSet.level,
+      answers,
+      setScore,
+      passed,
+      strengths,
+      weaknesses,
+      submittedAt,
+      evaluatedAt: submittedAt,
+    });
   }
 
   /**
@@ -1037,10 +1079,12 @@ export class SessionsService {
    *
    * @param session The session to evaluate.
    * @param toLevel The last level in the evaluated range.
+   * @param isLiveSession Whether the session is a live session.
    */
   private async createSessionEvaluation(
-    session: SessionDocument,
+    session: SessionDocument | LiveSessionDocument,
     toLevel: number,
+    isLiveSession = false,
   ): Promise<void> {
     const fromLevel = toLevel === 10 ? 0 : toLevel - 9;
     const attempts = await this.setAttemptModel
@@ -1074,16 +1118,18 @@ export class SessionsService {
       attemptIds: attempts.map((attempt) => attempt._id.toString()),
     });
 
-    await this.updateOverallEvaluation(session);
+    await this.updateOverallEvaluation(session, isLiveSession);
   }
 
   /**
    * Updates the overall evaluation for a session.
    *
    * @param session The session to update.
+   * @param isLiveSession Whether the session is a live session.
    */
   private async updateOverallEvaluation(
-    session: SessionDocument,
+    session: SessionDocument | LiveSessionDocument,
+    isLiveSession = false,
   ): Promise<void> {
     const evaluations = await this.sessionEvaluationModel
       .find({ session: session._id })
@@ -1103,9 +1149,15 @@ export class SessionsService {
       ],
     };
 
-    await this.sessionModel
-      .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
-      .exec();
+    if (isLiveSession) {
+      await this.liveSessionModel
+        .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
+        .exec();
+    } else {
+      await this.sessionModel
+        .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
+        .exec();
+    }
   }
 
   /**
