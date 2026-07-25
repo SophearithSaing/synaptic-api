@@ -231,7 +231,9 @@ export class SessionsService {
       .findOne({
         _id: Types.ObjectId.createFromHexString(questionId),
         liveSession: liveSession._id,
-        status: LiveQuestionStatus.Pending,
+        status: {
+          $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+        },
       })
       .exec();
 
@@ -249,6 +251,7 @@ export class SessionsService {
       .find({
         liveSession: liveSession._id,
         level: liveSession.currentLevel,
+        _id: { $ne: rejectedQuestion._id },
         status: {
           $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
         },
@@ -267,7 +270,7 @@ export class SessionsService {
       topicDescription: topic.description,
       topicTags: topic.tags,
       level: liveSession.currentLevel,
-      questionNumber: acceptedQuestions.length + 1,
+      questionNumber: rejectedQuestion.questionNumber,
       questionType,
       acceptedQuestionPrompts: acceptedQuestions.map(
         (question) => question.prompt,
@@ -280,7 +283,7 @@ export class SessionsService {
         {
           _id: rejectedQuestion._id,
           liveSession: liveSession._id,
-          status: LiveQuestionStatus.Pending,
+          status: rejectedQuestion.status,
         },
         { $set: { status: LiveQuestionStatus.Rejected } },
       )
@@ -294,7 +297,7 @@ export class SessionsService {
       liveSession: liveSession._id,
       question,
       level: liveSession.currentLevel,
-      questionNumber: acceptedQuestions.length + 1,
+      questionNumber: rejectedQuestion.questionNumber,
       status: LiveQuestionStatus.Pending,
     });
 
@@ -336,7 +339,9 @@ export class SessionsService {
       .findOne({
         _id: Types.ObjectId.createFromHexString(questionId),
         liveSession: liveSession._id,
-        status: LiveQuestionStatus.Pending,
+        status: {
+          $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+        },
       })
       .exec();
 
@@ -353,7 +358,9 @@ export class SessionsService {
       .updateOne(
         {
           _id: liveQuestion._id,
-          status: LiveQuestionStatus.Pending,
+          status: {
+            $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+          },
         },
         {
           $set: {
@@ -582,6 +589,18 @@ export class SessionsService {
     );
 
     if (acceptedQuestions.length >= 3) {
+      const failedQuestion = acceptedLiveQuestions.find(
+        (liveQuestion) => liveQuestion.status === LiveQuestionStatus.Failed,
+      );
+
+      if (failedQuestion) {
+        return {
+          sessionId: liveSession._id.toString(),
+          questionId: failedQuestion._id.toString(),
+          question: failedQuestion.question,
+        };
+      }
+
       throw new BadRequestException('Live session already has three questions');
     }
 

@@ -989,12 +989,14 @@ Response `201` for an incomplete live set:
 
 Completed-set behavior:
 
-- After three accepted live questions, the generated set is saved to
+- After three answered live questions, the generated set is saved to
   `questionSets` with `setType: "live"` for regular session reuse.
 - The API creates a `SetAttempt` with the same scoring, pass/fail, strengths,
   weaknesses, and periodic evaluation rules as regular sessions.
 - If the completed live set fails, `answers` contains all three evaluated
   answers and `nextQuestion` is `null`.
+- After a failed completed live set, `/sessions/live/continue` returns the
+  first failed live question so the student can retry or reject it.
 - If the completed live set passes below level `100`, `answers` contains all
   three evaluated answers and `nextQuestion` contains the first generated
   question for the next level.

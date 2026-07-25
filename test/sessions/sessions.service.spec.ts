@@ -252,12 +252,48 @@ describe('SessionsService', () => {
     );
   });
 
-  it('rejects only pending live questions and returns a replacement', async () => {
+  it('continues a failed live set by returning the failed question', async () => {
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(sortableQuery(null));
+    liveQuestionModel.find.mockReturnValue(
+      sortableQuery([
+        { question: questionOne, status: LiveQuestionStatus.Passed },
+        { question: questionTwo, status: LiveQuestionStatus.Passed },
+        {
+          _id: liveQuestionId,
+          question: questionThree,
+          status: LiveQuestionStatus.Failed,
+        },
+      ]),
+    );
+    const result = await service.continueLiveSession(
+      studentId,
+      liveSessionId.toString(),
+    );
+
+    expect(result).toEqual({
+      sessionId: liveSessionId.toString(),
+      questionId: liveQuestionId.toString(),
+      question: questionThree,
+    });
+    expect(liveQuestionModel.updateOne).not.toHaveBeenCalled();
+    expect(generateLiveQuestion).not.toHaveBeenCalled();
+    expect(liveQuestionModel.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects pending live questions and returns a replacement', async () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
     );
     liveQuestionModel.findOne.mockReturnValue(
-      execQuery({ _id: liveQuestionId, question: questionOne }),
+      execQuery({
+        _id: liveQuestionId,
+        question: questionOne,
+        questionNumber: 1,
+        status: LiveQuestionStatus.Pending,
+      }),
     );
     liveQuestionModel.updateOne.mockReturnValue(
       execQuery({ modifiedCount: 1 }),
@@ -287,12 +323,61 @@ describe('SessionsService', () => {
     );
   });
 
+  it('rejects failed live questions and returns a replacement', async () => {
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({
+        _id: liveQuestionId,
+        question: questionThree,
+        questionNumber: 3,
+        status: LiveQuestionStatus.Failed,
+      }),
+    );
+    liveQuestionModel.updateOne.mockReturnValue(
+      execQuery({ modifiedCount: 1 }),
+    );
+    topicModel.findById.mockReturnValue(execQuery(topic));
+    liveQuestionModel.find.mockReturnValue(
+      sortableQuery([
+        { question: questionOne, status: LiveQuestionStatus.Passed },
+        { question: questionTwo, status: LiveQuestionStatus.Passed },
+      ]),
+    );
+    liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
+    generateLiveQuestion.mockResolvedValue(questionThree);
+
+    await service.rejectLiveQuestion(
+      studentId,
+      liveSessionId.toString(),
+      liveQuestionId.toString(),
+      'Still confusing.',
+    );
+
+    expect(liveQuestionModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: liveQuestionId,
+        status: LiveQuestionStatus.Failed,
+      }),
+      { $set: { status: LiveQuestionStatus.Rejected } },
+    );
+    expect(liveQuestionModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({ questionNumber: 3 }),
+    );
+  });
+
   it('keeps the pending question when replacement generation fails', async () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
     );
     liveQuestionModel.findOne.mockReturnValue(
-      execQuery({ _id: liveQuestionId, question: questionOne }),
+      execQuery({
+        _id: liveQuestionId,
+        question: questionOne,
+        questionNumber: 1,
+        status: LiveQuestionStatus.Pending,
+      }),
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.find.mockReturnValue(sortableQuery([]));
@@ -347,7 +432,11 @@ describe('SessionsService', () => {
       ),
     ).rejects.toThrow(NotFoundException);
     expect(liveQuestionModel.updateOne).toHaveBeenCalledWith(
-      expect.objectContaining({ status: LiveQuestionStatus.Pending }),
+      expect.objectContaining({
+        status: {
+          $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+        },
+      }),
       expect.any(Object),
     );
   });
