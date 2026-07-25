@@ -24,6 +24,8 @@ import {
   StartSessionResponseDto,
   SubmitAnswerDto,
   SubmitAnswerResponseDto,
+  SubmitLiveAnswerDto,
+  SubmitLiveAnswerResponseDto,
 } from './dtos';
 import { SessionsService } from './sessions.service';
 
@@ -82,6 +84,26 @@ export class SessionsController {
       body.sessionId,
       body.questionId,
       body.reason,
+    );
+  }
+
+  /**
+   * Submits an answer to a live generated question.
+   *
+   * @param request The authenticated request.
+   * @param body The live answer submission request.
+   * @returns The evaluated answers and next live question when available.
+   */
+  @Post('live/submit-answer')
+  async submitLiveAnswer(
+    @Req() request: RequestWithUser,
+    @Body() body: SubmitLiveAnswerDto,
+  ): Promise<SubmitLiveAnswerResponseDto> {
+    return this.sessionsService.submitLiveAnswer(
+      request.user.userId,
+      body.sessionId,
+      body.questionId,
+      body.answer,
     );
   }
 

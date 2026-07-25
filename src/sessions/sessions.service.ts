@@ -13,6 +13,7 @@ import {
   Question,
   QuestionSet,
   QuestionSetDocument,
+  QuestionSetType,
   QuestionType,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
@@ -23,6 +24,7 @@ import {
   StartSessionResponseDto,
   SubmitAnswerItemDto,
   SubmitAnswerResponseDto,
+  SubmitLiveAnswerResponseDto,
 } from './dtos';
 import {
   QUESTION_GENERATION_SYSTEM_PROMPT,
@@ -55,6 +57,7 @@ import {
 import {
   LiveQuestion,
   LiveQuestionDocument,
+  LiveQuestionStatus,
 } from './schemas/live-question.schema';
 import {
   LiveSession,
@@ -184,6 +187,9 @@ export class SessionsService {
     const pendingQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
       question,
+      level,
+      questionNumber: 1,
+      status: LiveQuestionStatus.Pending,
     });
 
     return {
@@ -238,7 +244,11 @@ export class SessionsService {
     }
 
     const acceptedLiveQuestions = await this.liveQuestionModel
-      .find({ liveSession: liveSession._id })
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: LiveQuestionStatus.Accepted,
+      })
       .exec();
     const acceptedQuestions = acceptedLiveQuestions.map(
       (liveQuestion) => liveQuestion.question,
@@ -264,12 +274,207 @@ export class SessionsService {
     const replacementQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
       question,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      status: LiveQuestionStatus.Pending,
     });
 
     return {
       sessionId: liveSession._id.toString(),
       questionId: replacementQuestion._id.toString(),
       question,
+    };
+  }
+
+  /**
+   * Submits an answer to a pending live question.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID.
+   * @param questionId The live question document ID.
+   * @param submittedAnswer The submitted answer.
+   * @returns The evaluated answers and next live question when available.
+   */
+  async submitLiveAnswer(
+    studentId: string,
+    sessionId: string,
+    questionId: string,
+    submittedAnswer: string,
+  ): Promise<SubmitLiveAnswerResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const liveQuestion = await this.liveQuestionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(questionId),
+        liveSession: liveSession._id,
+        status: LiveQuestionStatus.Pending,
+      })
+      .exec();
+
+    if (!liveQuestion) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const [answer] = await this.evaluateAnswers(
+      [{ questionId: liveQuestion.question.id, answer: submittedAnswer }],
+      [liveQuestion.question],
+    );
+
+    await this.liveQuestionModel
+      .updateOne(
+        { _id: liveQuestion._id },
+        {
+          $set: {
+            status: LiveQuestionStatus.Accepted,
+            answer,
+            answeredAt: new Date(),
+          },
+        },
+      )
+      .exec();
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: LiveQuestionStatus.Accepted,
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (item) => item.question,
+    );
+
+    if (acceptedQuestions.length > 3) {
+      throw new BadRequestException('Live session already has three questions');
+    }
+
+    if (acceptedQuestions.length === 3) {
+      await this.questionSetModel.create({
+        topic: liveSession.topic,
+        setType: QuestionSetType.Live,
+        level: liveSession.currentLevel,
+        questions: acceptedQuestions,
+      });
+      const answers = acceptedLiveQuestions.map((item) => item.answer);
+      const passed = hasPassingAnswers(answers);
+
+      if (!passed) {
+        return {
+          answers,
+          nextQuestion: null,
+        };
+      }
+
+      if (liveSession.currentLevel >= 100) {
+        await this.liveSessionModel
+          .updateOne(
+            { _id: liveSession._id },
+            {
+              $set: {
+                status: SessionStatus.Completed,
+                finishedAt: new Date(),
+              },
+            },
+          )
+          .exec();
+
+        return {
+          answers,
+          nextQuestion: null,
+        };
+      }
+
+      const nextLevel = liveSession.currentLevel + 1;
+      const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+      if (!topic) {
+        throw new NotFoundException('Topic not found');
+      }
+
+      const questionType = getNextLiveQuestionType(nextLevel, []);
+      const question = await this.generateLiveQuestion({
+        topicSlug: topic.slug,
+        topicTitle: topic.title,
+        topicDescription: topic.description,
+        topicTags: topic.tags,
+        level: nextLevel,
+        questionNumber: 1,
+        questionType,
+        acceptedQuestionPrompts: [],
+      });
+      const nextLiveQuestion = await this.liveQuestionModel.create({
+        liveSession: liveSession._id,
+        question,
+        level: nextLevel,
+        questionNumber: 1,
+        status: LiveQuestionStatus.Pending,
+      });
+
+      await this.liveSessionModel
+        .updateOne(
+          { _id: liveSession._id },
+          { $set: { currentLevel: nextLevel } },
+        )
+        .exec();
+
+      return {
+        answers,
+        nextQuestion: {
+          sessionId: liveSession._id.toString(),
+          questionId: nextLiveQuestion._id.toString(),
+          question,
+        },
+      };
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+    });
+    const nextLiveQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      answers: [answer],
+      nextQuestion: {
+        sessionId: liveSession._id.toString(),
+        questionId: nextLiveQuestion._id.toString(),
+        question,
+      },
     };
   }
 

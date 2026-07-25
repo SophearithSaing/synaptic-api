@@ -85,6 +85,23 @@ export class SubmitAnswerDto {
 }
 
 /**
+ * Request body for submitting an answer to a live generated question.
+ */
+export class SubmitLiveAnswerDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  answer: string;
+}
+
+/**
  * Student answer submitted for a generated question.
  */
 export class SessionAnswerDto {
