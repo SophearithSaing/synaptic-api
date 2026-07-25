@@ -77,12 +77,12 @@ export class SessionsService {
     const apiKey = this.configService.get<string>('TOGETHER_API_KEY');
 
     this.togetherClient = apiKey ? new Together({ apiKey }) : null;
-    this.evaluationModel =
-      this.configService.get<string>('AI_MODEL') ?? EvaluationModel.GptOss120B;
+    this.aiModel =
+      this.configService.get<string>('AI_MODEL') ?? AiModel.GptOss120B;
   }
 
   private readonly togetherClient: Together | null;
-  private readonly evaluationModel: string;
+  private readonly aiModel: string;
 
   /**
    * Starts a learning session for a user on a topic.
@@ -414,7 +414,7 @@ export class SessionsService {
     }
 
     const completion = await this.togetherClient.chat.completions.create({
-      model: this.evaluationModel,
+      model: this.aiModel,
       response_format: writtenAnswerEvaluationResponseFormat,
       temperature: 0,
       messages: [

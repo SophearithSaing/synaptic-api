@@ -1,4 +1,4 @@
-export enum EvaluationModel {
+export enum AiModel {
   GptOss120B = 'openai/gpt-oss-120b',
   Glm5_2 = 'zai-org/GLM-5.2',
   KimiK2_7Code = 'moonshotai/Kimi-K2.7-Code',
