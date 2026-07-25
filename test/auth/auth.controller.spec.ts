@@ -6,10 +6,7 @@ import {
   REFRESH_TOKEN_COOKIE_NAME,
 } from '../../src/auth/auth-cookie';
 import { AuthController } from '../../src/auth/auth.controller';
-import {
-  AuthSessionResponse,
-  AuthService,
-} from '../../src/auth/auth.service';
+import { AuthSessionResponse, AuthService } from '../../src/auth/auth.service';
 import { UserRole } from '../../src/auth/schemas/user.schema';
 import { RequestWithUser } from '../../src/auth/types/request-with-user.type';
 
