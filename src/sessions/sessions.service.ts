@@ -230,6 +230,7 @@ export class SessionsService {
       .findOneAndDelete({
         _id: Types.ObjectId.createFromHexString(questionId),
         liveSession: liveSession._id,
+        status: LiveQuestionStatus.Pending,
       })
       .exec();
 
@@ -330,9 +331,12 @@ export class SessionsService {
       [liveQuestion.question],
     );
 
-    await this.liveQuestionModel
+    const updateResult = await this.liveQuestionModel
       .updateOne(
-        { _id: liveQuestion._id },
+        {
+          _id: liveQuestion._id,
+          status: LiveQuestionStatus.Pending,
+        },
         {
           $set: {
             status: LiveQuestionStatus.Accepted,
@@ -342,6 +346,10 @@ export class SessionsService {
         },
       )
       .exec();
+
+    if (updateResult.modifiedCount === 0) {
+      throw new NotFoundException('Live question not found');
+    }
 
     const acceptedLiveQuestions = await this.liveQuestionModel
       .find({
