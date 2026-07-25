@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { Question } from '../../questions/schemas/question-set.schema';
+import {
+  Question,
+  QuestionType,
+} from '../../questions/schemas/question-set.schema';
 import { SubmitAnswerItemDto } from '../dtos';
 import { writtenAnswerEvaluationSchema } from './sessions-ai.constant';
 
@@ -10,4 +13,19 @@ export type WrittenAnswerEvaluation = z.infer<
 export type SubmittedWrittenAnswer = {
   submittedAnswer: SubmitAnswerItemDto;
   question: Question;
+};
+
+export type GeneratedLiveQuestion = {
+  question: Question;
+};
+
+export type LiveGenerationPromptContext = {
+  topicSlug: string;
+  topicTitle: string;
+  topicDescription: string;
+  topicTags: string[];
+  level: number;
+  questionNumber: number;
+  questionType: QuestionType;
+  acceptedQuestions: Question[];
 };
