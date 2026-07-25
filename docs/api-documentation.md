@@ -86,6 +86,7 @@ and `OPTIONS` requests do not require the CSRF header.
 | `POST`   | `/sessions/submit-answer`      | Yes  | User/Admin | Submit answers and receive feedback.                           |
 | `POST`   | `/sessions/live/start`         | Yes  | User/Admin | Start live session and return one pending question.            |
 | `GET`    | `/sessions/live/in-progress`   | Yes  | User/Admin | List active live sessions for the current user.                |
+| `DELETE` | `/sessions/live/:id`           | Yes  | User/Admin | Delete owned live session by ID.                               |
 | `POST`   | `/sessions/live/continue`      | Yes  | User/Admin | Return current or next pending live question.                  |
 | `POST`   | `/sessions/live/reject`        | Yes  | User/Admin | Reject pending live question and return replacement.           |
 | `POST`   | `/sessions/live/submit-answer` | Yes  | User/Admin | Submit one live answer and receive feedback.                   |
@@ -865,6 +866,17 @@ Response `200`:
 
 Use the returned `id` as `sessionId` for `/sessions/live/continue`,
 `/sessions/live/reject`, and `/sessions/live/submit-answer`.
+
+#### `DELETE /sessions/live/:id`
+
+Deletes a live learning session owned by the authenticated user. Requires
+`X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Live session not found`
 
 #### `POST /sessions/live/continue`
 

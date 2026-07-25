@@ -154,6 +154,21 @@ export class SessionsController {
   }
 
   /**
+   * Deletes a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param id The live session ID to delete.
+   */
+  @Delete('live/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteLiveSession(
+    @Req() request: RequestWithUser,
+    @Param('id', MongoIdPipe) id: string,
+  ): Promise<void> {
+    await this.sessionsService.deleteLiveSession(id, request.user.userId);
+  }
+
+  /**
    * Deletes a learning session for the authenticated user.
    *
    * @param request The authenticated request.

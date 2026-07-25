@@ -109,6 +109,7 @@ describe('SessionsService', () => {
     liveSessionModel = {
       create: jest.fn(),
       find: jest.fn(),
+      findOneAndDelete: jest.fn(),
       findOne: jest.fn(),
       updateOne: jest.fn(),
     };
@@ -225,6 +226,27 @@ describe('SessionsService', () => {
       description: 'Memory concepts.',
       tags: ['systems'],
     });
+  });
+
+  it('deletes live sessions owned by the authenticated user', async () => {
+    liveSessionModel.findOneAndDelete.mockReturnValue(
+      execQuery({ _id: liveSessionId }),
+    );
+
+    await service.deleteLiveSession(liveSessionId.toString(), studentId);
+
+    expect(liveSessionModel.findOneAndDelete).toHaveBeenCalledWith({
+      _id: liveSessionId,
+      student: new Types.ObjectId(studentId),
+    });
+  });
+
+  it('rejects deleting missing live sessions', async () => {
+    liveSessionModel.findOneAndDelete.mockReturnValue(execQuery(null));
+
+    await expect(
+      service.deleteLiveSession(liveSessionId.toString(), studentId),
+    ).rejects.toThrow(NotFoundException);
   });
 
   it('continues a live session by generating the next required question', async () => {

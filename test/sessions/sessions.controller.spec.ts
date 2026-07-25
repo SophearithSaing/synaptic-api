@@ -23,6 +23,7 @@ describe('SessionsController', () => {
       | 'getInProgressSessions'
       | 'getInProgressLiveSessions'
       | 'deleteSession'
+      | 'deleteLiveSession'
       | 'continueSession'
       | 'submitAnswer'
     >
@@ -38,6 +39,7 @@ describe('SessionsController', () => {
       getInProgressSessions: jest.fn(),
       getInProgressLiveSessions: jest.fn(),
       deleteSession: jest.fn(),
+      deleteLiveSession: jest.fn(),
       continueSession: jest.fn(),
       submitAnswer: jest.fn(),
     };
@@ -137,6 +139,17 @@ describe('SessionsController', () => {
     await controller.deleteSession(request, 'session-id');
 
     expect(service.deleteSession).toHaveBeenCalledWith(
+      'session-id',
+      request.user.userId,
+    );
+  });
+
+  it('deletes live sessions with the authenticated user', async () => {
+    service.deleteLiveSession.mockResolvedValue(undefined);
+
+    await controller.deleteLiveSession(request, 'session-id');
+
+    expect(service.deleteLiveSession).toHaveBeenCalledWith(
       'session-id',
       request.user.userId,
     );

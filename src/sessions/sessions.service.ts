@@ -703,6 +703,25 @@ export class SessionsService {
   }
 
   /**
+   * Deletes a live learning session owned by a user.
+   *
+   * @param sessionId The live session ID to delete.
+   * @param studentId The authenticated student ID.
+   */
+  async deleteLiveSession(sessionId: string, studentId: string): Promise<void> {
+    const session = await this.liveSessionModel
+      .findOneAndDelete({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+      })
+      .exec();
+
+    if (!session) {
+      throw new NotFoundException('Live session not found');
+    }
+  }
+
+  /**
    * Continues a learning session for a user.
    *
    * @param sessionId The session ID to continue.
