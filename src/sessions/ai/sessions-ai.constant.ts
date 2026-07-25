@@ -4,19 +4,21 @@ import type { CompletionCreateParams } from 'together-ai/resources/chat.mjs';
 
 export const WRITTEN_EVALUATION_SYSTEM_PROMPT = `You are evaluating written answers for a computing theory learning session. Score each answer from 0 to 1 based on how well it covers the expected key points while avoiding listed misconceptions. Return one evaluation for every submitted answer, using the provided questionId for each result. Include a concise correctAnswer for each question. Keep feedback concise and helpful, and use short concept labels for strengths and weaknesses.`;
 
-export const QUESTION_GENERATION_SYSTEM_PROMPT = `You generate one computing theory learning question for a live session. Return exactly one question matching the requested type. Keep prompts clear and concise. MCQ questions must include three options, one correctOptionId, target concepts, feedback, and rubrics. Written questions must include target concepts, feedback, and rubrics, and may use empty options plus an empty correctOptionId.`;
+export const QUESTION_GENERATION_SYSTEM_PROMPT = `You generate one computing theory learning question for a live session. Return exactly one question matching the requested type. Keep prompts clear and concise. MCQ questions must include three options, one correctOptionId, target concepts, feedback, and rubrics. Written questions must include target concepts, feedback, and rubrics, and may omit options and correctOptionId.`;
 
 export const generatedQuestionSchema = z.object({
   id: z.string(),
   type: z.enum([QuestionType.MCQ, QuestionType.Written]),
   prompt: z.string(),
-  options: z.array(
-    z.object({
-      id: z.string(),
-      text: z.string(),
-    }),
-  ),
-  correctOptionId: z.string(),
+  options: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string(),
+      }),
+    )
+    .optional(),
+  correctOptionId: z.string().optional(),
   targetConcepts: z.array(z.string()),
   feedback: z.object({
     correct: z.string(),
@@ -96,8 +98,6 @@ export const generatedLiveQuestionResponseFormat: CompletionCreateParams.JsonSch
               'id',
               'type',
               'prompt',
-              'options',
-              'correctOptionId',
               'targetConcepts',
               'feedback',
               'rubrics',

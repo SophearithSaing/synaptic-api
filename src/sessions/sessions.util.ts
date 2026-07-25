@@ -116,7 +116,8 @@ export function formatGeneratedLiveQuestionIds(
     return { ...question, id: questionId };
   }
 
-  const correctOptionIndex = question.options.findIndex(
+  const originalOptions = question.options ?? [];
+  const correctOptionIndex = originalOptions.findIndex(
     (option) => option.id === question.correctOptionId,
   );
 
@@ -126,7 +127,7 @@ export function formatGeneratedLiveQuestionIds(
     );
   }
 
-  const options = question.options.map((option, index) => ({
+  const options = originalOptions.map((option, index) => ({
     ...option,
     id: createLiveOptionId(questionId, index + 1),
   }));
@@ -193,11 +194,12 @@ export function validateGeneratedLiveQuestion(
     return;
   }
 
-  const correctOption = question.options.find(
+  const options = question.options ?? [];
+  const correctOption = options.find(
     (option) => option.id === question.correctOptionId,
   );
 
-  if (question.options.length !== 3 || !correctOption) {
+  if (options.length !== 3 || !correctOption) {
     throw new ServiceUnavailableException('AI response was invalid');
   }
 }

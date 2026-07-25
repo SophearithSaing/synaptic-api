@@ -58,13 +58,15 @@ export class QuestionDto {
 
   @ValidateIf((obj: QuestionDto) => obj.type === QuestionType.MCQ)
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => QuestionOptionDto)
-  options: QuestionOptionDto[];
+  options?: QuestionOptionDto[];
 
-  @IsOptional()
+  @ValidateIf((obj: QuestionDto) => obj.type === QuestionType.MCQ)
   @IsString()
-  correctOptionId: string;
+  @IsNotEmpty()
+  correctOptionId?: string;
 
   @IsArray()
   @ArrayNotEmpty()

@@ -24,8 +24,8 @@ export interface Question {
   id: string;
   type: QuestionType;
   prompt: string;
-  options: Array<{ id: string; text: string }>;
-  correctOptionId: string;
+  options?: Array<{ id: string; text: string }>;
+  correctOptionId?: string;
   targetConcepts: string[];
   feedback: { correct: string; incorrect: string };
   rubrics: { keyPoints: string[]; misconceptions: string[] };

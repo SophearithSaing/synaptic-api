@@ -622,6 +622,10 @@ export class SessionsService {
     submittedAnswer: SubmitAnswerItemDto,
     question: Question,
   ): Answer {
+    if (!question.correctOptionId) {
+      throw new BadRequestException('MCQ correct option not found');
+    }
+
     const isCorrect = submittedAnswer.answer === question.correctOptionId;
 
     return {
