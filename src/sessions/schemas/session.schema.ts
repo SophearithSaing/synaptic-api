@@ -5,6 +5,12 @@ import { Topic } from '../../topics/schemas/topic.schema';
 
 export type SessionDocument = HydratedDocument<Session>;
 
+export enum SessionStatus {
+  Active = 'active',
+  Completed = 'completed',
+  Stopped = 'stopped',
+}
+
 @Schema({ timestamps: true, collection: 'sessions' })
 export class Session {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
@@ -16,8 +22,8 @@ export class Session {
   @Prop()
   currentLevel: number;
 
-  @Prop()
-  status: string;
+  @Prop({ enum: Object.values(SessionStatus) })
+  status: SessionStatus;
 
   @Prop({ type: Object })
   overallEvaluation: OverallEvaluation;

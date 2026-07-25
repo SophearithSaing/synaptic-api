@@ -1,5 +1,5 @@
 import { hasToObject } from '../../utils/object.utils';
-import { SessionDocument } from '../schemas/session.schema';
+import { SessionDocument, SessionStatus } from '../schemas/session.schema';
 import { SessionOverallEvaluationDto } from './session-overall-evaluation.dto';
 
 export class SessionResponseDto {
@@ -7,7 +7,7 @@ export class SessionResponseDto {
   student: unknown;
   topic: unknown;
   currentLevel: number;
-  status: string;
+  status: SessionStatus;
   overallEvaluation?: SessionOverallEvaluationDto;
   startedAt?: Date;
   finishedAt?: Date;

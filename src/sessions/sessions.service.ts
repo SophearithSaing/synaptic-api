@@ -68,6 +68,7 @@ import {
   OverallEvaluation,
   Session,
   SessionDocument,
+  SessionStatus,
 } from './schemas/session.schema';
 import {
   Answer,
@@ -134,7 +135,7 @@ export class SessionsService {
       student: Types.ObjectId.createFromHexString(studentId),
       topic: topic._id,
       currentLevel: 0,
-      status: 'active',
+      status: SessionStatus.Active,
       startedAt: new Date(),
     });
 
@@ -177,7 +178,7 @@ export class SessionsService {
       student: Types.ObjectId.createFromHexString(studentId),
       topic: topic._id,
       currentLevel: level,
-      status: 'active',
+      status: SessionStatus.Active,
       startedAt: new Date(),
     });
     const pendingQuestion = await this.liveQuestionModel.create({
@@ -211,7 +212,7 @@ export class SessionsService {
       .findOne({
         _id: Types.ObjectId.createFromHexString(sessionId),
         student: Types.ObjectId.createFromHexString(studentId),
-        status: 'active',
+        status: SessionStatus.Active,
       })
       .exec();
 
@@ -284,7 +285,7 @@ export class SessionsService {
     const sessions = await this.sessionModel
       .find({
         student: Types.ObjectId.createFromHexString(studentId),
-        status: 'active',
+        status: SessionStatus.Active,
       })
       .populate('topic')
       .sort({ updatedAt: -1 })
