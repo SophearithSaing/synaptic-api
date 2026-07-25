@@ -3,7 +3,8 @@ import { Answer, SetAttemptDocument } from '../schemas/set-attempt.schemas';
 export class SetAttemptResponseDto {
   id: string;
   user: string;
-  session: string;
+  session?: string;
+  liveSession?: string;
   topic: string;
   questionSet: string;
   level: number;
@@ -30,7 +31,8 @@ export class SetAttemptResponseDto {
     return {
       id: source._id.toString(),
       user: source.user.toString(),
-      session: source.session.toString(),
+      session: source.session?.toString(),
+      liveSession: source.liveSession?.toString(),
       topic: source.topic.toString(),
       questionSet: source.questionSet.toString(),
       level: source.level,

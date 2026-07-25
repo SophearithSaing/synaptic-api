@@ -10,6 +10,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { QuestionType } from '../../questions/schemas/question-set.schema';
@@ -63,9 +64,19 @@ export class CreateSetAttemptDto {
   @IsNotEmpty()
   user: string;
 
+  @ValidateIf((dto: CreateSetAttemptDto) => {
+    return dto.session !== undefined || !dto.liveSession;
+  })
   @IsMongoId()
   @IsNotEmpty()
-  session: string;
+  session?: string;
+
+  @ValidateIf((dto: CreateSetAttemptDto) => {
+    return dto.liveSession !== undefined || !dto.session;
+  })
+  @IsMongoId()
+  @IsNotEmpty()
+  liveSession?: string;
 
   @IsMongoId()
   @IsNotEmpty()

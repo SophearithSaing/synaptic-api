@@ -365,8 +365,15 @@ describe('SessionsService', () => {
       ]),
     );
     questionSetModel.create.mockResolvedValue(createQuestionSet(0));
-    setAttemptModel.create.mockResolvedValue(
-      createAttempt([questionOne, questionTwo, questionThree], true),
+    setAttemptModel.create.mockImplementation(
+      (payload: { liveSession?: Types.ObjectId; session?: Types.ObjectId }) => {
+        expect(payload.liveSession).toEqual(liveSessionId);
+        expect(payload).not.toHaveProperty('session');
+
+        return Promise.resolve(
+          createAttempt([questionOne, questionTwo, questionThree], true),
+        );
+      },
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
@@ -432,7 +439,14 @@ describe('SessionsService', () => {
 
     sessionModel.findOne.mockReturnValue(execQuery(session));
     questionSetModel.findById.mockReturnValue(execQuery(questionSet));
-    setAttemptModel.create.mockResolvedValue(attempt);
+    setAttemptModel.create.mockImplementation(
+      (payload: { liveSession?: Types.ObjectId; session?: Types.ObjectId }) => {
+        expect(payload.session).toEqual(sessionId);
+        expect(payload).not.toHaveProperty('liveSession');
+
+        return Promise.resolve(attempt);
+      },
+    );
     sessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
     questionSetModel.findOne.mockReturnValue(execQuery(nextQuestionSet));
 
@@ -443,9 +457,7 @@ describe('SessionsService', () => {
       [{ questionId: questionOne.id, answer: 'o1' }],
     );
 
-    expect(setAttemptModel.create).toHaveBeenCalledWith(
-      expect.objectContaining({ session: sessionId }),
-    );
+    expect(setAttemptModel.create).toHaveBeenCalled();
     expect(result.attempt.id).toBe(attemptId.toString());
     expect(result.nextQuestionSet?.id).toBe(questionSetId.toString());
   });

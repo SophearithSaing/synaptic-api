@@ -392,6 +392,7 @@ export class SessionsService {
         liveSession._id,
         questionSet,
         answers,
+        true,
       );
 
       if (
@@ -761,6 +762,7 @@ export class SessionsService {
    * @param sessionId The regular or live session ID.
    * @param questionSet The completed question set.
    * @param answers The evaluated answers for the completed set.
+   * @param isLiveSession Whether the attempt belongs to a live session.
    * @returns The created set attempt.
    */
   private async createSetAttempt(
@@ -768,6 +770,7 @@ export class SessionsService {
     sessionId: Types.ObjectId,
     questionSet: QuestionSetDocument,
     answers: Answer[],
+    isLiveSession = false,
   ): Promise<SetAttemptDocument> {
     const setScore = calculateSetScore(answers);
     const passed = hasPassingAnswers(answers);
@@ -777,7 +780,7 @@ export class SessionsService {
 
     return this.setAttemptModel.create({
       user: Types.ObjectId.createFromHexString(studentId),
-      session: sessionId,
+      ...(isLiveSession ? { liveSession: sessionId } : { session: sessionId }),
       topic: questionSet.topic,
       questionSet: questionSet._id,
       level: questionSet.level,
