@@ -479,6 +479,99 @@ export class SessionsService {
   }
 
   /**
+   * Continues a live learning session for a user.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID to continue.
+   * @returns The current or next pending generated question.
+   */
+  async continueLiveSession(
+    studentId: string,
+    sessionId: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const pendingQuestion = await this.liveQuestionModel
+      .findOne({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: LiveQuestionStatus.Pending,
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    if (pendingQuestion) {
+      return {
+        sessionId: liveSession._id.toString(),
+        questionId: pendingQuestion._id.toString(),
+        question: pendingQuestion.question,
+      };
+    }
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: LiveQuestionStatus.Accepted,
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (liveQuestion) => liveQuestion.question,
+    );
+
+    if (acceptedQuestions.length >= 3) {
+      throw new BadRequestException('Live session already has three questions');
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+    });
+    const nextLiveQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: nextLiveQuestion._id.toString(),
+      question,
+    };
+  }
+
+  /**
    * Fetches in-progress sessions for a user.
    *
    * @param studentId The authenticated student ID.

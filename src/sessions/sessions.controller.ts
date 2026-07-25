@@ -15,6 +15,7 @@ import type { RequestWithUser } from '../auth/types/request-with-user.type';
 import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
+  ContinueLiveSessionDto,
   ContinueSessionDto,
   RejectLiveQuestionDto,
   SessionResponseDto,
@@ -104,6 +105,24 @@ export class SessionsController {
       body.sessionId,
       body.questionId,
       body.answer,
+    );
+  }
+
+  /**
+   * Continues a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live session continue request.
+   * @returns The current or next pending generated question.
+   */
+  @Post('live/continue')
+  async continueLiveSession(
+    @Req() request: RequestWithUser,
+    @Body() body: ContinueLiveSessionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.continueLiveSession(
+      request.user.userId,
+      body.sessionId,
     );
   }
 

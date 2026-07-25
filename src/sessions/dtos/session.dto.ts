@@ -53,6 +53,15 @@ export class ContinueSessionDto {
 }
 
 /**
+ * Request body for continuing a live learning session.
+ */
+export class ContinueLiveSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+}
+
+/**
  * Submitted answer for a question set question.
  */
 export class SubmitAnswerItemDto {
