@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
 import { Topic } from '../../topics/schemas/topic.schema';
+import { LiveSession } from './live-session.schema';
 import { Session } from './session.schema';
 import {
   QuestionSet,
@@ -15,8 +16,11 @@ export class SetAttempt {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   user: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: Session.name, required: true })
-  session: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: Session.name })
+  session?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: LiveSession.name })
+  liveSession?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: Topic.name, required: true })
   topic: Types.ObjectId;
@@ -60,6 +64,7 @@ export const SetAttemptSchema = SchemaFactory.createForClass(SetAttempt);
 export interface Answer {
   id: string;
   questionId: string;
+  questionPrompt: string;
   questionType: QuestionType;
   answer: string;
   correctAnswer: string;

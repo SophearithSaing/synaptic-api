@@ -2,23 +2,24 @@ import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsEnum,
   IsMongoId,
   IsNotEmpty,
   IsNumber,
-  IsString,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { QuestionDto } from './question.dto';
+import { QuestionSetType } from '../schemas/question-set.schema';
 
 export class CreateQuestionSetDto {
   @IsMongoId()
   @IsNotEmpty()
   topic: string;
 
-  @IsString()
+  @IsEnum(QuestionSetType)
   @IsNotEmpty()
-  setType: string;
+  setType: QuestionSetType;
 
   @IsNumber()
   @Min(0)

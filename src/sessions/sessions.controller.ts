@@ -15,12 +15,19 @@ import type { RequestWithUser } from '../auth/types/request-with-user.type';
 import { MongoIdPipe } from '../common/pipes/mongo-id.pipe';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import {
+  ContinueLiveSessionDto,
   ContinueSessionDto,
+  LiveSessionResponseDto,
+  RejectLiveQuestionDto,
   SessionResponseDto,
+  StartLiveSessionDto,
+  StartLiveSessionResponseDto,
   StartSessionDto,
   StartSessionResponseDto,
   SubmitAnswerDto,
   SubmitAnswerResponseDto,
+  SubmitLiveAnswerDto,
+  SubmitLiveAnswerResponseDto,
 } from './dtos';
 import { SessionsService } from './sessions.service';
 
@@ -45,6 +52,82 @@ export class SessionsController {
   }
 
   /**
+   * Starts a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live session start request.
+   * @returns The created live session and pending generated question.
+   */
+  @Post('live/start')
+  async startLiveSession(
+    @Req() request: RequestWithUser,
+    @Body() body: StartLiveSessionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.startLiveSession(
+      body.topicId,
+      request.user.userId,
+    );
+  }
+
+  /**
+   * Rejects a live generated question for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live question rejection request.
+   * @returns The replacement pending generated question.
+   */
+  @Post('live/reject')
+  async rejectLiveQuestion(
+    @Req() request: RequestWithUser,
+    @Body() body: RejectLiveQuestionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.rejectLiveQuestion(
+      request.user.userId,
+      body.sessionId,
+      body.questionId,
+      body.reason,
+    );
+  }
+
+  /**
+   * Submits an answer to a live generated question.
+   *
+   * @param request The authenticated request.
+   * @param body The live answer submission request.
+   * @returns The evaluated answers and next live question when available.
+   */
+  @Post('live/submit-answer')
+  async submitLiveAnswer(
+    @Req() request: RequestWithUser,
+    @Body() body: SubmitLiveAnswerDto,
+  ): Promise<SubmitLiveAnswerResponseDto> {
+    return this.sessionsService.submitLiveAnswer(
+      request.user.userId,
+      body.sessionId,
+      body.questionId,
+      body.answer,
+    );
+  }
+
+  /**
+   * Continues a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param body The live session continue request.
+   * @returns The current or next pending generated question.
+   */
+  @Post('live/continue')
+  async continueLiveSession(
+    @Req() request: RequestWithUser,
+    @Body() body: ContinueLiveSessionDto,
+  ): Promise<StartLiveSessionResponseDto> {
+    return this.sessionsService.continueLiveSession(
+      request.user.userId,
+      body.sessionId,
+    );
+  }
+
+  /**
    * Fetches in-progress sessions for the authenticated user.
    *
    * @param request The authenticated request.
@@ -55,6 +138,34 @@ export class SessionsController {
     @Req() request: RequestWithUser,
   ): Promise<SessionResponseDto[]> {
     return this.sessionsService.getInProgressSessions(request.user.userId);
+  }
+
+  /**
+   * Fetches in-progress live sessions for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @returns The authenticated user's in-progress live sessions.
+   */
+  @Get('live/in-progress')
+  async getInProgressLiveSessions(
+    @Req() request: RequestWithUser,
+  ): Promise<LiveSessionResponseDto[]> {
+    return this.sessionsService.getInProgressLiveSessions(request.user.userId);
+  }
+
+  /**
+   * Deletes a live learning session for the authenticated user.
+   *
+   * @param request The authenticated request.
+   * @param id The live session ID to delete.
+   */
+  @Delete('live/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteLiveSession(
+    @Req() request: RequestWithUser,
+    @Param('id', MongoIdPipe) id: string,
+  ): Promise<void> {
+    await this.sessionsService.deleteLiveSession(id, request.user.userId);
   }
 
   /**

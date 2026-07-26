@@ -170,7 +170,7 @@ describe('AuthService', () => {
 
   it('refreshes sessions and rotates refresh tokens', async () => {
     const session = {
-      id: 'session-id',
+      id: '507f1f77bcf86cd799439012',
       userId: 'user-id',
       refreshTokenHash: 'hashed-old-secret',
       expiresAt: new Date(Date.now() + 60000),
@@ -187,10 +187,10 @@ describe('AuthService', () => {
     });
     findById.mockResolvedValue(user);
 
-    const result = await service.refresh('session-id.old-secret');
+    const result = await service.refresh('507f1f77bcf86cd799439012.old-secret');
 
     expect(result.access_token).toBe('signed-token');
-    expect(result.refresh_token).toMatch(/^session-id\./);
+    expect(result.refresh_token).toMatch(/^507f1f77bcf86cd799439012\./);
     expect(bcrypt.compare).toHaveBeenCalledWith(
       'old-secret',
       'hashed-old-secret',
@@ -203,17 +203,38 @@ describe('AuthService', () => {
       select: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(service.refresh('session-id.secret')).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      service.refresh('507f1f77bcf86cd799439011.secret'),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects refresh tokens with non-object id session ids', async () => {
+    await expect(
+      service.refresh('2c2f317e-0ddb-4c34-8a13-f1951fbd2fae.secret'),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(findSessionById).not.toHaveBeenCalled();
   });
 
   it('revokes refresh sessions during logout', async () => {
-    await service.logout('session-id.secret');
+    findByIdAndUpdate.mockImplementation(
+      (sessionId: string, update: { revokedAt: Date }) => {
+        expect(sessionId).toBe('507f1f77bcf86cd799439011');
+        expect(update.revokedAt).toBeInstanceOf(Date);
 
-    expect(findByIdAndUpdate).toHaveBeenCalledWith('session-id', {
-      revokedAt: expect.any(Date),
-    });
+        return Promise.resolve(null);
+      },
+    );
+
+    await service.logout('507f1f77bcf86cd799439011.secret');
+
+    expect(findByIdAndUpdate).toHaveBeenCalled();
+  });
+
+  it('ignores logout tokens with non-object id session ids', async () => {
+    await service.logout('2c2f317e-0ddb-4c34-8a13-f1951fbd2fae.secret');
+
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   it('rejects login when no user exists', async () => {

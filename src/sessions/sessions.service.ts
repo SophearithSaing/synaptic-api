@@ -9,27 +9,34 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import Together from 'together-ai';
 import { QuestionSetResponseDto } from '../questions/dtos';
+import { LiveSessionResponseDto } from './dtos/live-session-response.dto';
 import {
   Question,
   QuestionSet,
   QuestionSetDocument,
+  QuestionSetType,
   QuestionType,
 } from '../questions/schemas/question-set.schema';
 import { Topic, TopicDocument } from '../topics/schemas/topic.schema';
 import {
   SessionResponseDto,
   SetAttemptResponseDto,
+  StartLiveSessionResponseDto,
   StartSessionResponseDto,
   SubmitAnswerItemDto,
   SubmitAnswerResponseDto,
+  SubmitLiveAnswerResponseDto,
 } from './dtos';
 import {
+  QUESTION_GENERATION_SYSTEM_PROMPT,
   WRITTEN_EVALUATION_SYSTEM_PROMPT,
+  generatedLiveQuestionResponseFormat,
   writtenAnswerEvaluationResponseFormat,
   writtenAnswerEvaluationsSchema,
 } from './ai/sessions-ai.constant';
-import { EvaluationModel } from './ai/sessions-ai.enum';
+import { AiModel } from './ai/sessions-ai.enum';
 import {
+  LiveGenerationPromptContext,
   SubmittedWrittenAnswer,
   WrittenAnswerEvaluation,
 } from './ai/sessions-ai.types';
@@ -39,10 +46,24 @@ import {
   calculateSetScore,
   collectAttemptConcepts,
   collectConceptsByScore,
+  createLiveGenerationUserPrompt,
   createRecommendations,
+  formatGeneratedLiveQuestionIds,
+  getNextLiveQuestionType,
   hasPassingAnswers,
+  parseGeneratedLiveQuestion,
   roundScore,
+  validateGeneratedLiveQuestion,
 } from './sessions.util';
+import {
+  LiveQuestion,
+  LiveQuestionDocument,
+  LiveQuestionStatus,
+} from './schemas/live-question.schema';
+import {
+  LiveSession,
+  LiveSessionDocument,
+} from './schemas/live-session.schema';
 import {
   SessionEvaluation,
   SessionEvaluationDocument,
@@ -51,6 +72,7 @@ import {
   OverallEvaluation,
   Session,
   SessionDocument,
+  SessionStatus,
 } from './schemas/session.schema';
 import {
   Answer,
@@ -68,6 +90,10 @@ export class SessionsService {
     private readonly topicModel: Model<TopicDocument>,
     @InjectModel(QuestionSet.name)
     private readonly questionSetModel: Model<QuestionSetDocument>,
+    @InjectModel(LiveQuestion.name)
+    private readonly liveQuestionModel: Model<LiveQuestionDocument>,
+    @InjectModel(LiveSession.name)
+    private readonly liveSessionModel: Model<LiveSessionDocument>,
     @InjectModel(SetAttempt.name)
     private readonly setAttemptModel: Model<SetAttemptDocument>,
     @InjectModel(SessionEvaluation.name)
@@ -77,12 +103,12 @@ export class SessionsService {
     const apiKey = this.configService.get<string>('TOGETHER_API_KEY');
 
     this.togetherClient = apiKey ? new Together({ apiKey }) : null;
-    this.evaluationModel =
-      this.configService.get<string>('AI_MODEL') ?? EvaluationModel.GptOss120B;
+    this.aiModel =
+      this.configService.get<string>('AI_MODEL') ?? AiModel.GptOss120B;
   }
 
   private readonly togetherClient: Together | null;
-  private readonly evaluationModel: string;
+  private readonly aiModel: string;
 
   /**
    * Starts a learning session for a user on a topic.
@@ -113,13 +139,512 @@ export class SessionsService {
       student: Types.ObjectId.createFromHexString(studentId),
       topic: topic._id,
       currentLevel: 0,
-      status: 'active',
-      startAt: new Date(),
+      status: SessionStatus.Active,
+      startedAt: new Date(),
     });
 
     return {
       sessionId: session._id.toString(),
       questionSet: QuestionSetResponseDto.from(questionSet),
+    };
+  }
+
+  /**
+   * Starts a live learning session for a user on a topic.
+   *
+   * @param topicId The topic ID to start.
+   * @param studentId The authenticated student ID.
+   * @returns The created live session and pending generated question.
+   */
+  async startLiveSession(
+    topicId: string,
+    studentId: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const topic = await this.topicModel.findById(topicId).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const level = 0;
+    const questionType = getNextLiveQuestionType(level, []);
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level,
+      questionNumber: 1,
+      questionType,
+      acceptedQuestionPrompts: [],
+    });
+    const liveSession = await this.liveSessionModel.create({
+      student: Types.ObjectId.createFromHexString(studentId),
+      topic: topic._id,
+      currentLevel: level,
+      status: SessionStatus.Active,
+      startedAt: new Date(),
+    });
+    const pendingQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level,
+      questionNumber: 1,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: pendingQuestion._id.toString(),
+      question,
+    };
+  }
+
+  /**
+   * Rejects a pending live question and generates a replacement.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID.
+   * @param questionId The live question document ID to reject.
+   * @param reason The reason the question was rejected.
+   * @returns The live session and replacement pending question.
+   */
+  async rejectLiveQuestion(
+    studentId: string,
+    sessionId: string,
+    questionId: string,
+    reason: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const rejectedQuestion = await this.liveQuestionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(questionId),
+        liveSession: liveSession._id,
+        status: {
+          $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+        },
+      })
+      .exec();
+
+    if (!rejectedQuestion) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        _id: { $ne: rejectedQuestion._id },
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
+      })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (liveQuestion) => liveQuestion.question,
+    );
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: rejectedQuestion.questionNumber,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+      rejectedQuestion: rejectedQuestion.question,
+      rejectionReason: reason,
+    });
+    const updateResult = await this.liveQuestionModel
+      .updateOne(
+        {
+          _id: rejectedQuestion._id,
+          liveSession: liveSession._id,
+          status: rejectedQuestion.status,
+        },
+        { $set: { status: LiveQuestionStatus.Rejected } },
+      )
+      .exec();
+
+    if (updateResult.modifiedCount === 0) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const replacementQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level: liveSession.currentLevel,
+      questionNumber: rejectedQuestion.questionNumber,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: replacementQuestion._id.toString(),
+      question,
+    };
+  }
+
+  /**
+   * Submits an answer to a pending live question.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID.
+   * @param questionId The live question document ID.
+   * @param submittedAnswer The submitted answer.
+   * @returns The evaluated answers and next live question when available.
+   */
+  async submitLiveAnswer(
+    studentId: string,
+    sessionId: string,
+    questionId: string,
+    submittedAnswer: string,
+  ): Promise<SubmitLiveAnswerResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const liveQuestion = await this.liveQuestionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(questionId),
+        liveSession: liveSession._id,
+        status: {
+          $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+        },
+      })
+      .exec();
+
+    if (!liveQuestion) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const [answer] = await this.evaluateAnswers(
+      [{ questionId: liveQuestion.question.id, answer: submittedAnswer }],
+      [liveQuestion.question],
+    );
+
+    const updateResult = await this.liveQuestionModel
+      .updateOne(
+        {
+          _id: liveQuestion._id,
+          status: {
+            $in: [LiveQuestionStatus.Pending, LiveQuestionStatus.Failed],
+          },
+        },
+        {
+          $set: {
+            status:
+              answer.score >= 0.5
+                ? LiveQuestionStatus.Passed
+                : LiveQuestionStatus.Failed,
+            answer,
+            answeredAt: new Date(),
+          },
+        },
+      )
+      .exec();
+
+    if (updateResult.modifiedCount === 0) {
+      throw new NotFoundException('Live question not found');
+    }
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (item) => item.question,
+    );
+
+    // Completed sets still need attempt creation; early failures stop generation.
+    if (answer.score < 0.5 && acceptedQuestions.length < 3) {
+      return {
+        answers: [answer],
+        nextQuestion: null,
+      };
+    }
+
+    if (acceptedQuestions.length > 3) {
+      throw new BadRequestException('Live session already has three questions');
+    }
+
+    if (acceptedQuestions.length === 3) {
+      const questionSet = await this.questionSetModel.create({
+        topic: liveSession.topic,
+        setType: QuestionSetType.Live,
+        level: liveSession.currentLevel,
+        questions: acceptedQuestions,
+      });
+      const answers = acceptedLiveQuestions.map((item) => item.answer);
+      const { passed } = await this.createSetAttempt(
+        studentId,
+        liveSession._id,
+        questionSet,
+        answers,
+        true,
+      );
+
+      if (
+        passed &&
+        liveSession.currentLevel > 0 &&
+        liveSession.currentLevel % 10 === 0
+      ) {
+        await this.createSessionEvaluation(
+          liveSession,
+          liveSession.currentLevel,
+          true,
+        );
+      }
+
+      if (!passed) {
+        return {
+          answers,
+          nextQuestion: null,
+        };
+      }
+
+      if (liveSession.currentLevel >= 100) {
+        await this.liveSessionModel
+          .updateOne(
+            { _id: liveSession._id },
+            {
+              $set: {
+                status: SessionStatus.Completed,
+                finishedAt: new Date(),
+              },
+            },
+          )
+          .exec();
+
+        return {
+          answers,
+          nextQuestion: null,
+        };
+      }
+
+      const nextLevel = liveSession.currentLevel + 1;
+      const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+      if (!topic) {
+        throw new NotFoundException('Topic not found');
+      }
+
+      const questionType = getNextLiveQuestionType(nextLevel, []);
+      const question = await this.generateLiveQuestion({
+        topicSlug: topic.slug,
+        topicTitle: topic.title,
+        topicDescription: topic.description,
+        topicTags: topic.tags,
+        level: nextLevel,
+        questionNumber: 1,
+        questionType,
+        acceptedQuestionPrompts: [],
+      });
+      const nextLiveQuestion = await this.liveQuestionModel.create({
+        liveSession: liveSession._id,
+        question,
+        level: nextLevel,
+        questionNumber: 1,
+        status: LiveQuestionStatus.Pending,
+      });
+
+      await this.liveSessionModel
+        .updateOne(
+          { _id: liveSession._id },
+          { $set: { currentLevel: nextLevel } },
+        )
+        .exec();
+
+      return {
+        answers,
+        nextQuestion: {
+          sessionId: liveSession._id.toString(),
+          questionId: nextLiveQuestion._id.toString(),
+          question,
+        },
+      };
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+    });
+    const nextLiveQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      answers: [answer],
+      nextQuestion: {
+        sessionId: liveSession._id.toString(),
+        questionId: nextLiveQuestion._id.toString(),
+        question,
+      },
+    };
+  }
+
+  /**
+   * Continues a live learning session for a user.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The live session ID to continue.
+   * @returns The current or next pending generated question.
+   */
+  async continueLiveSession(
+    studentId: string,
+    sessionId: string,
+  ): Promise<StartLiveSessionResponseDto> {
+    const liveSession = await this.liveSessionModel
+      .findOne({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .exec();
+
+    if (!liveSession) {
+      throw new NotFoundException('Live session not found');
+    }
+
+    const pendingQuestion = await this.liveQuestionModel
+      .findOne({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: LiveQuestionStatus.Pending,
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    if (pendingQuestion) {
+      return {
+        sessionId: liveSession._id.toString(),
+        questionId: pendingQuestion._id.toString(),
+        question: pendingQuestion.question,
+      };
+    }
+
+    const acceptedLiveQuestions = await this.liveQuestionModel
+      .find({
+        liveSession: liveSession._id,
+        level: liveSession.currentLevel,
+        status: {
+          $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+        },
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+    const acceptedQuestions = acceptedLiveQuestions.map(
+      (liveQuestion) => liveQuestion.question,
+    );
+    const failedQuestion = acceptedLiveQuestions.find(
+      (liveQuestion) => liveQuestion.status === LiveQuestionStatus.Failed,
+    );
+
+    if (failedQuestion) {
+      return {
+        sessionId: liveSession._id.toString(),
+        questionId: failedQuestion._id.toString(),
+        question: failedQuestion.question,
+      };
+    }
+
+    if (acceptedQuestions.length >= 3) {
+      throw new BadRequestException('Live session already has three questions');
+    }
+
+    const topic = await this.topicModel.findById(liveSession.topic).exec();
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const questionType = getNextLiveQuestionType(
+      liveSession.currentLevel,
+      acceptedQuestions,
+    );
+    const question = await this.generateLiveQuestion({
+      topicSlug: topic.slug,
+      topicTitle: topic.title,
+      topicDescription: topic.description,
+      topicTags: topic.tags,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      questionType,
+      acceptedQuestionPrompts: acceptedQuestions.map(
+        (question) => question.prompt,
+      ),
+    });
+    const nextLiveQuestion = await this.liveQuestionModel.create({
+      liveSession: liveSession._id,
+      question,
+      level: liveSession.currentLevel,
+      questionNumber: acceptedQuestions.length + 1,
+      status: LiveQuestionStatus.Pending,
+    });
+
+    return {
+      sessionId: liveSession._id.toString(),
+      questionId: nextLiveQuestion._id.toString(),
+      question,
     };
   }
 
@@ -135,13 +660,34 @@ export class SessionsService {
     const sessions = await this.sessionModel
       .find({
         student: Types.ObjectId.createFromHexString(studentId),
-        status: 'active',
+        status: SessionStatus.Active,
       })
       .populate('topic')
       .sort({ updatedAt: -1 })
       .exec();
 
     return SessionResponseDto.fromMany(sessions);
+  }
+
+  /**
+   * Fetches in-progress live sessions for a user.
+   *
+   * @param studentId The authenticated student ID.
+   * @returns The user's in-progress live sessions.
+   */
+  async getInProgressLiveSessions(
+    studentId: string,
+  ): Promise<LiveSessionResponseDto[]> {
+    const sessions = await this.liveSessionModel
+      .find({
+        student: Types.ObjectId.createFromHexString(studentId),
+        status: SessionStatus.Active,
+      })
+      .populate('topic')
+      .sort({ updatedAt: -1 })
+      .exec();
+
+    return sessions.map((session) => LiveSessionResponseDto.from(session));
   }
 
   /**
@@ -160,6 +706,25 @@ export class SessionsService {
 
     if (!session) {
       throw new NotFoundException('Session not found');
+    }
+  }
+
+  /**
+   * Deletes a live learning session owned by a user.
+   *
+   * @param sessionId The live session ID to delete.
+   * @param studentId The authenticated student ID.
+   */
+  async deleteLiveSession(sessionId: string, studentId: string): Promise<void> {
+    const session = await this.liveSessionModel
+      .findOneAndDelete({
+        _id: Types.ObjectId.createFromHexString(sessionId),
+        student: Types.ObjectId.createFromHexString(studentId),
+      })
+      .exec();
+
+    if (!session) {
+      throw new NotFoundException('Live session not found');
     }
   }
 
@@ -237,26 +802,14 @@ export class SessionsService {
       submittedAnswers,
       questionSet.questions,
     );
-    const setScore = calculateSetScore(answers);
-    const passed = hasPassingAnswers(answers);
-    const strengths = collectConceptsByScore(answers, 1);
-    const weaknesses = collectConceptsByScore(answers, 0);
-    const submittedAt = new Date();
     let nextQuestionSet: QuestionSetResponseDto | null = null;
-    const attempt = await this.setAttemptModel.create({
-      user: Types.ObjectId.createFromHexString(studentId),
-      session: session._id,
-      topic: questionSet.topic,
-      questionSet: questionSet._id,
-      level: questionSet.level,
+    const attempt = await this.createSetAttempt(
+      studentId,
+      session._id,
+      questionSet,
       answers,
-      setScore,
-      passed,
-      strengths,
-      weaknesses,
-      submittedAt,
-      evaluatedAt: submittedAt,
-    });
+    );
+    const { passed } = attempt;
 
     if (passed && questionSet.level === session.currentLevel) {
       await this.sessionModel
@@ -282,6 +835,45 @@ export class SessionsService {
   }
 
   /**
+   * Creates a completed set attempt using the standard evaluation aggregates.
+   *
+   * @param studentId The authenticated student ID.
+   * @param sessionId The regular or live session ID.
+   * @param questionSet The completed question set.
+   * @param answers The evaluated answers for the completed set.
+   * @param isLiveSession Whether the attempt belongs to a live session.
+   * @returns The created set attempt.
+   */
+  private async createSetAttempt(
+    studentId: string,
+    sessionId: Types.ObjectId,
+    questionSet: QuestionSetDocument,
+    answers: Answer[],
+    isLiveSession = false,
+  ): Promise<SetAttemptDocument> {
+    const setScore = calculateSetScore(answers);
+    const passed = hasPassingAnswers(answers);
+    const strengths = collectConceptsByScore(answers, 1);
+    const weaknesses = collectConceptsByScore(answers, 0);
+    const submittedAt = new Date();
+
+    return this.setAttemptModel.create({
+      user: Types.ObjectId.createFromHexString(studentId),
+      ...(isLiveSession ? { liveSession: sessionId } : { session: sessionId }),
+      topic: questionSet.topic,
+      questionSet: questionSet._id,
+      level: questionSet.level,
+      answers,
+      setScore,
+      passed,
+      strengths,
+      weaknesses,
+      submittedAt,
+      evaluatedAt: submittedAt,
+    });
+  }
+
+  /**
    * Gets the next question set after a completed level.
    *
    * @param session The current learning session.
@@ -304,6 +896,47 @@ export class SessionsService {
     }
 
     return QuestionSetResponseDto.from(nextQuestionSet);
+  }
+
+  /**
+   * Generates one live-session question with AI.
+   *
+   * @param context The live generation prompt context.
+   * @returns The generated question.
+   */
+  private async generateLiveQuestion(
+    context: LiveGenerationPromptContext,
+  ): Promise<Question> {
+    if (!this.togetherClient) {
+      throw new ServiceUnavailableException('AI is not configured');
+    }
+
+    const completion = await this.togetherClient.chat.completions.create({
+      model: this.aiModel,
+      response_format: generatedLiveQuestionResponseFormat,
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: QUESTION_GENERATION_SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: createLiveGenerationUserPrompt(context),
+        },
+      ],
+    });
+    const content = completion.choices[0]?.message?.content;
+    const text = this.extractCompletionText(content);
+    const generatedQuestion = parseGeneratedLiveQuestion(text);
+    const question = formatGeneratedLiveQuestionIds(
+      generatedQuestion.question,
+      context,
+    );
+
+    validateGeneratedLiveQuestion(question, context.questionType);
+
+    return question;
   }
 
   /**
@@ -388,6 +1021,7 @@ export class SessionsService {
     return {
       id: `ans-${writtenAnswer.submittedAnswer.questionId}`,
       questionId: writtenAnswer.submittedAnswer.questionId,
+      questionPrompt: writtenAnswer.question.prompt,
       questionType: writtenAnswer.question.type,
       answer: writtenAnswer.submittedAnswer.answer,
       correctAnswer: evaluation.correctAnswer,
@@ -414,7 +1048,7 @@ export class SessionsService {
     }
 
     const completion = await this.togetherClient.chat.completions.create({
-      model: this.evaluationModel,
+      model: this.aiModel,
       response_format: writtenAnswerEvaluationResponseFormat,
       temperature: 0,
       messages: [
@@ -512,11 +1146,16 @@ export class SessionsService {
     submittedAnswer: SubmitAnswerItemDto,
     question: Question,
   ): Answer {
+    if (!question.correctOptionId) {
+      throw new BadRequestException('MCQ correct option not found');
+    }
+
     const isCorrect = submittedAnswer.answer === question.correctOptionId;
 
     return {
       id: `ans-${submittedAnswer.questionId}`,
       questionId: submittedAnswer.questionId,
+      questionPrompt: question.prompt,
       questionType: question.type,
       answer: submittedAnswer.answer,
       correctAnswer: question.correctOptionId,
@@ -536,15 +1175,20 @@ export class SessionsService {
    *
    * @param session The session to evaluate.
    * @param toLevel The last level in the evaluated range.
+   * @param isLiveSession Whether the session is a live session.
    */
   private async createSessionEvaluation(
-    session: SessionDocument,
+    session: SessionDocument | LiveSessionDocument,
     toLevel: number,
+    isLiveSession = false,
   ): Promise<void> {
     const fromLevel = toLevel === 10 ? 0 : toLevel - 9;
+    const sessionFilter = isLiveSession
+      ? { liveSession: session._id }
+      : { session: session._id };
     const attempts = await this.setAttemptModel
       .find({
-        session: session._id,
+        ...sessionFilter,
         level: { $gte: fromLevel, $lte: toLevel },
       })
       .exec();
@@ -561,7 +1205,7 @@ export class SessionsService {
 
     await this.sessionEvaluationModel.create({
       student: session.student,
-      session: session._id,
+      ...sessionFilter,
       topic: session.topic,
       fromLevel,
       toLevel,
@@ -573,19 +1217,24 @@ export class SessionsService {
       attemptIds: attempts.map((attempt) => attempt._id.toString()),
     });
 
-    await this.updateOverallEvaluation(session);
+    await this.updateOverallEvaluation(session, isLiveSession);
   }
 
   /**
    * Updates the overall evaluation for a session.
    *
    * @param session The session to update.
+   * @param isLiveSession Whether the session is a live session.
    */
   private async updateOverallEvaluation(
-    session: SessionDocument,
+    session: SessionDocument | LiveSessionDocument,
+    isLiveSession = false,
   ): Promise<void> {
+    const sessionFilter = isLiveSession
+      ? { liveSession: session._id }
+      : { session: session._id };
     const evaluations = await this.sessionEvaluationModel
-      .find({ session: session._id })
+      .find(sessionFilter)
       .exec();
     const overallEvaluation: OverallEvaluation = {
       summary: this.createOverallSummary(evaluations),
@@ -602,9 +1251,15 @@ export class SessionsService {
       ],
     };
 
-    await this.sessionModel
-      .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
-      .exec();
+    if (isLiveSession) {
+      await this.liveSessionModel
+        .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
+        .exec();
+    } else {
+      await this.sessionModel
+        .updateOne({ _id: session._id }, { $set: { overallEvaluation } })
+        .exec();
+    }
   }
 
   /**

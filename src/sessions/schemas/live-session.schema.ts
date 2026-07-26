@@ -2,17 +2,13 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
 import { Topic } from '../../topics/schemas/topic.schema';
+import { SessionStatus } from './session.schema';
+import type { OverallEvaluation } from './session.schema';
 
-export type SessionDocument = HydratedDocument<Session>;
+export type LiveSessionDocument = HydratedDocument<LiveSession>;
 
-export enum SessionStatus {
-  Active = 'active',
-  Completed = 'completed',
-  Stopped = 'stopped',
-}
-
-@Schema({ timestamps: true, collection: 'sessions' })
-export class Session {
+@Schema({ timestamps: true, collection: 'liveSessions' })
+export class LiveSession {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   student: Types.ObjectId;
 
@@ -38,11 +34,4 @@ export class Session {
   updatedAt: Date;
 }
 
-export const SessionSchema = SchemaFactory.createForClass(Session);
-
-export interface OverallEvaluation {
-  summary: string;
-  strengths: string[];
-  weaknesses: string[];
-  recommendations: string[];
-}
+export const LiveSessionSchema = SchemaFactory.createForClass(LiveSession);

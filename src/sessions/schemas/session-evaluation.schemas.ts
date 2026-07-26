@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { User } from '../../auth/schemas/user.schema';
+import { LiveSession } from './live-session.schema';
 import { Session } from './session.schema';
 import { Topic } from '../../topics/schemas/topic.schema';
 
@@ -11,8 +12,11 @@ export class SessionEvaluation {
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   student: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: Session.name, required: true })
-  session: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: Session.name })
+  session?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: LiveSession.name })
+  liveSession?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: Topic.name, required: true })
   topic: Types.ObjectId;

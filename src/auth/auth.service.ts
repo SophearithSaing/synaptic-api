@@ -103,6 +103,11 @@ export class AuthService {
    */
   async refresh(refreshToken: string): Promise<AuthSessionResponse> {
     const { sessionId, secret } = this.parseRefreshToken(refreshToken);
+
+    if (!Types.ObjectId.isValid(sessionId)) {
+      throw new UnauthorizedException();
+    }
+
     const session = await this.authSessionModel
       .findById(sessionId)
       .select('+refreshTokenHash');
@@ -147,6 +152,11 @@ export class AuthService {
     }
 
     const { sessionId } = this.parseRefreshToken(refreshToken);
+
+    if (!Types.ObjectId.isValid(sessionId)) {
+      return;
+    }
+
     await this.authSessionModel.findByIdAndUpdate(sessionId, {
       revokedAt: new Date(),
     });

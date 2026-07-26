@@ -18,9 +18,44 @@ export class StartSessionDto {
 }
 
 /**
+ * Request body for starting a live learning session.
+ */
+export class StartLiveSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  topicId: string;
+}
+
+/**
+ * Request body for rejecting a live generated question.
+ */
+export class RejectLiveQuestionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+}
+
+/**
  * Request body for continuing a learning session.
  */
 export class ContinueSessionDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+}
+
+/**
+ * Request body for continuing a live learning session.
+ */
+export class ContinueLiveSessionDto {
   @IsMongoId()
   @IsNotEmpty()
   sessionId: string;
@@ -56,6 +91,23 @@ export class SubmitAnswerDto {
   @ValidateNested({ each: true })
   @Type(() => SubmitAnswerItemDto)
   answers: SubmitAnswerItemDto[];
+}
+
+/**
+ * Request body for submitting an answer to a live generated question.
+ */
+export class SubmitLiveAnswerDto {
+  @IsMongoId()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @IsMongoId()
+  @IsNotEmpty()
+  questionId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  answer: string;
 }
 
 /**

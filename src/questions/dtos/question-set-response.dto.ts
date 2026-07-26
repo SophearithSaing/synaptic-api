@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 import { QuestionDto } from './question.dto';
-import { QuestionSetDocument } from '../schemas/question-set.schema';
+import {
+  QuestionSetDocument,
+  QuestionSetType,
+} from '../schemas/question-set.schema';
 
 type QuestionSetResponseSource = QuestionSetDocument & {
   _id: { toString(): string };
@@ -11,7 +14,7 @@ type QuestionSetResponseSource = QuestionSetDocument & {
 export class QuestionSetResponseDto {
   id: string;
   topic: unknown;
-  setType: string;
+  setType: QuestionSetType;
   level: number;
   questions: QuestionDto[];
   createdAt?: Date;

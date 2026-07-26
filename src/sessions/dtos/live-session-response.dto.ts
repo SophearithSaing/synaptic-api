@@ -1,8 +1,10 @@
 import { hasToObject } from '../../utils/object.utils';
-import { SessionDocument, SessionStatus } from '../schemas/session.schema';
+import { Types } from 'mongoose';
+import { LiveSessionDocument } from '../schemas/live-session.schema';
+import { SessionStatus } from '../schemas/session.schema';
 import { SessionOverallEvaluationDto } from './session-overall-evaluation.dto';
 
-export class SessionResponseDto {
+export class LiveSessionResponseDto {
   id: string;
   student: unknown;
   topic: unknown;
@@ -15,18 +17,18 @@ export class SessionResponseDto {
   updatedAt?: Date;
 
   /**
-   * Creates a response DTO from a session document.
+   * Creates a response DTO from a live session document.
    *
-   * @param session The session document.
-   * @returns The session response DTO.
+   * @param session The live session document.
+   * @returns The live session response DTO.
    */
-  static from(session: SessionDocument): SessionResponseDto {
+  static from(session: LiveSessionDocument): LiveSessionResponseDto {
     const source = session;
 
     return {
       id: source._id.toString(),
-      student: SessionResponseDto.transformReference(source.student),
-      topic: SessionResponseDto.transformReference(source.topic),
+      student: LiveSessionResponseDto.transformReference(source.student),
+      topic: LiveSessionResponseDto.transformReference(source.topic),
       currentLevel: source.currentLevel,
       status: source.status,
       overallEvaluation: source.overallEvaluation,
@@ -38,13 +40,13 @@ export class SessionResponseDto {
   }
 
   /**
-   * Creates response DTOs from session documents.
+   * Creates response DTOs from live session documents.
    *
-   * @param sessions The session documents.
-   * @returns The session response DTOs.
+   * @param sessions The live session documents.
+   * @returns The live session response DTOs.
    */
-  static fromMany(sessions: SessionDocument[]): SessionResponseDto[] {
-    return sessions.map((session) => SessionResponseDto.from(session));
+  static fromMany(sessions: LiveSessionDocument[]): LiveSessionResponseDto[] {
+    return sessions.map((session) => LiveSessionResponseDto.from(session));
   }
 
   /**
@@ -55,11 +57,13 @@ export class SessionResponseDto {
    */
   private static transformReference(reference: unknown): unknown {
     if (hasToObject(reference)) {
-      return SessionResponseDto.transformDocumentObject(reference.toObject());
+      return LiveSessionResponseDto.transformDocumentObject(
+        reference.toObject(),
+      );
     }
 
-    if (SessionResponseDto.isPlainObject(reference)) {
-      return SessionResponseDto.transformDocumentObject(reference);
+    if (LiveSessionResponseDto.isPlainObject(reference)) {
+      return LiveSessionResponseDto.transformDocumentObject(reference);
     }
 
     return String(reference);
@@ -74,11 +78,11 @@ export class SessionResponseDto {
   private static transformDocumentObject(value: unknown): unknown {
     if (Array.isArray(value)) {
       return value.map((item) =>
-        SessionResponseDto.transformDocumentObject(item),
+        LiveSessionResponseDto.transformDocumentObject(item),
       );
     }
 
-    if (!SessionResponseDto.isPlainObject(value)) {
+    if (!LiveSessionResponseDto.isPlainObject(value)) {
       return value;
     }
 
@@ -86,7 +90,9 @@ export class SessionResponseDto {
     const result: Record<string, unknown> = {};
 
     if (source['_id']) {
-      result['id'] = String(source['_id']);
+      result['id'] = LiveSessionResponseDto.transformDocumentObjectId(
+        source['_id'],
+      );
     }
 
     for (const [key, item] of Object.entries(source)) {
@@ -94,7 +100,7 @@ export class SessionResponseDto {
         continue;
       }
 
-      result[key] = SessionResponseDto.transformDocumentObject(item);
+      result[key] = LiveSessionResponseDto.transformDocumentObject(item);
     }
 
     return result;
@@ -108,5 +114,19 @@ export class SessionResponseDto {
    */
   private static isPlainObject(value: unknown): boolean {
     return Object.prototype.toString.call(value) === '[object Object]';
+  }
+
+  /**
+   * Converts a document object ID into a response ID.
+   *
+   * @param value The document object ID value.
+   * @returns The response ID value.
+   */
+  private static transformDocumentObjectId(value: unknown): string {
+    if (value instanceof Types.ObjectId) {
+      return value.toString();
+    }
+
+    return String(value);
   }
 }

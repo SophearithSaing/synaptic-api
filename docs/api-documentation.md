@@ -19,11 +19,11 @@ frontend integration.
 Authentication is cookie-based for browser clients. Login, registration, and
 refresh responses set these cookies:
 
-| Cookie | HttpOnly | Purpose |
-| ------ | -------- | ------- |
-| `access_token` | Yes | Short-lived JWT used for protected routes. |
-| `refresh_token` | Yes | Long-lived opaque session token used by `/auth/refresh`. |
-| `csrf_token` | No | Read by the frontend and sent as `X-CSRF-Token`. |
+| Cookie          | HttpOnly | Purpose                                                  |
+| --------------- | -------- | -------------------------------------------------------- |
+| `access_token`  | Yes      | Short-lived JWT used for protected routes.               |
+| `refresh_token` | Yes      | Long-lived opaque session token used by `/auth/refresh`. |
+| `csrf_token`    | No       | Read by the frontend and sent as `X-CSRF-Token`.         |
 
 The API does not return access or refresh tokens in JSON responses. Protected
 requests can also use `Authorization: Bearer <access_token>` for API testing.
@@ -56,34 +56,40 @@ and `OPTIONS` requests do not require the CSRF header.
 
 ## Endpoint summary
 
-| Method | Path                         | Auth | Role       | Purpose |
-| ------ | ---------------------------- | ---- | ---------- | ------- |
-| `GET` | `/` | No | Any | Health/welcome response. |
-| `GET` | `/auth/csrf` | No | Any | Create a CSRF token cookie. |
-| `POST` | `/auth/register` | No | Any | Register, create auth cookies, and log in. |
-| `POST` | `/auth/login` | No | Any | Login with username/email and create auth cookies. |
-| `GET` | `/auth/me` | Yes | User/Admin | Return current authenticated user. |
-| `POST` | `/auth/refresh` | No | Any | Rotate refresh session and auth cookies. |
-| `POST` | `/auth/logout` | No | Any | Revoke current refresh session and clear auth cookies. |
-| `POST` | `/categories/category/create` | Yes | Admin | Create category. |
-| `GET` | `/categories/categories` | Yes | User/Admin | List categories. |
-| `GET` | `/categories/:id` | Yes | User/Admin | Get category by ID. |
-| `DELETE` | `/categories/:id` | Yes | Admin | Delete category by ID. |
-| `POST` | `/topics/create` | Yes | Admin | Create topic. |
-| `GET` | `/topics` | Yes | User/Admin | List topics. |
-| `GET` | `/topics/:id` | Yes | User/Admin | Get topic by ID. |
-| `DELETE` | `/topics/:id` | Yes | Admin | Delete topic by ID. |
-| `POST` | `/questions/create` | Yes | Admin | Create question sets. |
-| `PATCH` | `/questions/update` | Yes | Admin | Update question sets in bulk. |
-| `PATCH` | `/questions/:id` | Yes | Admin | Update question set. |
-| `DELETE` | `/questions/:id` | Yes | Admin | Delete question set by ID. |
-| `GET` | `/questions/topic/:slug` | Yes | User/Admin | Get question sets by topic slug. |
-| `GET` | `/questions/:id` | Yes | User/Admin | Get question set by ID. |
-| `POST` | `/sessions/start` | Yes | User/Admin | Start session and return session ID plus level 0 question set. |
-| `GET` | `/sessions/in-progress` | Yes | User/Admin | List active sessions for the current user. |
-| `DELETE` | `/sessions/:id` | Yes | User/Admin | Delete owned session by ID. |
-| `POST` | `/sessions/continue` | Yes | User/Admin | Return current-level question set. |
-| `POST` | `/sessions/submit-answer` | Yes | User/Admin | Submit answers and receive feedback. |
+| Method   | Path                           | Auth | Role       | Purpose                                                        |
+| -------- | ------------------------------ | ---- | ---------- | -------------------------------------------------------------- |
+| `GET`    | `/`                            | No   | Any        | Health/welcome response.                                       |
+| `GET`    | `/auth/csrf`                   | No   | Any        | Create a CSRF token cookie.                                    |
+| `POST`   | `/auth/register`               | No   | Any        | Register, create auth cookies, and log in.                     |
+| `POST`   | `/auth/login`                  | No   | Any        | Login with username/email and create auth cookies.             |
+| `GET`    | `/auth/me`                     | Yes  | User/Admin | Return current authenticated user.                             |
+| `POST`   | `/auth/refresh`                | No   | Any        | Rotate refresh session and auth cookies.                       |
+| `POST`   | `/auth/logout`                 | No   | Any        | Revoke current refresh session and clear auth cookies.         |
+| `POST`   | `/categories/category/create`  | Yes  | Admin      | Create category.                                               |
+| `GET`    | `/categories/categories`       | Yes  | User/Admin | List categories.                                               |
+| `GET`    | `/categories/:id`              | Yes  | User/Admin | Get category by ID.                                            |
+| `DELETE` | `/categories/:id`              | Yes  | Admin      | Delete category by ID.                                         |
+| `POST`   | `/topics/create`               | Yes  | Admin      | Create topic.                                                  |
+| `GET`    | `/topics`                      | Yes  | User/Admin | List topics.                                                   |
+| `GET`    | `/topics/:id`                  | Yes  | User/Admin | Get topic by ID.                                               |
+| `DELETE` | `/topics/:id`                  | Yes  | Admin      | Delete topic by ID.                                            |
+| `POST`   | `/questions/create`            | Yes  | Admin      | Create question sets.                                          |
+| `PATCH`  | `/questions/update`            | Yes  | Admin      | Update question sets in bulk.                                  |
+| `PATCH`  | `/questions/:id`               | Yes  | Admin      | Update question set.                                           |
+| `DELETE` | `/questions/:id`               | Yes  | Admin      | Delete question set by ID.                                     |
+| `GET`    | `/questions/topic/:slug`       | Yes  | User/Admin | Get question sets by topic slug.                               |
+| `GET`    | `/questions/:id`               | Yes  | User/Admin | Get question set by ID.                                        |
+| `POST`   | `/sessions/start`              | Yes  | User/Admin | Start session and return session ID plus level 0 question set. |
+| `GET`    | `/sessions/in-progress`        | Yes  | User/Admin | List active sessions for the current user.                     |
+| `DELETE` | `/sessions/:id`                | Yes  | User/Admin | Delete owned session by ID.                                    |
+| `POST`   | `/sessions/continue`           | Yes  | User/Admin | Return current-level question set.                             |
+| `POST`   | `/sessions/submit-answer`      | Yes  | User/Admin | Submit answers and receive feedback.                           |
+| `POST`   | `/sessions/live/start`         | Yes  | User/Admin | Start live session and return one pending question.            |
+| `GET`    | `/sessions/live/in-progress`   | Yes  | User/Admin | List active live sessions for the current user.                |
+| `DELETE` | `/sessions/live/:id`           | Yes  | User/Admin | Delete owned live session by ID.                               |
+| `POST`   | `/sessions/live/continue`      | Yes  | User/Admin | Return current or next pending live question.                  |
+| `POST`   | `/sessions/live/reject`        | Yes  | User/Admin | Reject pending live question and return replacement.           |
+| `POST`   | `/sessions/live/submit-answer` | Yes  | User/Admin | Submit one live answer and receive feedback.                   |
 
 ## Common errors
 
@@ -410,7 +416,7 @@ For MCQ answers, submit the selected option `id` as the answer.
 {
   id: string;
   topic: string | Topic;
-  setType: string;
+  setType: 'regular' | 'live';
   level: number;
   questions: Question[];
   createdAt?: string;
@@ -429,7 +435,7 @@ Request:
 [
   {
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 0,
     "questions": [
       {
@@ -471,7 +477,7 @@ Request:
   {
     "id": "<question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 1
   }
 ]
@@ -542,7 +548,7 @@ Response `201`:
   "questionSet": {
     "id": "<question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 0,
     "questions": []
   }
@@ -582,7 +588,7 @@ Response `200`:
       "weaknesses": [],
       "recommendations": []
     },
-    "startAt": "2026-06-21T00:00:00.000Z",
+    "startedAt": "2026-06-21T00:00:00.000Z",
     "createdAt": "2026-06-21T00:00:00.000Z",
     "updatedAt": "2026-06-21T00:00:00.000Z"
   }
@@ -669,6 +675,7 @@ Response `201`:
       {
         "id": "ans-q1",
         "questionId": "q1",
+        "questionPrompt": "Where are function call frames stored?",
         "questionType": "mcq",
         "answer": "b",
         "correctAnswer": "b",
@@ -682,6 +689,7 @@ Response `201`:
       {
         "id": "ans-q2",
         "questionId": "q2",
+        "questionPrompt": "Explain what the stack stores.",
         "questionType": "written",
         "answer": "The stack stores function call frames and local variables.",
         "correctAnswer": "Stack stores function call frames; Stack stores local variables",
@@ -705,7 +713,7 @@ Response `201`:
   "nextQuestionSet": {
     "id": "<next-question-set-id>",
     "topic": "<topic-id>",
-    "setType": "practice",
+    "setType": "regular",
     "level": 1,
     "questions": []
   }
@@ -745,6 +753,289 @@ Important errors:
 - `503 AI response was invalid`
 - `503 AI response was incomplete`
 
+### Live session endpoints
+
+Live sessions are standalone persisted sessions. They do not reuse regular
+`Session` records, and generated questions are persisted as live-question
+records linked to the live session. A live set still contains exactly three
+accepted questions, but the API returns only one pending generated question at
+a time.
+
+Live question composition by level:
+
+- levels `0-10`: three MCQ questions.
+- levels `11-20`: two MCQ questions and one written question.
+- levels `21-30`: one MCQ question and two written questions.
+- levels `31+`: three written questions.
+
+#### `POST /sessions/live/start`
+
+Starts a live learning session for the authenticated user and returns the first
+pending generated question for level `0`.
+
+Request:
+
+```json
+{
+  "topicId": "<topic-id>"
+}
+```
+
+Response `201`:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "question": {
+    "id": "memory-management-l0-q1",
+    "type": "mcq",
+    "prompt": "What does paging divide virtual memory into?",
+    "options": [
+      {
+        "id": "memory-management-l0-q1-o1",
+        "text": "Pages"
+      },
+      {
+        "id": "memory-management-l0-q1-o2",
+        "text": "Threads"
+      },
+      {
+        "id": "memory-management-l0-q1-o3",
+        "text": "Registers"
+      }
+    ],
+    "correctOptionId": "memory-management-l0-q1-o1",
+    "targetConcepts": ["paging"],
+    "feedback": {
+      "correct": "Correct. Paging divides memory into pages.",
+      "incorrect": "Review how paging structures virtual memory."
+    },
+    "rubrics": {
+      "keyPoints": ["Pages", "Fixed-size blocks"],
+      "misconceptions": ["Paging uses CPU registers as memory blocks"]
+    }
+  }
+}
+```
+
+Side effects:
+
+- Creates a persisted live session with `currentLevel: 0`.
+- Creates one persisted pending live question linked to the live session.
+
+Important errors:
+
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `GET /sessions/live/in-progress`
+
+Returns active live sessions for the authenticated user, sorted by most
+recently updated first.
+
+Response `200`:
+
+```json
+[
+  {
+    "id": "<live-session-id>",
+    "student": "<user-id>",
+    "topic": {
+      "id": "<topic-id>",
+      "title": "Memory Management",
+      "slug": "memory-management",
+      "description": "Understanding stack, heap, and garbage collection.",
+      "icon": "memory-management",
+      "tags": ["systems", "runtime"],
+      "category": "<category-id>"
+    },
+    "currentLevel": 3,
+    "status": "active",
+    "overallEvaluation": {
+      "summary": "Completed through level 10 with 0.9 average score.",
+      "strengths": ["stack-memory"],
+      "weaknesses": [],
+      "recommendations": []
+    },
+    "startedAt": "2026-06-21T00:00:00.000Z",
+    "createdAt": "2026-06-21T00:00:00.000Z",
+    "updatedAt": "2026-06-21T00:00:00.000Z"
+  }
+]
+```
+
+Use the returned `id` as `sessionId` for `/sessions/live/continue`,
+`/sessions/live/reject`, and `/sessions/live/submit-answer`.
+
+#### `DELETE /sessions/live/:id`
+
+Deletes a live learning session owned by the authenticated user. Requires
+`X-CSRF-Token`.
+
+Response `204`: empty body.
+
+Important errors:
+
+- `404 Live session not found`
+
+#### `POST /sessions/live/continue`
+
+Returns the current pending generated question for an active live session. If a
+failed question exists, the API returns it for retry or rejection instead of
+generating another question. When there is no pending or failed question and the
+current level has fewer than three accepted questions, the API generates and
+persists the next required question.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>"
+}
+```
+
+Response `201`: same shape as `/sessions/live/start`.
+
+Important errors:
+
+- `400 Live session already has three questions`
+- `404 Live session not found`
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `POST /sessions/live/reject`
+
+Rejects a pending generated live question with a reason. The rejected pending
+question is deleted, and a replacement pending question is generated for the
+same live session level and question number.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "reason": "The question was ambiguous."
+}
+```
+
+Response `201`: same shape as `/sessions/live/start`.
+
+Important errors:
+
+- `404 Live session not found`
+- `404 Live question not found`
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+
+#### `POST /sessions/live/submit-answer`
+
+Submits one answer for the current pending generated live question. MCQ answers
+are evaluated locally, and written answers use the same AI evaluation path as
+regular sessions.
+
+Request:
+
+```json
+{
+  "sessionId": "<live-session-id>",
+  "questionId": "<live-question-id>",
+  "answer": "memory-management-l0-q1-o1"
+}
+```
+
+Response `201` for an incomplete live set:
+
+```json
+{
+  "answers": [
+    {
+      "id": "ans-memory-management-l0-q1",
+      "questionId": "memory-management-l0-q1",
+      "questionPrompt": "What does paging divide memory into?",
+      "questionType": "mcq",
+      "answer": "memory-management-l0-q1-o1",
+      "correctAnswer": "memory-management-l0-q1-o1",
+      "score": 1,
+      "feedback": "Correct. Paging divides memory into pages.",
+      "targetConcepts": ["paging"],
+      "strengths": ["paging"],
+      "weaknesses": [],
+      "evaluatedBy": "system"
+    }
+  ],
+  "nextQuestion": {
+    "sessionId": "<live-session-id>",
+    "questionId": "<next-live-question-id>",
+    "question": {
+      "id": "memory-management-l0-q2",
+      "type": "mcq",
+      "prompt": "What maps virtual pages to physical frames?",
+      "options": [
+        {
+          "id": "memory-management-l0-q2-o1",
+          "text": "Page table"
+        },
+        {
+          "id": "memory-management-l0-q2-o2",
+          "text": "Call stack"
+        },
+        {
+          "id": "memory-management-l0-q2-o3",
+          "text": "Instruction register"
+        }
+      ],
+      "correctOptionId": "memory-management-l0-q2-o1",
+      "targetConcepts": ["page-table"],
+      "feedback": {
+        "correct": "Correct.",
+        "incorrect": "Review page tables."
+      },
+      "rubrics": {
+        "keyPoints": ["Page table"],
+        "misconceptions": ["The stack maps pages to frames"]
+      }
+    }
+  }
+}
+```
+
+If the evaluated answer is wrong before the live set is complete, the response
+contains the failed answer and `nextQuestion` is `null`. The API does not
+generate another question until the failed question is retried successfully or
+rejected.
+
+Completed-set behavior:
+
+- After three answered live questions, the generated set is saved to
+  `questionSets` with `setType: "live"` for regular session reuse.
+- The API creates a `SetAttempt` with the same scoring, pass/fail, strengths,
+  weaknesses, and periodic evaluation rules as regular sessions.
+- If the completed live set fails, `answers` contains all three evaluated
+  answers and `nextQuestion` is `null`.
+- After a failed completed live set, `/sessions/live/continue` returns the
+  first failed live question so the student can retry or reject it.
+- If the completed live set passes below level `100`, `answers` contains all
+  three evaluated answers and `nextQuestion` contains the first generated
+  question for the next level.
+- If level `100` passes, the live session is marked completed and
+  `nextQuestion` is `null`.
+
+Important errors:
+
+- `400 Live session already has three questions`
+- `400 Question not found in question set`
+- `404 Live session not found`
+- `404 Live question not found`
+- `404 Topic not found`
+- `503 AI is not configured`
+- `503 AI response was invalid`
+- `503 AI response was incomplete`
+
 ---
 
 ## Data model reference
@@ -764,8 +1055,8 @@ Important errors:
     weaknesses: string[];
     recommendations: string[];
   };
-  startAt?: string;
-  finishAt?: string;
+  startedAt?: string;
+  finishedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -800,6 +1091,7 @@ Important errors:
 {
   id: string;
   questionId: string;
+  questionPrompt: string;
   questionType: 'mcq' | 'written';
   answer: string;
   correctAnswer: string;
@@ -850,8 +1142,8 @@ Important errors:
 11. Show `attempt.answers` feedback.
 12. If `nextQuestionSet` is not `null`, render it next.
 13. If the user comes back later, call `GET /sessions/in-progress` to list
-   active sessions, then call `POST /sessions/continue` with the chosen session
-   ID to fetch its current-level question set.
+    active sessions, then call `POST /sessions/continue` with the chosen session
+    ID to fetch its current-level question set.
 
 ## Endpoint coverage summary
 
