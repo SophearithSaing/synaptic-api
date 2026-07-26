@@ -675,6 +675,7 @@ Response `201`:
       {
         "id": "ans-q1",
         "questionId": "q1",
+        "questionPrompt": "Where are function call frames stored?",
         "questionType": "mcq",
         "answer": "b",
         "correctAnswer": "b",
@@ -688,6 +689,7 @@ Response `201`:
       {
         "id": "ans-q2",
         "questionId": "q2",
+        "questionPrompt": "Explain what the stack stores.",
         "questionType": "written",
         "answer": "The stack stores function call frames and local variables.",
         "correctAnswer": "Stack stores function call frames; Stack stores local variables",
@@ -952,6 +954,7 @@ Response `201` for an incomplete live set:
     {
       "id": "ans-memory-management-l0-q1",
       "questionId": "memory-management-l0-q1",
+      "questionPrompt": "What does paging divide memory into?",
       "questionType": "mcq",
       "answer": "memory-management-l0-q1-o1",
       "correctAnswer": "memory-management-l0-q1-o1",
@@ -1081,6 +1084,7 @@ Important errors:
 {
   id: string;
   questionId: string;
+  questionPrompt: string;
   questionType: 'mcq' | 'written';
   answer: string;
   correctAnswer: string;
