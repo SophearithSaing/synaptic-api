@@ -709,6 +709,7 @@ describe('SessionsService', () => {
   const createAnswer = (question: Question, answer: string): unknown => ({
     id: `ans-${question.id}`,
     questionId: question.id,
+    questionPrompt: question.prompt,
     questionType: question.type,
     answer,
     correctAnswer: question.correctOptionId,

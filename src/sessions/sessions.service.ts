@@ -1014,6 +1014,7 @@ export class SessionsService {
     return {
       id: `ans-${writtenAnswer.submittedAnswer.questionId}`,
       questionId: writtenAnswer.submittedAnswer.questionId,
+      questionPrompt: writtenAnswer.question.prompt,
       questionType: writtenAnswer.question.type,
       answer: writtenAnswer.submittedAnswer.answer,
       correctAnswer: evaluation.correctAnswer,
@@ -1147,6 +1148,7 @@ export class SessionsService {
     return {
       id: `ans-${submittedAnswer.questionId}`,
       questionId: submittedAnswer.questionId,
+      questionPrompt: question.prompt,
       questionType: question.type,
       answer: submittedAnswer.answer,
       correctAnswer: question.correctOptionId,

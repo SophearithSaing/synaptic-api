@@ -64,6 +64,7 @@ export const SetAttemptSchema = SchemaFactory.createForClass(SetAttempt);
 export interface Answer {
   id: string;
   questionId: string;
+  questionPrompt: string;
   questionType: QuestionType;
   answer: string;
   correctAnswer: string;

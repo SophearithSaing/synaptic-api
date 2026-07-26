@@ -16,6 +16,7 @@ describe('CreateSetAttemptDto', () => {
       {
         id: 'ans-q1',
         questionId: 'q1',
+        questionPrompt: 'What is paging?',
         questionType: QuestionType.MCQ,
         answer: 'o1',
         correctAnswer: 'o1',

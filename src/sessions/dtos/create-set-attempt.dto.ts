@@ -25,6 +25,10 @@ export class SetAttemptAnswerDto {
   @IsNotEmpty()
   questionId: string;
 
+  @IsString()
+  @IsNotEmpty()
+  questionPrompt: string;
+
   @IsEnum(QuestionType)
   @IsNotEmpty()
   questionType: QuestionType;
