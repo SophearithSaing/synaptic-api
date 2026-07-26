@@ -305,6 +305,35 @@ describe('SessionsService', () => {
     expect(liveQuestionModel.create).not.toHaveBeenCalled();
   });
 
+  it('continues an early failed live question without generating', async () => {
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(sortableQuery(null));
+    liveQuestionModel.find.mockReturnValue(
+      sortableQuery([
+        {
+          _id: liveQuestionId,
+          question: questionOne,
+          status: LiveQuestionStatus.Failed,
+        },
+      ]),
+    );
+
+    const result = await service.continueLiveSession(
+      studentId,
+      liveSessionId.toString(),
+    );
+
+    expect(result).toEqual({
+      sessionId: liveSessionId.toString(),
+      questionId: liveQuestionId.toString(),
+      question: questionOne,
+    });
+    expect(generateLiveQuestion).not.toHaveBeenCalled();
+    expect(liveQuestionModel.create).not.toHaveBeenCalled();
+  });
+
   it('rejects pending live questions and returns a replacement', async () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
@@ -492,6 +521,37 @@ describe('SessionsService', () => {
     expect(result.answers).toHaveLength(1);
     expect(result.answers[0].evaluatedBy).toBe(EvaluatedBy.System);
     expect(result.nextQuestion?.question).toEqual(questionTwo);
+  });
+
+  it('returns a failed live answer without generating another question', async () => {
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveQuestionId, question: questionOne }),
+    );
+    liveQuestionModel.updateOne.mockReturnValue(
+      execQuery({ modifiedCount: 1 }),
+    );
+    liveQuestionModel.find.mockReturnValue(
+      sortableQuery([
+        { question: questionOne, answer: createAnswer(questionOne, 'o2') },
+      ]),
+    );
+
+    const result = await service.submitLiveAnswer(
+      studentId,
+      liveSessionId.toString(),
+      liveQuestionId.toString(),
+      'o2',
+    );
+
+    expect(result.answers).toHaveLength(1);
+    expect(result.answers[0].score).toBe(0);
+    expect(result.nextQuestion).toBeNull();
+    expect(topicModel.findById).not.toHaveBeenCalled();
+    expect(generateLiveQuestion).not.toHaveBeenCalled();
+    expect(liveQuestionModel.create).not.toHaveBeenCalled();
   });
 
   it('saves completed passing live sets and generates the next level question', async () => {

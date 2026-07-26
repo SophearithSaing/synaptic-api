@@ -882,9 +882,11 @@ Important errors:
 
 #### `POST /sessions/live/continue`
 
-Returns the current pending generated question for an active live session. When
-there is no pending question and the current level has fewer than three
-accepted questions, the API generates and persists the next required question.
+Returns the current pending generated question for an active live session. If a
+failed question exists, the API returns it for retry or rejection instead of
+generating another question. When there is no pending or failed question and the
+current level has fewer than three accepted questions, the API generates and
+persists the next required question.
 
 Request:
 
@@ -1001,6 +1003,11 @@ Response `201` for an incomplete live set:
   }
 }
 ```
+
+If the evaluated answer is wrong before the live set is complete, the response
+contains the failed answer and `nextQuestion` is `null`. The API does not
+generate another question until the failed question is retried successfully or
+rejected.
 
 Completed-set behavior:
 

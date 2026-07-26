@@ -393,6 +393,14 @@ export class SessionsService {
       (item) => item.question,
     );
 
+    // Completed sets still need attempt creation; early failures stop generation.
+    if (answer.score < 0.5 && acceptedQuestions.length < 3) {
+      return {
+        answers: [answer],
+        nextQuestion: null,
+      };
+    }
+
     if (acceptedQuestions.length > 3) {
       throw new BadRequestException('Live session already has three questions');
     }
@@ -587,20 +595,19 @@ export class SessionsService {
     const acceptedQuestions = acceptedLiveQuestions.map(
       (liveQuestion) => liveQuestion.question,
     );
+    const failedQuestion = acceptedLiveQuestions.find(
+      (liveQuestion) => liveQuestion.status === LiveQuestionStatus.Failed,
+    );
+
+    if (failedQuestion) {
+      return {
+        sessionId: liveSession._id.toString(),
+        questionId: failedQuestion._id.toString(),
+        question: failedQuestion.question,
+      };
+    }
 
     if (acceptedQuestions.length >= 3) {
-      const failedQuestion = acceptedLiveQuestions.find(
-        (liveQuestion) => liveQuestion.status === LiveQuestionStatus.Failed,
-      );
-
-      if (failedQuestion) {
-        return {
-          sessionId: liveSession._id.toString(),
-          questionId: failedQuestion._id.toString(),
-          question: failedQuestion.question,
-        };
-      }
-
       throw new BadRequestException('Live session already has three questions');
     }
 
