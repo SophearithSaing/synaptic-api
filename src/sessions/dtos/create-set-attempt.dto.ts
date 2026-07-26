@@ -38,8 +38,16 @@ export class SetAttemptAnswerDto {
   answer: string;
 
   @IsString()
+  @IsOptional()
+  answerText?: string;
+
+  @IsString()
   @IsNotEmpty()
   correctAnswer: string;
+
+  @IsString()
+  @IsOptional()
+  correctAnswerText?: string;
 
   @IsNumber()
   score: number;

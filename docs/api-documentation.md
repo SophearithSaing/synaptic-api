@@ -678,7 +678,9 @@ Response `201`:
         "questionPrompt": "Where are function call frames stored?",
         "questionType": "mcq",
         "answer": "b",
+        "answerText": "Stack",
         "correctAnswer": "b",
+        "correctAnswerText": "Stack",
         "score": 1,
         "feedback": "Correct. The stack stores call frames.",
         "targetConcepts": ["stack-memory"],
@@ -959,7 +961,9 @@ Response `201` for an incomplete live set:
       "questionPrompt": "What does paging divide memory into?",
       "questionType": "mcq",
       "answer": "memory-management-l0-q1-o1",
+      "answerText": "Pages",
       "correctAnswer": "memory-management-l0-q1-o1",
+      "correctAnswerText": "Pages",
       "score": 1,
       "feedback": "Correct. Paging divides memory into pages.",
       "targetConcepts": ["paging"],
@@ -1087,6 +1091,9 @@ Important errors:
 
 ### Answer
 
+For MCQ answers, `answer` and `correctAnswer` are option IDs, while
+`answerText` and `correctAnswerText` contain the option labels for display.
+
 ```ts
 {
   id: string;
@@ -1094,7 +1101,9 @@ Important errors:
   questionPrompt: string;
   questionType: 'mcq' | 'written';
   answer: string;
+  answerText?: string;
   correctAnswer: string;
+  correctAnswerText?: string;
   score: number;
   feedback: string;
   targetConcepts: string[];

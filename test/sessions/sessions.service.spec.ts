@@ -520,6 +520,8 @@ describe('SessionsService', () => {
 
     expect(result.answers).toHaveLength(1);
     expect(result.answers[0].evaluatedBy).toBe(EvaluatedBy.System);
+    expect(result.answers[0].answerText).toBe('Pages');
+    expect(result.answers[0].correctAnswerText).toBe('Pages');
     expect(result.nextQuestion?.question).toEqual(questionTwo);
   });
 
@@ -548,6 +550,8 @@ describe('SessionsService', () => {
 
     expect(result.answers).toHaveLength(1);
     expect(result.answers[0].score).toBe(0);
+    expect(result.answers[0].answerText).toBe('Threads');
+    expect(result.answers[0].correctAnswerText).toBe('Pages');
     expect(result.nextQuestion).toBeNull();
     expect(topicModel.findById).not.toHaveBeenCalled();
     expect(generateLiveQuestion).not.toHaveBeenCalled();
@@ -772,7 +776,12 @@ describe('SessionsService', () => {
     questionPrompt: question.prompt,
     questionType: question.type,
     answer,
+    answerText:
+      question.options?.find((option) => option.id === answer)?.text ?? answer,
     correctAnswer: question.correctOptionId,
+    correctAnswerText:
+      question.options?.find((option) => option.id === question.correctOptionId)
+        ?.text ?? question.correctOptionId,
     score: answer === question.correctOptionId ? 1 : 0,
     feedback:
       answer === question.correctOptionId
