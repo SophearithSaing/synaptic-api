@@ -74,7 +74,8 @@ export function createLiveGenerationUserPrompt(
 ): string {
   const instructions = [
     'Generate exactly one question for the questionType.',
-    'Do not repeat acceptedQuestionPrompts.',
+    'Avoid repeats or close paraphrases in recentAcceptedQuestions.',
+    'Use recentAcceptedQuestions targetConcepts to vary focus.',
     'Use short option IDs such as o1, o2, and o3 for MCQ questions.',
   ];
   const prompt = {
