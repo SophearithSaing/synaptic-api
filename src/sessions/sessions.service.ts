@@ -37,6 +37,7 @@ import {
 import { AiModel } from './ai/sessions-ai.enum';
 import {
   LiveGenerationPromptContext,
+  RecentAcceptedQuestionContext,
   SubmittedWrittenAnswer,
   WrittenAnswerEvaluation,
 } from './ai/sessions-ai.types';
@@ -176,7 +177,7 @@ export class SessionsService {
       level,
       questionNumber: 1,
       questionType,
-      acceptedQuestionPrompts: [],
+      recentAcceptedQuestions: [],
     });
     const liveSession = await this.liveSessionModel.create({
       student: Types.ObjectId.createFromHexString(studentId),
@@ -264,6 +265,12 @@ export class SessionsService {
       liveSession.currentLevel,
       acceptedQuestions,
     );
+    const recentAcceptedQuestionContext =
+      await this.getRecentAcceptedQuestionContext(
+        liveSession._id,
+        liveSession.currentLevel,
+        rejectedQuestion._id,
+      );
     const question = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
@@ -272,9 +279,7 @@ export class SessionsService {
       level: liveSession.currentLevel,
       questionNumber: rejectedQuestion.questionNumber,
       questionType,
-      acceptedQuestionPrompts: acceptedQuestions.map(
-        (question) => question.prompt,
-      ),
+      recentAcceptedQuestions: recentAcceptedQuestionContext,
       rejectedQuestion: rejectedQuestion.question,
       rejectionReason: reason,
     });
@@ -467,6 +472,8 @@ export class SessionsService {
       }
 
       const questionType = getNextLiveQuestionType(nextLevel, []);
+      const recentAcceptedQuestionContext =
+        await this.getRecentAcceptedQuestionContext(liveSession._id, nextLevel);
       const question = await this.generateLiveQuestion({
         topicSlug: topic.slug,
         topicTitle: topic.title,
@@ -475,7 +482,7 @@ export class SessionsService {
         level: nextLevel,
         questionNumber: 1,
         questionType,
-        acceptedQuestionPrompts: [],
+        recentAcceptedQuestions: recentAcceptedQuestionContext,
       });
       const nextLiveQuestion = await this.liveQuestionModel.create({
         liveSession: liveSession._id,
@@ -512,6 +519,11 @@ export class SessionsService {
       liveSession.currentLevel,
       acceptedQuestions,
     );
+    const recentAcceptedQuestionContext =
+      await this.getRecentAcceptedQuestionContext(
+        liveSession._id,
+        liveSession.currentLevel,
+      );
     const question = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
@@ -520,9 +532,7 @@ export class SessionsService {
       level: liveSession.currentLevel,
       questionNumber: acceptedQuestions.length + 1,
       questionType,
-      acceptedQuestionPrompts: acceptedQuestions.map(
-        (question) => question.prompt,
-      ),
+      recentAcceptedQuestions: recentAcceptedQuestionContext,
     });
     const nextLiveQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
@@ -621,6 +631,11 @@ export class SessionsService {
       liveSession.currentLevel,
       acceptedQuestions,
     );
+    const recentAcceptedQuestionContext =
+      await this.getRecentAcceptedQuestionContext(
+        liveSession._id,
+        liveSession.currentLevel,
+      );
     const question = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
@@ -629,9 +644,7 @@ export class SessionsService {
       level: liveSession.currentLevel,
       questionNumber: acceptedQuestions.length + 1,
       questionType,
-      acceptedQuestionPrompts: acceptedQuestions.map(
-        (question) => question.prompt,
-      ),
+      recentAcceptedQuestions: recentAcceptedQuestionContext,
     });
     const nextLiveQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
@@ -896,6 +909,40 @@ export class SessionsService {
     }
 
     return QuestionSetResponseDto.from(nextQuestionSet);
+  }
+
+  /**
+   * Gets compact accepted question context from recent live levels.
+   *
+   * @param liveSessionId The live session ID to inspect.
+   * @param level The level receiving a generated question.
+   * @param excludedQuestionId Optional live question ID to exclude.
+   * @returns Recent accepted question prompt context for generation.
+   */
+  private async getRecentAcceptedQuestionContext(
+    liveSessionId: Types.ObjectId,
+    level: number,
+    excludedQuestionId?: Types.ObjectId,
+  ): Promise<RecentAcceptedQuestionContext[]> {
+    const filter = {
+      liveSession: liveSessionId,
+      level: { $gte: Math.max(0, level - 10), $lte: level },
+      ...(excludedQuestionId ? { _id: { $ne: excludedQuestionId } } : {}),
+      status: {
+        $in: [LiveQuestionStatus.Passed, LiveQuestionStatus.Failed],
+      },
+    };
+
+    const recentLiveQuestions = await this.liveQuestionModel
+      .find(filter)
+      .sort({ level: 1, questionNumber: 1, createdAt: 1 })
+      .exec();
+
+    return recentLiveQuestions.map((liveQuestion) => ({
+      level: liveQuestion.level,
+      prompt: liveQuestion.question.prompt,
+      targetConcepts: liveQuestion.question.targetConcepts,
+    }));
   }
 
   /**

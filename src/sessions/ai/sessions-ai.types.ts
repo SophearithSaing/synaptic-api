@@ -19,6 +19,12 @@ export type GeneratedLiveQuestion = {
   question: Question;
 };
 
+export type RecentAcceptedQuestionContext = {
+  level: number;
+  prompt: string;
+  targetConcepts: string[];
+};
+
 export type LiveGenerationPromptContext = {
   topicSlug: string;
   topicTitle: string;
@@ -27,7 +33,7 @@ export type LiveGenerationPromptContext = {
   level: number;
   questionNumber: number;
   questionType: QuestionType;
-  acceptedQuestionPrompts: string[];
+  recentAcceptedQuestions: RecentAcceptedQuestionContext[];
   rejectedQuestion?: Question;
   rejectionReason?: string;
 };
