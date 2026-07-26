@@ -606,6 +606,69 @@ describe('SessionsService', () => {
     expect(result.nextQuestion?.question).toEqual(nextLevelQuestion);
   });
 
+  it('passes recent accepted context when generating next live level', async () => {
+    const acceptedLiveQuestions = [
+      { question: questionOne, answer: createAnswer(questionOne, 'o1') },
+      { question: questionTwo, answer: createAnswer(questionTwo, 'o1') },
+      { question: questionThree, answer: createAnswer(questionThree, 'o1') },
+    ];
+    const recentLiveQuestions = [
+      { level: 7, question: questionOne },
+      { level: 8, question: questionTwo },
+      { level: 9, question: questionThree },
+    ];
+
+    liveSessionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 9 }),
+    );
+    liveQuestionModel.findOne.mockReturnValue(
+      execQuery({ _id: liveQuestionId, question: questionThree }),
+    );
+    liveQuestionModel.updateOne.mockReturnValue(
+      execQuery({ modifiedCount: 1 }),
+    );
+    liveQuestionModel.find
+      .mockReturnValueOnce(sortableQuery(acceptedLiveQuestions))
+      .mockReturnValueOnce(sortableQuery(recentLiveQuestions));
+    questionSetModel.create.mockResolvedValue(createQuestionSet(9));
+    setAttemptModel.create.mockResolvedValue(
+      createAttempt([questionOne, questionTwo, questionThree], true),
+    );
+    topicModel.findById.mockReturnValue(execQuery(topic));
+    liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
+    liveSessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
+
+    await service.submitLiveAnswer(
+      studentId,
+      liveSessionId.toString(),
+      liveQuestionId.toString(),
+      'o1',
+    );
+
+    expect(generateLiveQuestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: 10,
+        recentAcceptedQuestions: [
+          {
+            level: 7,
+            prompt: questionOne.prompt,
+            targetConcepts: questionOne.targetConcepts,
+          },
+          {
+            level: 8,
+            prompt: questionTwo.prompt,
+            targetConcepts: questionTwo.targetConcepts,
+          },
+          {
+            level: 9,
+            prompt: questionThree.prompt,
+            targetConcepts: questionThree.targetConcepts,
+          },
+        ],
+      }),
+    );
+  });
+
   it('creates live session evaluations with a live session reference', async () => {
     const attempt = createAttempt(
       [questionOne, questionTwo, questionThree],
