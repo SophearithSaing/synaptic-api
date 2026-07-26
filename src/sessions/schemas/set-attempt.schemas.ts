@@ -67,7 +67,9 @@ export interface Answer {
   questionPrompt: string;
   questionType: QuestionType;
   answer: string;
+  answerText?: string;
   correctAnswer: string;
+  correctAnswerText?: string;
   score: number;
   feedback: string;
   targetConcepts: string[];

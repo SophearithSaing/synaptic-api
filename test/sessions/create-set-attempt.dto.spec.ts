@@ -19,7 +19,9 @@ describe('CreateSetAttemptDto', () => {
         questionPrompt: 'What is paging?',
         questionType: QuestionType.MCQ,
         answer: 'o1',
+        answerText: 'Paging',
         correctAnswer: 'o1',
+        correctAnswerText: 'Paging',
         score: 1,
         feedback: 'Correct.',
         targetConcepts: ['paging'],
@@ -68,27 +70,16 @@ describe('CreateSetAttemptDto', () => {
     );
   });
 
-  it(
-    'rejects an empty provided session even when liveSession exists',
-    async () => {
-      const dto = plainToInstance(CreateSetAttemptDto, {
-        ...validPayload,
-        session: '',
-        liveSession: mongoId,
-      });
+  it('rejects an empty provided session even when liveSession exists', async () => {
+    const dto = plainToInstance(CreateSetAttemptDto, {
+      ...validPayload,
+      session: '',
+      liveSession: mongoId,
+    });
 
-      const errors = await validate(dto);
+    const errors = await validate(dto);
+    const sessionError = errors.find((error) => error.property === 'session');
 
-      expect(errors).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            constraints: expect.objectContaining({
-              isNotEmpty: expect.any(String),
-            }),
-            property: 'session',
-          }),
-        ]),
-      );
-    },
-  );
+    expect(typeof sessionError?.constraints?.isNotEmpty).toBe('string');
+  });
 });

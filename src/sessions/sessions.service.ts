@@ -1151,6 +1151,12 @@ export class SessionsService {
     }
 
     const isCorrect = submittedAnswer.answer === question.correctOptionId;
+    const selectedOption = question.options?.find(
+      (option) => option.id === submittedAnswer.answer,
+    );
+    const correctOption = question.options?.find(
+      (option) => option.id === question.correctOptionId,
+    );
 
     return {
       id: `ans-${submittedAnswer.questionId}`,
@@ -1158,7 +1164,9 @@ export class SessionsService {
       questionPrompt: question.prompt,
       questionType: question.type,
       answer: submittedAnswer.answer,
+      answerText: selectedOption?.text ?? submittedAnswer.answer,
       correctAnswer: question.correctOptionId,
+      correctAnswerText: correctOption?.text ?? question.correctOptionId,
       score: isCorrect ? 1 : 0,
       feedback: isCorrect
         ? question.feedback.correct
