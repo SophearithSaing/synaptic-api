@@ -18,17 +18,20 @@ export class AiService {
    * Records a raw AI completion.
    *
    * @param operation The AI operation that produced the completion.
+   * @param aiModel The AI provider model that generated the completion.
    * @param prompt The prompt sent to the AI provider.
    * @param output The raw string returned by the AI provider.
    * @returns The created AI log ID.
    */
   async createAiLog(
     operation: AiLogOperation,
+    aiModel: string,
     prompt: string,
     output: string,
   ): Promise<Types.ObjectId> {
     const aiLog = await this.aiLogModel.create({
       operation,
+      aiModel,
       prompt,
       output,
     });

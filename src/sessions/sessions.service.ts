@@ -1002,6 +1002,7 @@ export class SessionsService {
     const text = this.extractCompletionText(content);
     const aiLogId = await this.aiService.createAiLog(
       AiLogOperation.QuestionGeneration,
+      this.aiModel,
       prompt,
       text,
     );

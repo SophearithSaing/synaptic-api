@@ -24,6 +24,7 @@ describe('AiService', () => {
 
     const result = await service.createAiLog(
       AiLogOperation.QuestionGeneration,
+      'openai/gpt-oss-120b',
       '{"topic":"memory-management"}',
       '{"question":{}}',
     );
@@ -31,6 +32,7 @@ describe('AiService', () => {
     expect(result).toEqual(aiLogId);
     expect(aiLogModel.create).toHaveBeenCalledWith({
       operation: AiLogOperation.QuestionGeneration,
+      aiModel: 'openai/gpt-oss-120b',
       prompt: '{"topic":"memory-management"}',
       output: '{"question":{}}',
     });
@@ -55,6 +57,7 @@ describe('AiService', () => {
       {
         _id: aiLogId,
         operation: AiLogOperation.QuestionGeneration,
+        aiModel: 'openai/gpt-oss-120b',
         prompt: 'prompt',
         output: 'output',
         createdAt,
@@ -81,6 +84,7 @@ describe('AiService', () => {
         {
           id: aiLogId.toString(),
           operation: AiLogOperation.QuestionGeneration,
+          aiModel: 'openai/gpt-oss-120b',
           prompt: 'prompt',
           output: 'output',
           createdAt,
