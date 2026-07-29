@@ -325,6 +325,47 @@ describe('SessionsService', () => {
     expect(liveQuestionModel.create).not.toHaveBeenCalled();
   });
 
+  it('recovers a completed level when next-question generation was interrupted', async () => {
+    liveSessionModel.findOne
+      .mockReturnValueOnce(
+        execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
+      )
+      .mockReturnValueOnce(
+        execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 1 }),
+      );
+    liveQuestionModel.findOne.mockReturnValue(sortableQuery(null));
+    liveQuestionModel.find
+      .mockReturnValueOnce(
+        sortableQuery([
+          { question: questionOne, status: LiveQuestionStatus.Passed },
+          { question: questionTwo, status: LiveQuestionStatus.Passed },
+          { question: questionThree, status: LiveQuestionStatus.Passed },
+        ]),
+      )
+      .mockReturnValueOnce(sortableQuery([]))
+      .mockReturnValueOnce(sortableQuery([]));
+    liveSessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
+    topicModel.findById.mockReturnValue(execQuery(topic));
+    liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(nextLevelQuestion),
+    );
+
+    const result = await service.continueLiveSession(
+      studentId,
+      liveSessionId.toString(),
+    );
+
+    expect(liveSessionModel.updateOne).toHaveBeenCalledWith(
+      { _id: liveSessionId, currentLevel: 0 },
+      { $set: { currentLevel: 1 } },
+    );
+    expect(generateLiveQuestion).toHaveBeenCalledWith(
+      expect.objectContaining({ level: 1, questionNumber: 1 }),
+    );
+    expect(result.question).toEqual(nextLevelQuestion);
+  });
+
   it('continues an early failed live question without generating', async () => {
     liveSessionModel.findOne.mockReturnValue(
       execQuery({ _id: liveSessionId, topic: topicId, currentLevel: 0 }),
@@ -632,6 +673,9 @@ describe('SessionsService', () => {
     expect(setAttemptModel.create).toHaveBeenCalled();
     expect(result.answers).toHaveLength(3);
     expect(result.nextQuestion?.question).toEqual(nextLevelQuestion);
+    expect(liveSessionModel.updateOne.mock.invocationCallOrder[0]).toBeLessThan(
+      generateLiveQuestion.mock.invocationCallOrder[0],
+    );
   });
 
   it('passes recent accepted context when generating next live level', async () => {
