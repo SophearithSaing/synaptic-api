@@ -483,6 +483,13 @@ export class SessionsService {
         throw new NotFoundException('Topic not found');
       }
 
+      await this.liveSessionModel
+        .updateOne(
+          { _id: liveSession._id, currentLevel: liveSession.currentLevel },
+          { $set: { currentLevel: nextLevel } },
+        )
+        .exec();
+
       const questionType = getNextLiveQuestionType(nextLevel, []);
       const recentAcceptedQuestionContext =
         await this.getRecentAcceptedQuestionContext(liveSession._id, nextLevel);
@@ -507,13 +514,6 @@ export class SessionsService {
         generatedQuestion.aiLogId,
         nextLiveQuestion._id,
       );
-
-      await this.liveSessionModel
-        .updateOne(
-          { _id: liveSession._id },
-          { $set: { currentLevel: nextLevel } },
-        )
-        .exec();
 
       return {
         answers,
