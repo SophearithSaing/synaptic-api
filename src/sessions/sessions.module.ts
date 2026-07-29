@@ -18,9 +18,11 @@ import {
 } from './schemas/session-evaluation.schemas';
 import { Session, SessionSchema } from './schemas/session.schema';
 import { SetAttempt, SetAttemptSchema } from './schemas/set-attempt.schemas';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
+    AiModule,
     MongooseModule.forFeature([
       { name: QuestionSet.name, schema: QuestionSetSchema },
       { name: LiveQuestion.name, schema: LiveQuestionSchema },
