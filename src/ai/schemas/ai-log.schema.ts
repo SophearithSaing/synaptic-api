@@ -14,6 +14,9 @@ export class AiLog {
   operation: AiLogOperation;
 
   @Prop({ required: true })
+  aiModel: string;
+
+  @Prop({ required: true })
   prompt: string;
 
   @Prop({ required: true })

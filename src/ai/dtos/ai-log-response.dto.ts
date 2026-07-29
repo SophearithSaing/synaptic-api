@@ -36,6 +36,7 @@ export class AiLogLiveQuestionResponseDto {
 export class AiLogResponseDto {
   id: string;
   operation: AiLogOperation;
+  aiModel: string;
   prompt: string;
   output: string;
   liveQuestion: AiLogLiveQuestionResponseDto | null;
@@ -54,6 +55,7 @@ export class AiLogResponseDto {
     return {
       id: source._id.toString(),
       operation: source.operation,
+      aiModel: source.aiModel,
       prompt: source.prompt,
       output: source.output,
       liveQuestion:
