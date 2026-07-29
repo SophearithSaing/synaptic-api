@@ -15,18 +15,20 @@ export class AiService {
   ) {}
 
   /**
-   * Records a raw question-generation completion.
+   * Records a raw AI completion.
    *
+   * @param operation The AI operation that produced the completion.
    * @param prompt The prompt sent to the AI provider.
    * @param output The raw string returned by the AI provider.
    * @returns The created AI log ID.
    */
-  async createQuestionGenerationLog(
+  async createAiLog(
+    operation: AiLogOperation,
     prompt: string,
     output: string,
   ): Promise<Types.ObjectId> {
     const aiLog = await this.aiLogModel.create({
-      operation: AiLogOperation.QuestionGeneration,
+      operation,
       prompt,
       output,
     });

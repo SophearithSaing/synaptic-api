@@ -22,7 +22,8 @@ describe('AiService', () => {
   it('records a raw question-generation completion', async () => {
     aiLogModel.create.mockResolvedValue({ _id: aiLogId });
 
-    const result = await service.createQuestionGenerationLog(
+    const result = await service.createAiLog(
+      AiLogOperation.QuestionGeneration,
       '{"topic":"memory-management"}',
       '{"question":{}}',
     );
