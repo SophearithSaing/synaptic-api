@@ -14,6 +14,7 @@ import {
 import { LiveQuestionStatus } from '../../src/sessions/schemas/live-question.schema';
 import { SessionStatus } from '../../src/sessions/schemas/session.schema';
 import { EvaluatedBy } from '../../src/sessions/schemas/set-attempt.schemas';
+import { AiService } from '../../src/ai/ai.service';
 
 describe('SessionsService', () => {
   const studentId = '507f1f77bcf86cd799439011';
@@ -78,8 +79,11 @@ describe('SessionsService', () => {
   let liveSessionModel: Record<string, jest.Mock>;
   let setAttemptModel: Record<string, jest.Mock>;
   let sessionEvaluationModel: Record<string, jest.Mock>;
+  let aiService: jest.Mocked<
+    Pick<AiService, 'createAiLog' | 'linkLiveQuestion'>
+  >;
   let generateLiveQuestion: jest.SpyInstance<
-    Promise<Question>,
+    Promise<{ question: Question; aiLogId: Types.ObjectId }>,
     [context: unknown]
   >;
 
@@ -121,6 +125,11 @@ describe('SessionsService', () => {
       create: jest.fn(),
       find: jest.fn(),
     };
+    aiService = {
+      createAiLog: jest.fn(),
+      linkLiveQuestion: jest.fn(),
+    };
+    aiService.linkLiveQuestion.mockResolvedValue(undefined);
     service = new SessionsService(
       sessionModel as never,
       topicModel as never,
@@ -130,15 +139,18 @@ describe('SessionsService', () => {
       setAttemptModel as never,
       sessionEvaluationModel as never,
       { get: jest.fn() } as unknown as ConfigService,
+      aiService,
     );
     generateLiveQuestion = jest
       .spyOn(
         service as unknown as {
-          generateLiveQuestion(context: unknown): Promise<Question>;
+          generateLiveQuestion(
+            context: unknown,
+          ): Promise<{ question: Question; aiLogId: Types.ObjectId }>;
         },
         'generateLiveQuestion',
       )
-      .mockResolvedValue(nextLevelQuestion);
+      .mockResolvedValue(createGeneratedLiveQuestion(nextLevelQuestion));
   });
 
   it('maps live question ratios at documented thresholds', () => {
@@ -156,7 +168,9 @@ describe('SessionsService', () => {
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveSessionModel.create.mockResolvedValue({ _id: liveSessionId });
     liveQuestionModel.create.mockResolvedValue({ _id: liveQuestionId });
-    generateLiveQuestion.mockResolvedValue(questionOne);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(questionOne),
+    );
 
     const result = await service.startLiveSession(
       topicId.toString(),
@@ -176,6 +190,10 @@ describe('SessionsService', () => {
     );
     expect(liveQuestionModel.create).toHaveBeenCalledWith(
       expect.objectContaining({ status: LiveQuestionStatus.Pending }),
+    );
+    expect(aiService.linkLiveQuestion).toHaveBeenCalledWith(
+      expect.any(Types.ObjectId),
+      liveQuestionId,
     );
   });
 
@@ -261,7 +279,9 @@ describe('SessionsService', () => {
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(questionTwo);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(questionTwo),
+    );
 
     const result = await service.continueLiveSession(
       studentId,
@@ -352,7 +372,9 @@ describe('SessionsService', () => {
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.find.mockReturnValue(sortableQuery([]));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(questionOne);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(questionOne),
+    );
 
     const result = await service.rejectLiveQuestion(
       studentId,
@@ -397,7 +419,9 @@ describe('SessionsService', () => {
       ]),
     );
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(questionThree);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(questionThree),
+    );
 
     await service.rejectLiveQuestion(
       studentId,
@@ -509,7 +533,9 @@ describe('SessionsService', () => {
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(questionTwo);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(questionTwo),
+    );
 
     const result = await service.submitLiveAnswer(
       studentId,
@@ -588,7 +614,9 @@ describe('SessionsService', () => {
     );
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(nextLevelQuestion);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(nextLevelQuestion),
+    );
     liveSessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
 
     const result = await service.submitLiveAnswer(
@@ -715,7 +743,9 @@ describe('SessionsService', () => {
     sessionEvaluationModel.find.mockReturnValue(execQuery([evaluation]));
     topicModel.findById.mockReturnValue(execQuery(topic));
     liveQuestionModel.create.mockResolvedValue({ _id: replacementQuestionId });
-    generateLiveQuestion.mockResolvedValue(nextLevelQuestion);
+    generateLiveQuestion.mockResolvedValue(
+      createGeneratedLiveQuestion(nextLevelQuestion),
+    );
     liveSessionModel.updateOne.mockReturnValue(execQuery({ modifiedCount: 1 }));
 
     await service.submitLiveAnswer(
@@ -799,6 +829,13 @@ describe('SessionsService', () => {
     expect(setAttemptModel.create).toHaveBeenCalled();
     expect(result.attempt.id).toBe(attemptId.toString());
     expect(result.nextQuestionSet?.id).toBe(questionSetId.toString());
+  });
+
+  const createGeneratedLiveQuestion = (
+    question: Question,
+  ): { question: Question; aiLogId: Types.ObjectId } => ({
+    question,
+    aiLogId: new Types.ObjectId(),
   });
 
   const execQuery = (value: unknown): { exec: jest.Mock } => ({

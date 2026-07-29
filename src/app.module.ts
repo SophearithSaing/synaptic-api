@@ -13,6 +13,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CsrfGuard } from './auth/guards/csrf.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { QuestionsModule } from './questions/questions.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { QuestionsModule } from './questions/questions.module';
     TopicsModule,
     CategoriesModule,
     QuestionsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [
