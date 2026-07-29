@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Types } from 'mongoose';
 import {
   Question,
   QuestionType,
@@ -17,6 +18,11 @@ export type SubmittedWrittenAnswer = {
 
 export type GeneratedLiveQuestion = {
   question: Question;
+};
+
+export type GeneratedLiveQuestionResult = {
+  question: Question;
+  aiLogId: Types.ObjectId;
 };
 
 export type RecentAcceptedQuestionContext = {

@@ -8,6 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import Together from 'together-ai';
+import { AiService } from '../ai/ai.service';
+import { AiLogOperation } from '../ai/schemas/ai-log.schema';
 import { QuestionSetResponseDto } from '../questions/dtos';
 import { LiveSessionResponseDto } from './dtos/live-session-response.dto';
 import {
@@ -39,6 +41,7 @@ import {
   LiveGenerationPromptContext,
   RecentAcceptedQuestionContext,
   SubmittedWrittenAnswer,
+  GeneratedLiveQuestionResult,
   WrittenAnswerEvaluation,
 } from './ai/sessions-ai.types';
 import {
@@ -100,6 +103,7 @@ export class SessionsService {
     @InjectModel(SessionEvaluation.name)
     private readonly sessionEvaluationModel: Model<SessionEvaluationDocument>,
     private readonly configService: ConfigService,
+    private readonly aiService: AiService,
   ) {
     const apiKey = this.configService.get<string>('TOGETHER_API_KEY');
 
@@ -169,7 +173,7 @@ export class SessionsService {
 
     const level = 0;
     const questionType = getNextLiveQuestionType(level, []);
-    const question = await this.generateLiveQuestion({
+    const generatedQuestion = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
       topicDescription: topic.description,
@@ -188,16 +192,20 @@ export class SessionsService {
     });
     const pendingQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
-      question,
+      question: generatedQuestion.question,
       level,
       questionNumber: 1,
       status: LiveQuestionStatus.Pending,
     });
+    await this.aiService.linkLiveQuestion(
+      generatedQuestion.aiLogId,
+      pendingQuestion._id,
+    );
 
     return {
       sessionId: liveSession._id.toString(),
       questionId: pendingQuestion._id.toString(),
-      question,
+      question: generatedQuestion.question,
     };
   }
 
@@ -271,7 +279,7 @@ export class SessionsService {
         liveSession.currentLevel,
         rejectedQuestion._id,
       );
-    const question = await this.generateLiveQuestion({
+    const generatedQuestion = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
       topicDescription: topic.description,
@@ -300,16 +308,20 @@ export class SessionsService {
 
     const replacementQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
-      question,
+      question: generatedQuestion.question,
       level: liveSession.currentLevel,
       questionNumber: rejectedQuestion.questionNumber,
       status: LiveQuestionStatus.Pending,
     });
+    await this.aiService.linkLiveQuestion(
+      generatedQuestion.aiLogId,
+      replacementQuestion._id,
+    );
 
     return {
       sessionId: liveSession._id.toString(),
       questionId: replacementQuestion._id.toString(),
-      question,
+      question: generatedQuestion.question,
     };
   }
 
@@ -474,7 +486,7 @@ export class SessionsService {
       const questionType = getNextLiveQuestionType(nextLevel, []);
       const recentAcceptedQuestionContext =
         await this.getRecentAcceptedQuestionContext(liveSession._id, nextLevel);
-      const question = await this.generateLiveQuestion({
+      const generatedQuestion = await this.generateLiveQuestion({
         topicSlug: topic.slug,
         topicTitle: topic.title,
         topicDescription: topic.description,
@@ -486,11 +498,15 @@ export class SessionsService {
       });
       const nextLiveQuestion = await this.liveQuestionModel.create({
         liveSession: liveSession._id,
-        question,
+        question: generatedQuestion.question,
         level: nextLevel,
         questionNumber: 1,
         status: LiveQuestionStatus.Pending,
       });
+      await this.aiService.linkLiveQuestion(
+        generatedQuestion.aiLogId,
+        nextLiveQuestion._id,
+      );
 
       await this.liveSessionModel
         .updateOne(
@@ -504,7 +520,7 @@ export class SessionsService {
         nextQuestion: {
           sessionId: liveSession._id.toString(),
           questionId: nextLiveQuestion._id.toString(),
-          question,
+          question: generatedQuestion.question,
         },
       };
     }
@@ -524,7 +540,7 @@ export class SessionsService {
         liveSession._id,
         liveSession.currentLevel,
       );
-    const question = await this.generateLiveQuestion({
+    const generatedQuestion = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
       topicDescription: topic.description,
@@ -536,18 +552,22 @@ export class SessionsService {
     });
     const nextLiveQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
-      question,
+      question: generatedQuestion.question,
       level: liveSession.currentLevel,
       questionNumber: acceptedQuestions.length + 1,
       status: LiveQuestionStatus.Pending,
     });
+    await this.aiService.linkLiveQuestion(
+      generatedQuestion.aiLogId,
+      nextLiveQuestion._id,
+    );
 
     return {
       answers: [answer],
       nextQuestion: {
         sessionId: liveSession._id.toString(),
         questionId: nextLiveQuestion._id.toString(),
-        question,
+        question: generatedQuestion.question,
       },
     };
   }
@@ -636,7 +656,7 @@ export class SessionsService {
         liveSession._id,
         liveSession.currentLevel,
       );
-    const question = await this.generateLiveQuestion({
+    const generatedQuestion = await this.generateLiveQuestion({
       topicSlug: topic.slug,
       topicTitle: topic.title,
       topicDescription: topic.description,
@@ -648,16 +668,20 @@ export class SessionsService {
     });
     const nextLiveQuestion = await this.liveQuestionModel.create({
       liveSession: liveSession._id,
-      question,
+      question: generatedQuestion.question,
       level: liveSession.currentLevel,
       questionNumber: acceptedQuestions.length + 1,
       status: LiveQuestionStatus.Pending,
     });
+    await this.aiService.linkLiveQuestion(
+      generatedQuestion.aiLogId,
+      nextLiveQuestion._id,
+    );
 
     return {
       sessionId: liveSession._id.toString(),
       questionId: nextLiveQuestion._id.toString(),
-      question,
+      question: generatedQuestion.question,
     };
   }
 
@@ -953,11 +977,12 @@ export class SessionsService {
    */
   private async generateLiveQuestion(
     context: LiveGenerationPromptContext,
-  ): Promise<Question> {
+  ): Promise<GeneratedLiveQuestionResult> {
     if (!this.togetherClient) {
       throw new ServiceUnavailableException('AI is not configured');
     }
 
+    const prompt = createLiveGenerationUserPrompt(context);
     const completion = await this.togetherClient.chat.completions.create({
       model: this.aiModel,
       response_format: generatedLiveQuestionResponseFormat,
@@ -969,12 +994,17 @@ export class SessionsService {
         },
         {
           role: 'user',
-          content: createLiveGenerationUserPrompt(context),
+          content: prompt,
         },
       ],
     });
     const content = completion.choices[0]?.message?.content;
     const text = this.extractCompletionText(content);
+    const aiLogId = await this.aiService.createAiLog(
+      AiLogOperation.QuestionGeneration,
+      prompt,
+      text,
+    );
     const generatedQuestion = parseGeneratedLiveQuestion(text);
     const question = formatGeneratedLiveQuestionIds(
       generatedQuestion.question,
@@ -983,7 +1013,7 @@ export class SessionsService {
 
     validateGeneratedLiveQuestion(question, context.questionType);
 
-    return question;
+    return { question, aiLogId };
   }
 
   /**
