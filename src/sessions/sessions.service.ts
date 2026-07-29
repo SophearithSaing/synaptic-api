@@ -637,8 +637,20 @@ export class SessionsService {
       };
     }
 
-    if (acceptedQuestions.length >= 3) {
+    if (acceptedQuestions.length > 3) {
       throw new BadRequestException('Live session already has three questions');
+    }
+
+    if (acceptedQuestions.length === 3) {
+      // Recover a completed level when next-question generation was interrupted.
+      await this.liveSessionModel
+        .updateOne(
+          { _id: liveSession._id, currentLevel: liveSession.currentLevel },
+          { $set: { currentLevel: liveSession.currentLevel + 1 } },
+        )
+        .exec();
+
+      return this.continueLiveSession(studentId, sessionId);
     }
 
     const topic = await this.topicModel.findById(liveSession.topic).exec();
