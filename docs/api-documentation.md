@@ -65,6 +65,7 @@ and `OPTIONS` requests do not require the CSRF header.
 | `GET`    | `/auth/me`                     | Yes  | User/Admin | Return current authenticated user.                             |
 | `POST`   | `/auth/refresh`                | No   | Any        | Rotate refresh session and auth cookies.                       |
 | `POST`   | `/auth/logout`                 | No   | Any        | Revoke current refresh session and clear auth cookies.         |
+| `GET`    | `/ai/logs`                     | Yes  | Admin      | List paginated AI completion logs.                             |
 | `POST`   | `/categories/category/create`  | Yes  | Admin      | Create category.                                               |
 | `GET`    | `/categories/categories`       | Yes  | User/Admin | List categories.                                               |
 | `GET`    | `/categories/:id`              | Yes  | User/Admin | Get category by ID.                                            |
@@ -265,6 +266,72 @@ Side effects:
 Important errors:
 
 - `403 Invalid CSRF token`
+
+---
+
+## AI log endpoints
+
+### `GET /ai/logs?page=1&limit=20`
+
+Admin only. Returns AI completion logs, sorted newest first. Linked live
+questions are populated when available.
+
+Query parameters:
+
+- `page`: optional positive integer; defaults to `1`.
+- `limit`: optional integer from `1` through `100`; defaults to `20`.
+
+Response `200`:
+
+```json
+{
+  "items": [
+    {
+      "id": "<ai-log-id>",
+      "operation": "question-generation",
+      "aiModel": "<ai-model>",
+      "prompt": "Generate an MCQ about paging.",
+      "output": "{\"id\":\"memory-management-l0-q1\",...}",
+      "liveQuestion": {
+        "id": "<live-question-id>",
+        "question": {
+          "id": "memory-management-l0-q1",
+          "type": "mcq",
+          "prompt": "What does paging divide virtual memory into?",
+          "options": [],
+          "correctOptionId": "memory-management-l0-q1-o1",
+          "targetConcepts": ["paging"],
+          "feedback": {
+            "correct": "Correct.",
+            "incorrect": "Review paging."
+          },
+          "rubrics": {
+            "keyPoints": ["Pages"],
+            "misconceptions": []
+          }
+        },
+        "level": 0,
+        "questionNumber": 1,
+        "status": "pending"
+      },
+      "createdAt": "2026-06-21T00:00:00.000Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20
+}
+```
+
+`liveQuestion` is `null` when the completion has no linked persisted live
+question. When present, its `status` is one of `pending`, `rejected`, `passed`,
+or `failed`.
+
+Important errors:
+
+- `400 Bad Request` for an invalid `page` or `limit`.
+- `401 Unauthorized`
+- `403 Forbidden` for non-admin users.
 
 ---
 
@@ -1156,5 +1223,5 @@ For MCQ answers, `answer` and `correctAnswer` are option IDs, while
 
 ## Endpoint coverage summary
 
-- Implemented endpoints documented: 26.
-- Missing endpoints added in this update: 5.
+- Implemented endpoints documented: 27.
+- Missing endpoints added in this update: 6.
