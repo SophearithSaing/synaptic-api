@@ -8,6 +8,12 @@ import (
 // ReadyProbe reports whether a dependency is ready to serve traffic.
 type ReadyProbe func(ctx context.Context) error
 
+// Middleware wraps a handler with additional request processing.
+type Middleware = func(http.Handler) http.Handler
+
+// Mounter registers one feature's routes on the request mux.
+type Mounter = func(mux *http.ServeMux)
+
 // NewRouter builds the root router with global middleware, extra
 // application middleware (e.g. rate limiting), and the infrastructure
 // endpoints. Each mounter registers feature routes on the mux; the
@@ -15,8 +21,8 @@ type ReadyProbe func(ctx context.Context) error
 func NewRouter(
 	clientURL string,
 	ready ReadyProbe,
-	middleware []func(http.Handler) http.Handler,
-	mounters []func(mux *http.ServeMux),
+	middleware []Middleware,
+	mounters []Mounter,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -55,15 +61,12 @@ func NewRouter(
 	// and unsupported methods instead of the default Go 404/405 bodies.
 	mux.HandleFunc("/", notFoundHandler)
 
-	extra := append([]func(http.Handler) http.Handler{}, middleware...)
+	extra := append([]Middleware{}, middleware...)
 	extra = append(extra, recoverer)
 
-	return chain(mux, append(
-		[]func(http.Handler) http.Handler{
-			requestID, cors(clientURL), requestLogger,
-		},
-		extra...,
-	)...)
+	return chain(mux, append([]Middleware{
+		requestID, cors(clientURL), requestLogger,
+	}, extra...)...)
 }
 
 // notFoundHandler reproduces the legacy Express 404 body so unknown routes

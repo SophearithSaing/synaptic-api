@@ -5,7 +5,6 @@ package app
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -67,32 +66,34 @@ func New(cfg config.Config) (*App, error) {
 		"POST /auth/register": registerThrottle,
 		"POST /auth/login":    loginThrottle,
 	})
-	store := mongostore.NewIdentityStore(mongoClient.Database(cfg.MongoDatabase))
+	authStore := mongostore.NewIdentityStore(
+		mongoClient.Database(cfg.MongoDatabase),
+	)
 	issuer := identity.NewTokenIssuer(
 		cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL,
 	)
-	service := identity.NewService(store, issuer, identity.Options{
+	authService := identity.NewService(authStore, issuer, identity.Options{
 		AccessTTL:     cfg.JWTAccessTTL,
 		RefreshTTL:    cfg.JWTRefreshTTL,
 		SecureCookies: cfg.SecureCookies(),
 	})
-	authenticator := identity.NewAuthenticator(issuer, store)
-	handler := identity.NewHandler(service, authenticator, identity.Options{
-		AccessTTL:     cfg.JWTAccessTTL,
-		RefreshTTL:    cfg.JWTRefreshTTL,
-		SecureCookies: cfg.SecureCookies(),
-	})
+	authenticator := identity.NewAuthenticator(issuer, authStore)
+	authHandler := identity.NewHandler(
+		authService, authenticator, identity.Options{
+			AccessTTL:     cfg.JWTAccessTTL,
+			RefreshTTL:    cfg.JWTRefreshTTL,
+			SecureCookies: cfg.SecureCookies(),
+		},
+	)
 	catalogStore := mongostore.NewCatalogStore(
 		mongoClient.Database(cfg.MongoDatabase),
 	)
 	catalogHandler := catalog.NewHandler(catalogStore, authenticator)
 
-	router := web.NewRouter(
-		cfg.ClientURL,
-		ready,
-		[]func(http.Handler) http.Handler{throttler.Middleware},
-		[]func(mux *http.ServeMux){handler.Mount, catalogHandler.Mount},
-	)
+	middleware := []web.Middleware{throttler.Middleware}
+	mounters := []web.Mounter{authHandler.Mount, catalogHandler.Mount}
+
+	router := web.NewRouter(cfg.ClientURL, ready, middleware, mounters)
 
 	return &App{
 		server: web.NewServer(cfg.Port, router),
