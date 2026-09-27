@@ -1,10 +1,12 @@
-node_modules
-dist
+bin
 coverage
+coverage.out
 .git
 .gitignore
 .env
 .env.*
+!.env.example
 npm-debug.log*
 .pi
 .agents
+.dev

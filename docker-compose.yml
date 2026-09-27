@@ -1,0 +1,38 @@
+services:
+  mongo:
+    # 8.2 is the minimum supporting Linux kernels 6.19+ (SERVER-121912).
+    image: mongo:8.2
+    container_name: synaptic-mongo
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  mongo-init:
+    image: mongo:8.2
+    container_name: synaptic-mongo-init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint:
+      - mongosh
+      - --host
+      - mongo:27017
+      - --quiet
+      - --eval
+      - |
+        try {
+          rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'localhost:27017'}]})
+        } catch (e) {
+          if (e.code !== 23) throw e
+        }
+    restart: "no"
+
+volumes:
+  mongo-data:

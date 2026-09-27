@@ -1,30 +1,11 @@
-FROM node:22-bookworm-slim AS base
+FROM golang:1.26-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
-WORKDIR /usr/src/app
-
-FROM base AS dependencies
-
-COPY package*.json ./
-RUN npm ci
-
-FROM dependencies AS build
-
-COPY nest-cli.json tsconfig*.json ./
-COPY src ./src
-RUN npm run build
-
-FROM base AS production
-
-ENV NODE_ENV=production
-ENV PORT=8080
-
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-
-COPY --from=build /usr/src/app/dist ./dist
-
-USER node
-
-EXPOSE 8080
-
-CMD ["node", "dist/main.js"]
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/api /api
+EXPOSE 3000
+ENTRYPOINT ["/api"]
