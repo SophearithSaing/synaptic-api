@@ -17,6 +17,10 @@ type Handler struct {
 	options       Options
 }
 
+// clearedCookieInstant is the fixed past Expires instant of cleared
+// auth cookies, matching Express clearCookie (new Date(1)).
+var clearedCookieInstant = time.Unix(1, 0)
+
 // registerOrder and loginOrder are the schema declaration orders used
 // for validation message ordering.
 var (
@@ -138,14 +142,16 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 	web.WriteJSON(w, http.StatusCreated, authenticatedTrue)
 }
 
-// logout revokes the session and clears both auth cookies with 201.
+// logout revokes the session and clears both auth cookies with a bare
+// 201 and empty body: the response carries only the Set-Cookie
+// headers, no Content-Type.
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie(refreshTokenCookieName)
 	_ = h.service.Logout(r.Context(), cookieValue(cookie))
 
 	http.SetCookie(w, h.clearCookie(accessTokenCookieName, "/"))
 	http.SetCookie(w, h.clearCookie(refreshTokenCookieName, "/auth"))
-	web.WriteJSON(w, http.StatusCreated, nil)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // csrf issues a fresh CSRF token as a JS-readable session cookie.
@@ -222,7 +228,8 @@ func (h *Handler) authCookie(
 	return cookie
 }
 
-// clearCookie expires an auth cookie with no Max-Age.
+// clearCookie expires an auth cookie in the far past with no Max-Age,
+// matching the pinned Express clearCookie output.
 func (h *Handler) clearCookie(name, path string) *http.Cookie {
 	return &http.Cookie{
 		Name:     name,
@@ -230,7 +237,7 @@ func (h *Handler) clearCookie(name, path string) *http.Cookie {
 		HttpOnly: true,
 		Secure:   h.options.SecureCookies,
 		SameSite: h.sameSite(),
-		MaxAge:   -1,
+		Expires:  clearedCookieInstant,
 	}
 }
 

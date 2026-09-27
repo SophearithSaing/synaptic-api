@@ -473,6 +473,31 @@ func TestMePinnedPaths(t *testing.T) {
 		`{"message":"Unauthorized","statusCode":401}`)
 }
 
+// assertClearedCookie pins the raw cleared Set-Cookie shape: empty
+// value, no Max-Age, Expires in the fixed past, and the identity
+// attributes.
+func assertClearedCookie(t *testing.T, raw, name string) {
+	t.Helper()
+
+	if !strings.HasPrefix(raw, name+"=;") {
+		t.Fatalf("cleared cookie %q must start empty", raw)
+	}
+	deadline := "Expires=Thu, 01 Jan 1970 00:00:01 GMT"
+	if !strings.Contains(raw, deadline) {
+		t.Fatalf("cleared cookie %q must carry %s", raw, deadline)
+	}
+	if strings.Contains(raw, "Max-Age=") {
+		t.Fatalf("cleared cookie %q must not carry Max-Age", raw)
+	}
+	for _, attribute := range []string{
+		"Path=/", "HttpOnly", "Secure", "SameSite=None",
+	} {
+		if !strings.Contains(raw, attribute) {
+			t.Fatalf("cleared cookie %q misses %s", raw, attribute)
+		}
+	}
+}
+
 // TestLogoutClearsCookiesPins201 matching the logout fixtures.
 func TestLogoutClearsCookiesPins201(t *testing.T) {
 	handler, repo, _ := productionServer()
@@ -491,25 +516,24 @@ func TestLogoutClearsCookiesPins201(t *testing.T) {
 		t.Fatalf("logout body %q", recorder.Body.String())
 	}
 
-	cleared := cookieList(recorder)
-	access, refresh := cleared["access_token"], cleared["refresh_token"]
-	if access == nil || refresh == nil {
-		t.Fatalf("cookies %v", cleared)
+	// The 201 body headers are exactly the two cleared Set-Cookie
+	// values; no Content-Type is set on the empty-body logout.
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("logout status %d", recorder.Code)
 	}
-	if access.Path != "/" || refresh.Path != "/auth" {
-		t.Fatalf("paths %q %q", access.Path, refresh.Path)
+	if got := recorder.Header().Get("Content-Type"); got != "" {
+		t.Fatalf("logout content-type %q, want none", got)
 	}
-	if access.MaxAge != -1 || refresh.MaxAge != -1 {
-		t.Fatalf("MaxAge %d %d", access.MaxAge, refresh.MaxAge)
+	set := recorder.Header().Values("Set-Cookie")
+	if len(set) != 2 {
+		t.Fatalf("set-cookie headers %q", set)
 	}
-	if access.MaxAge < 0 && !access.Expires.IsZero() {
-		if expires := access.Expires; expires.After(time.Now()) {
-			t.Fatalf("access cookie not expired: %v", expires)
-		}
+	if !strings.HasPrefix(set[0], "access_token=;") ||
+		!strings.HasPrefix(set[1], "refresh_token=;") {
+		t.Fatalf("cleared cookie order %q", set)
 	}
-	if !access.HttpOnly || !access.Secure {
-		t.Fatal("cleared cookie policy mismatch")
-	}
+	assertClearedCookie(t, set[0], "access_token")
+	assertClearedCookie(t, set[1], "refresh_token")
 
 	// The referenced session is revoked with the correct secret.
 	sessionID, _, _ := strings.Cut(refreshValue, ".")
@@ -531,13 +555,16 @@ func TestLogoutWithoutCookieStill201(t *testing.T) {
 	if recorder.Body.Len() != 0 || recorder.Code != http.StatusCreated {
 		t.Fatalf("status %d body %q", recorder.Code, recorder.Body.String())
 	}
-
-	cleared := cookieList(recorder)
-	access := cleared["access_token"]
-	refresh := cleared["refresh_token"]
-	if access == nil || refresh == nil {
-		t.Fatalf("cookies %v", cleared)
+	if got := recorder.Header().Get("Content-Type"); got != "" {
+		t.Fatalf("logout content-type %q, want none", got)
 	}
+
+	set := recorder.Header().Values("Set-Cookie")
+	if len(set) != 2 {
+		t.Fatalf("set-cookie headers %q", set)
+	}
+	assertClearedCookie(t, set[0], "access_token")
+	assertClearedCookie(t, set[1], "refresh_token")
 
 	// Malformed refresh tokens never fail the logout.
 	token = csrfToken(handler)

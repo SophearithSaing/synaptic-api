@@ -39,8 +39,9 @@ func NewError(status int, message any) *Error {
 }
 
 // WriteJSON writes the value as a JSON response with the given status.
+// The content type matches the pinned legacy header exactly.
 func WriteJSON(w http.ResponseWriter, status int, value any) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	if value == nil {
 		return
