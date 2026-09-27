@@ -1750,11 +1750,28 @@ components:
           type: array
           items: { type: string }
 
+    ObjectIdReference:
+      type: object
+      description: >-
+        bson ObjectId as serialized by the session DTO reference
+        remapping (ground-truthed by fixture capture): the driver's
+        ObjectId passes `Object.prototype.toString` as a plain object, so
+        the DTO recurses into it — `id` is the hex string and `i0`–`i3`
+        leak the driver's internal int32 segments.
+      required: [id, i0, i1, i2, i3]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        i0: { type: integer, format: int32 }
+        i1: { type: integer, format: int32 }
+        i2: { type: integer, format: int32 }
+        i3: { type: integer, format: int32 }
+
     SessionTopic:
       type: object
       description: >-
         Populated topic as serialized by `SessionResponseDto`: `_id` is
-        remapped to `id`; `category` stays an ObjectId hex string.
+        remapped to `id`; the nested `category` ObjectId is remapped to
+        the `ObjectIdReference` shape.
       properties:
         id: { $ref: '#/components/schemas/ObjectId' }
         title: { type: string }
@@ -1764,7 +1781,7 @@ components:
         tags:
           type: array
           items: { type: string }
-        category: { $ref: '#/components/schemas/ObjectId' }
+        category: { $ref: '#/components/schemas/ObjectIdReference' }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         __v: { type: integer }
@@ -1775,10 +1792,9 @@ components:
       properties:
         id: { $ref: '#/components/schemas/ObjectId' }
         student:
-          description: User ID hex string (never populated).
-          oneOf:
-            - $ref: '#/components/schemas/ObjectId'
-            - type: object
+          description: User reference (never populated).
+          allOf:
+            - $ref: '#/components/schemas/ObjectIdReference'
         topic:
           description: ObjectId hex string, or the populated topic.
           oneOf:
@@ -1799,10 +1815,9 @@ components:
       properties:
         id: { $ref: '#/components/schemas/ObjectId' }
         student:
-          description: User ID hex string (never populated).
-          oneOf:
-            - $ref: '#/components/schemas/ObjectId'
-            - type: object
+          description: User reference (never populated).
+          allOf:
+            - $ref: '#/components/schemas/ObjectIdReference'
         topic:
           description: ObjectId hex string, or the populated topic.
           oneOf:
