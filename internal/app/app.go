@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 
+	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 	"github.com/SophearithSaing/synaptic-api/internal/config"
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
@@ -75,21 +76,22 @@ func New(cfg config.Config) (*App, error) {
 		RefreshTTL:    cfg.JWTRefreshTTL,
 		SecureCookies: cfg.SecureCookies(),
 	})
-	handler := identity.NewHandler(
-		service,
-		identity.NewAuthenticator(issuer, store),
-		identity.Options{
-			AccessTTL:     cfg.JWTAccessTTL,
-			RefreshTTL:    cfg.JWTRefreshTTL,
-			SecureCookies: cfg.SecureCookies(),
-		},
+	authenticator := identity.NewAuthenticator(issuer, store)
+	handler := identity.NewHandler(service, authenticator, identity.Options{
+		AccessTTL:     cfg.JWTAccessTTL,
+		RefreshTTL:    cfg.JWTRefreshTTL,
+		SecureCookies: cfg.SecureCookies(),
+	})
+	catalogStore := mongostore.NewCatalogStore(
+		mongoClient.Database(cfg.MongoDatabase),
 	)
+	catalogHandler := catalog.NewHandler(catalogStore, authenticator)
 
 	router := web.NewRouter(
 		cfg.ClientURL,
 		ready,
 		[]func(http.Handler) http.Handler{throttler.Middleware},
-		[]func(mux *http.ServeMux){handler.Mount},
+		[]func(mux *http.ServeMux){handler.Mount, catalogHandler.Mount},
 	)
 
 	return &App{
