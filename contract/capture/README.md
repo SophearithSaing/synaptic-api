@@ -75,15 +75,15 @@ byte-identical across runs.
 
 Applied to the serialized fixture JSON (`contract/capture/normalize.mjs`):
 
-| Token               | Replaced value                                            |
-| ------------------- | --------------------------------------------------------- |
-| `<refreshToken:NN>` | `<24-hex>.<base64url-43>` refresh cookie values           |
-| `<csrfToken:NN>`    | bare 43-char base64url CSRF tokens                        |
-| `<objectId:NN>`     | 24-char hex ObjectIds (seed ids are pre-registered)       |
-| `<jwt>`             | compact JWTs (Authorization header, cookies)              |
-| `<isoDate>`         | `YYYY-MM-DDTHH:mm:ss.sssZ` timestamps                     |
-| `<httpDate>`        | `Expires=…GMT` cookie dates                               |
-| `<retryAfter>`      | `Retry-After` header values (replaced structurally)       |
+| Token               | Replaced value                                      |
+| ------------------- | --------------------------------------------------- |
+| `<refreshToken:NN>` | `<24-hex>.<base64url-43>` refresh cookie values     |
+| `<csrfToken:NN>`    | bare 43-char base64url CSRF tokens                  |
+| `<objectId:NN>`     | 24-char hex ObjectIds (seed ids are pre-registered) |
+| `<jwt>`             | compact JWTs (Authorization header, cookies)        |
+| `<isoDate>`         | `YYYY-MM-DDTHH:mm:ss.sssZ` timestamps               |
+| `<httpDate>`        | `Expires=…GMT` cookie dates                         |
+| `<retryAfter>`      | `Retry-After` header values (replaced structurally) |
 
 `NN` tokens are numbered in order of first appearance across the run;
 their underlying values are random per issuance, so numbering is stable.

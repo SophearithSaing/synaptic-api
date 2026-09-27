@@ -15,12 +15,7 @@
  * Re-running reproduces byte-identical fixtures (see README.md for the
  * normalization rules). Never point DB_URI at Atlas.
  */
-import {
-  existsSync,
-  mkdirSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -166,7 +161,9 @@ async function main() {
       }
 
       const dynamicHeaders =
-        typeof def.headers === 'function' ? def.headers(ctx.state) : def.headers;
+        typeof def.headers === 'function'
+          ? def.headers(ctx.state)
+          : def.headers;
       const headers = { ...(dynamicHeaders ?? {}) };
 
       if (def.csrf && def.jar) {
@@ -174,10 +171,8 @@ async function main() {
         headers['x-csrf-token'] = client.jar(def.jar).get('csrf_token');
       }
 
-      const path =
-        typeof def.path === 'function' ? def.path(state) : def.path;
-      const body =
-        typeof def.body === 'function' ? def.body(state) : def.body;
+      const path = typeof def.path === 'function' ? def.path(state) : def.path;
+      const body = typeof def.body === 'function' ? def.body(state) : def.body;
 
       const response = await client.request({
         method: def.method,
@@ -188,7 +183,10 @@ async function main() {
         fixtureKey: currentKey,
       });
 
-      if (def.expectStatus !== undefined && response.status !== def.expectStatus) {
+      if (
+        def.expectStatus !== undefined &&
+        response.status !== def.expectStatus
+      ) {
         throw new Error(
           `${currentKey}: expected ${def.expectStatus}, got ` +
             `${response.status}: ${JSON.stringify(response.body)}`,

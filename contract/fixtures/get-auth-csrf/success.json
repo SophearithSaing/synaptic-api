@@ -11,9 +11,7 @@
     "status": 200,
     "headers": {
       "content-type": "application/json; charset=utf-8",
-      "set-cookie": [
-        "csrf_token=<csrfToken:01>; Path=/; Secure; SameSite=None"
-      ]
+      "set-cookie": ["csrf_token=<csrfToken:01>; Path=/; Secure; SameSite=None"]
     },
     "body": {
       "csrf_token": "<csrfToken:01>"

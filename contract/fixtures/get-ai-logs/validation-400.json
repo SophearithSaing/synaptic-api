@@ -14,9 +14,7 @@
       "content-type": "application/json; charset=utf-8"
     },
     "body": {
-      "message": [
-        "limit must not be less than 1"
-      ],
+      "message": ["limit must not be less than 1"],
       "error": "Bad Request",
       "statusCode": 400
     }

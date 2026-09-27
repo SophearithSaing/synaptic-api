@@ -126,9 +126,7 @@ for (const [path, item] of Object.entries(spec.paths ?? {})) {
     );
     for (const param of pathParams) {
       if (!declared.has(param)) {
-        structuralProblems.push(
-          `${label}: path param {${param}} not declared`,
-        );
+        structuralProblems.push(`${label}: path param {${param}} not declared`);
       }
     }
     const responses = operation.responses ?? {};

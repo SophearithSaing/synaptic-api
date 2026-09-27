@@ -15,9 +15,7 @@
       "slug": "binary-basics",
       "description": "Duplicate slug.",
       "icon": "binary",
-      "tags": [
-        "binary"
-      ],
+      "tags": ["binary"],
       "category": "<objectId:03>"
     }
   },

@@ -19,10 +19,7 @@
       "slug": "binary-basics",
       "description": "Binary numbers and arithmetic.",
       "icon": "binary",
-      "tags": [
-        "binary",
-        "arithmetic"
-      ],
+      "tags": ["binary", "arithmetic"],
       "category": {
         "id": "<objectId:03>",
         "title": "Core Concepts",

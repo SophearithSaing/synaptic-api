@@ -14,9 +14,7 @@
       "slug": "forbidden-topic",
       "description": "Student role.",
       "icon": "x",
-      "tags": [
-        "x"
-      ],
+      "tags": ["x"],
       "category": "<objectId:03>"
     }
   },

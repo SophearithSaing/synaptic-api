@@ -30,12 +30,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const worktreeRoot = join(scriptDir, '..', '..');
 
 // ---------------------------------------------------------------- env
-const DEFAULT_ENV_FILE = resolve(
-  worktreeRoot,
-  '..',
-  'synaptic-api',
-  '.env',
-);
+const DEFAULT_ENV_FILE = resolve(worktreeRoot, '..', 'synaptic-api', '.env');
 
 /** Minimal .env parser (KEY=value lines, optional quotes, # comments). */
 function loadEnvFile(path) {
@@ -279,7 +274,10 @@ async function enumDistribution(collection, field, unwindPath = null) {
   const rows = await collection.aggregate(stages).toArray();
 
   return Object.fromEntries(
-    rows.map((row) => [row._id === null ? '(absent)' : String(row._id), row.count]),
+    rows.map((row) => [
+      row._id === null ? '(absent)' : String(row._id),
+      row.count,
+    ]),
   );
 }
 
@@ -309,7 +307,10 @@ function checkQuestion(question) {
     issues.push('missing-prompt');
   }
 
-  if (!Array.isArray(question.targetConcepts) || question.targetConcepts.length === 0) {
+  if (
+    !Array.isArray(question.targetConcepts) ||
+    question.targetConcepts.length === 0
+  ) {
     issues.push('missing-target-concepts');
   }
 
@@ -497,7 +498,10 @@ const COLLECTIONS = {
       // Legacy: some category refs are stored as strings, not ObjectIds.
       // Distinguish type mismatches from truly dangling references.
       const stringRefs = await ctx.c
-        .find({ category: { $type: 'string' } }, { projection: { category: 1 } })
+        .find(
+          { category: { $type: 'string' } },
+          { projection: { category: 1 } },
+        )
         .toArray();
       const resolvable = stringRefs
         .map((doc) => doc.category)
@@ -544,10 +548,11 @@ const COLLECTIONS = {
     ],
     scalarArrays: ['questions.targetConcepts'],
     async measures(ctx, out) {
-      out.duplicates['topic + level + setType'] = await duplicateGroups(
-        ctx.c,
-        { topic: '$topic', level: '$level', setType: '$setType' },
-      );
+      out.duplicates['topic + level + setType'] = await duplicateGroups(ctx.c, {
+        topic: '$topic',
+        level: '$level',
+        setType: '$setType',
+      });
       out.dangling['topic -> topics'] = await danglingRefs(
         ctx.c,
         'topic',
@@ -582,10 +587,10 @@ const COLLECTIONS = {
       },
     ],
     async measures(ctx, out) {
-      out.duplicates['student + topic (total)'] = await duplicateGroups(
-        ctx.c,
-        { student: '$student', topic: '$topic' },
-      );
+      out.duplicates['student + topic (total)'] = await duplicateGroups(ctx.c, {
+        student: '$student',
+        topic: '$topic',
+      });
       out.duplicates['student + topic (active)'] = await duplicateGroups(
         ctx.c,
         { student: '$student', topic: '$topic' },
@@ -616,10 +621,10 @@ const COLLECTIONS = {
       },
     ],
     async measures(ctx, out) {
-      out.duplicates['student + topic (total)'] = await duplicateGroups(
-        ctx.c,
-        { student: '$student', topic: '$topic' },
-      );
+      out.duplicates['student + topic (total)'] = await duplicateGroups(ctx.c, {
+        student: '$student',
+        topic: '$topic',
+      });
       out.duplicates['student + topic (active)'] = await duplicateGroups(
         ctx.c,
         { student: '$student', topic: '$topic' },
@@ -728,7 +733,11 @@ const COLLECTIONS = {
     shapes: [
       { label: 'answers', segments: [{ name: 'answers', kind: 'array' }] },
     ],
-    scalarArrays: ['answers.targetConcepts', 'answers.strengths', 'answers.weaknesses'],
+    scalarArrays: [
+      'answers.targetConcepts',
+      'answers.strengths',
+      'answers.weaknesses',
+    ],
     async measures(ctx, out) {
       out.duplicates['session + questionSet'] = await duplicateGroups(
         ctx.c,
@@ -750,7 +759,11 @@ const COLLECTIONS = {
         { liveSession: '$liveSession', level: '$level' },
         { liveSession: { $exists: true, $ne: null } },
       );
-      out.dangling['user -> users'] = await danglingRefs(ctx.c, 'user', 'users');
+      out.dangling['user -> users'] = await danglingRefs(
+        ctx.c,
+        'user',
+        'users',
+      );
       out.dangling['session -> sessions (when set)'] = await danglingRefs(
         ctx.c,
         'session',
@@ -855,8 +868,7 @@ const COLLECTIONS = {
 
       out.counts['distinct attemptIds referenced'] = referencedIds.length;
       out.counts['attemptIds with invalid ObjectId format'] = invalidFormat;
-      out.counts['dangling attemptIds (distinct)'] =
-        validIds.length - existing;
+      out.counts['dangling attemptIds (distinct)'] = validIds.length - existing;
     },
   },
 
@@ -894,7 +906,10 @@ function renderDuplicates(duplicates) {
     return '_none_\n';
   }
 
-  const lines = ['| natural key | duplicate groups | documents in groups |', '| --- | ---: | ---: |'];
+  const lines = [
+    '| natural key | duplicate groups | documents in groups |',
+    '| --- | ---: | ---: |',
+  ];
 
   for (const [key, value] of entries) {
     lines.push(`| ${key} | ${value.groups} | ${value.documents} |`);
@@ -968,9 +983,8 @@ async function main() {
       };
 
       out.counts['documents'] = await docCount(collection);
-      out.counts['documents missing __v'] = await missingVersionCount(
-        collection,
-      );
+      out.counts['documents missing __v'] =
+        await missingVersionCount(collection);
       out.indexes = await indexInventory(collection);
 
       for (const shape of spec.shapes ?? []) {
@@ -995,11 +1009,19 @@ async function main() {
       sections.push({ name, out });
     }
 
-    const report = renderReport(dbName, envFile, now, collectionNames, sections);
+    const report = renderReport(
+      dbName,
+      envFile,
+      now,
+      collectionNames,
+      sections,
+    );
     const reportPath = join(scriptDir, 'report.md');
 
     writeFileSync(reportPath, report);
-    console.log(`Audit complete: ${sections.length} collections -> ${reportPath}`);
+    console.log(
+      `Audit complete: ${sections.length} collections -> ${reportPath}`,
+    );
   } finally {
     await client.close();
   }
@@ -1012,7 +1034,9 @@ function renderReport(dbName, envFile, now, collectionNames, sections) {
   lines.push('');
   lines.push(`- Generated: ${now.toISOString()} (run timestamp)`);
   lines.push(`- Target: database \`${dbName}\` (read-only audit)`);
-  lines.push(`- Env file: \`${basename(envFile)}\` (path elided; credentials never read into output)`);
+  lines.push(
+    `- Env file: \`${basename(envFile)}\` (path elided; credentials never read into output)`,
+  );
   lines.push('- Method: countDocuments, aggregate, find (projections),');
   lines.push('  distinct, listIndexes only; no writes of any kind.');
   lines.push('- Contents: aggregate counts, field names, BSON types, and');
@@ -1118,7 +1142,8 @@ function collectFindings(sections, collectionNames) {
     (byName[name]?.shapeRows ?? []).some((row) =>
       row._id.field.match(fieldPattern),
     );
-  const enumKeys = (name, field) => Object.keys(byName[name]?.enums[field] ?? {});
+  const enumKeys = (name, field) =>
+    Object.keys(byName[name]?.enums[field] ?? {});
 
   const legacyCollections = collectionNames.filter(
     (name) => !(name in COLLECTIONS),
@@ -1133,7 +1158,9 @@ function collectFindings(sections, collectionNames) {
 
   const missingV = Object.entries(byName)
     .filter(([, out]) => out.counts['documents missing __v'] > 0)
-    .map(([name, out]) => `\`${name}\` (${out.counts['documents missing __v']})`);
+    .map(
+      ([name, out]) => `\`${name}\` (${out.counts['documents missing __v']})`,
+    );
 
   if (missingV.length > 0) {
     findings.push(`Documents missing \`__v\`: ${missingV.join(', ')}.`);
@@ -1261,7 +1288,9 @@ function collectFindings(sections, collectionNames) {
   );
 
   if (duplicateSummary.length > 0) {
-    findings.push(`Duplicate natural keys exist: ${duplicateSummary.join('; ')}.`);
+    findings.push(
+      `Duplicate natural keys exist: ${duplicateSummary.join('; ')}.`,
+    );
   }
 
   const danglingSummary = Object.entries(byName).flatMap(([name, out]) =>
@@ -1271,9 +1300,7 @@ function collectFindings(sections, collectionNames) {
   );
 
   if (danglingSummary.length > 0) {
-    findings.push(
-      `Dangling references exist: ${danglingSummary.join('; ')}.`,
-    );
+    findings.push(`Dangling references exist: ${danglingSummary.join('; ')}.`);
   }
 
   return findings;

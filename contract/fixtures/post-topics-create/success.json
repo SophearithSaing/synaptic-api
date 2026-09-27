@@ -14,9 +14,7 @@
       "slug": "logic-gates",
       "description": "Boolean logic and gates.",
       "icon": "gate",
-      "tags": [
-        "logic"
-      ],
+      "tags": ["logic"],
       "category": "<objectId:03>"
     }
   },
@@ -31,9 +29,7 @@
       "slug": "logic-gates",
       "description": "Boolean logic and gates.",
       "icon": "gate",
-      "tags": [
-        "logic"
-      ],
+      "tags": ["logic"],
       "category": {
         "id": "<objectId:03>",
         "title": "Core Concepts",

@@ -44,21 +44,15 @@
             "correctAnswer": "Stub correct answer.",
             "score": 1,
             "feedback": "Stub passing feedback.",
-            "targetConcepts": [
-              "twos-complement"
-            ],
-            "strengths": [
-              "stub-concept"
-            ],
+            "targetConcepts": ["twos-complement"],
+            "strengths": ["stub-concept"],
             "weaknesses": [],
             "evaluatedBy": "ai"
           }
         ],
         "setScore": 1,
         "passed": true,
-        "strengths": [
-          "twos-complement"
-        ],
+        "strengths": ["twos-complement"],
         "weaknesses": [],
         "submittedAt": "<isoDate>",
         "evaluatedAt": "<isoDate>",

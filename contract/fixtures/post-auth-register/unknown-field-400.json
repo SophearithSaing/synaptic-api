@@ -23,9 +23,7 @@
       "content-type": "application/json; charset=utf-8"
     },
     "body": {
-      "message": [
-        "property role should not exist"
-      ],
+      "message": ["property role should not exist"],
       "error": "Bad Request",
       "statusCode": 400
     }

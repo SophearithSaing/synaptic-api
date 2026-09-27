@@ -34,20 +34,14 @@
               }
             ],
             "correctOptionId": "o1",
-            "targetConcepts": [
-              "hardware-basics"
-            ],
+            "targetConcepts": ["hardware-basics"],
             "feedback": {
               "correct": "Correct.",
               "incorrect": "Incorrect."
             },
             "rubrics": {
-              "keyPoints": [
-                "Central processing."
-              ],
-              "misconceptions": [
-                "Personal computer."
-              ]
+              "keyPoints": ["Central processing."],
+              "misconceptions": ["Personal computer."]
             }
           }
         ]

@@ -21,10 +21,7 @@
       "content-type": "application/json; charset=utf-8"
     },
     "body": {
-      "message": [
-        "icon should not be empty",
-        "icon must be a string"
-      ],
+      "message": ["icon should not be empty", "icon must be a string"],
       "error": "Bad Request",
       "statusCode": 400
     }

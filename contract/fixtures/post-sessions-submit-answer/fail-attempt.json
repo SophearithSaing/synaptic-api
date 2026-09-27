@@ -50,13 +50,9 @@
             "correctAnswerText": "seed-l0-q1 option one",
             "score": 0,
             "feedback": "Incorrect feedback.",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "strengths": [],
-            "weaknesses": [
-              "binary-addition"
-            ],
+            "weaknesses": ["binary-addition"],
             "evaluatedBy": "system"
           },
           {
@@ -70,22 +66,16 @@
             "correctAnswerText": "seed-l0-q2 option two",
             "score": 0,
             "feedback": "Incorrect feedback.",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "strengths": [],
-            "weaknesses": [
-              "binary-addition"
-            ],
+            "weaknesses": ["binary-addition"],
             "evaluatedBy": "system"
           }
         ],
         "setScore": 0,
         "passed": false,
         "strengths": [],
-        "weaknesses": [
-          "binary-addition"
-        ],
+        "weaknesses": ["binary-addition"],
         "submittedAt": "<isoDate>",
         "evaluatedAt": "<isoDate>",
         "createdAt": "<isoDate>",

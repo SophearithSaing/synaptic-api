@@ -34,13 +34,9 @@
           "correctAnswerText": "Stub option two",
           "score": 0,
           "feedback": "Stub incorrect feedback.",
-          "targetConcepts": [
-            "stub-concept"
-          ],
+          "targetConcepts": ["stub-concept"],
           "strengths": [],
-          "weaknesses": [
-            "stub-concept"
-          ],
+          "weaknesses": ["stub-concept"],
           "evaluatedBy": "system"
         }
       ],

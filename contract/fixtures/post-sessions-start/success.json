@@ -45,20 +45,14 @@
               }
             ],
             "correctOptionId": "o1",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Key point."
-              ],
-              "misconceptions": [
-                "Misconception."
-              ]
+              "keyPoints": ["Key point."],
+              "misconceptions": ["Misconception."]
             }
           },
           {
@@ -80,20 +74,14 @@
               }
             ],
             "correctOptionId": "o2",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Key point."
-              ],
-              "misconceptions": [
-                "Misconception."
-              ]
+              "keyPoints": ["Key point."],
+              "misconceptions": ["Misconception."]
             }
           }
         ],

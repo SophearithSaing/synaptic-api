@@ -20,18 +20,18 @@ Collections present (12):
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
-| username_1 | `{"username":1}` | true |  |
-| email_1 | `{"email":1}` | true |  |
+| name       | key              | unique | expireAfterSeconds |
+| ---------- | ---------------- | ------ | ------------------ |
+| _id_       | `{"_id":1}`      | false  |                    |
+| username_1 | `{"username":1}` | true   |                    |
+| email_1    | `{"email":1}`    | true   |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| email (exact) | 0 | 0 |
-| username (case-insensitive) | 0 | 0 |
+| natural key                 | duplicate groups | documents in groups |
+| --------------------------- | ---------------: | ------------------: |
+| email (exact)               |                0 |                   0 |
+| username (case-insensitive) |                0 |                   0 |
 
 ### Dangling references
 
@@ -47,16 +47,16 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 3 |
-| _id | objectId | 3 |
-| createdAt | date | 3 |
-| email | string | 3 |
-| password | string | 3 |
-| role | string | 3 |
-| updatedAt | date | 3 |
-| username | string | 3 |
+| field     | BSON type | documents |
+| --------- | --------- | --------: |
+| __v       | int       |         3 |
+| _id       | objectId  |         3 |
+| createdAt | date      |         3 |
+| email     | string    |         3 |
+| password  | string    |         3 |
+| role      | string    |         3 |
+| updatedAt | date      |         3 |
+| username  | string    |         3 |
 
 ## authSessions
 
@@ -69,18 +69,18 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
-| userId_1 | `{"userId":1}` | false |  |
-| expiresAt_1 | `{"expiresAt":1}` | false | 0 |
+| name        | key               | unique | expireAfterSeconds |
+| ----------- | ----------------- | ------ | ------------------ |
+| _id_        | `{"_id":1}`       | false  |                    |
+| userId_1    | `{"userId":1}`    | false  |                    |
+| expiresAt_1 | `{"expiresAt":1}` | false  | 0                  |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| sessions per user (>1 total) | 0 | 0 |
-| active sessions per user (>1) | 0 | 0 |
+| natural key                   | duplicate groups | documents in groups |
+| ----------------------------- | ---------------: | ------------------: |
+| sessions per user (>1 total)  |                0 |                   0 |
+| active sessions per user (>1) |                0 |                   0 |
 
 ### Dangling references
 
@@ -96,15 +96,15 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 1 |
-| _id | objectId | 1 |
-| createdAt | date | 1 |
-| expiresAt | date | 1 |
-| refreshTokenHash | string | 1 |
-| updatedAt | date | 1 |
-| userId | objectId | 1 |
+| field            | BSON type | documents |
+| ---------------- | --------- | --------: |
+| __v              | int       |         1 |
+| _id              | objectId  |         1 |
+| createdAt        | date      |         1 |
+| expiresAt        | date      |         1 |
+| refreshTokenHash | string    |         1 |
+| updatedAt        | date      |         1 |
+| userId           | objectId  |         1 |
 
 ## categories
 
@@ -115,16 +115,16 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
-| slug_1 | `{"slug":1}` | true |  |
+| name   | key          | unique | expireAfterSeconds |
+| ------ | ------------ | ------ | ------------------ |
+| _id_   | `{"_id":1}`  | false  |                    |
+| slug_1 | `{"slug":1}` | true   |                    |
 
 ### Duplicate natural keys
 
 | natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| slug | 0 | 0 |
+| ----------- | ---------------: | ------------------: |
+| slug        |                0 |                   0 |
 
 ### Dangling references
 
@@ -140,16 +140,16 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 5 |
-| _id | objectId | 5 |
-| createdAt | date | 5 |
-| description | string | 5 |
-| icon | string | 5 |
-| slug | string | 5 |
-| title | string | 5 |
-| updatedAt | date | 5 |
+| field       | BSON type | documents |
+| ----------- | --------- | --------: |
+| __v         | int       |         5 |
+| _id         | objectId  |         5 |
+| createdAt   | date      |         5 |
+| description | string    |         5 |
+| icon        | string    |         5 |
+| slug        | string    |         5 |
+| title       | string    |         5 |
+| updatedAt   | date      |         5 |
 
 ## topics
 
@@ -164,16 +164,16 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
-| slug_1 | `{"slug":1}` | true |  |
+| name   | key          | unique | expireAfterSeconds |
+| ------ | ------------ | ------ | ------------------ |
+| _id_   | `{"_id":1}`  | false  |                    |
+| slug_1 | `{"slug":1}` | true   |                    |
 
 ### Duplicate natural keys
 
 | natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| slug | 0 | 0 |
+| ----------- | ---------------: | ------------------: |
+| slug        |                0 |                   0 |
 
 ### Dangling references
 
@@ -189,19 +189,19 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 23 |
-| _id | objectId | 23 |
-| category | objectId | 13 |
-| category | string | 10 |
-| createdAt | date | 23 |
-| description | string | 23 |
-| icon | string | 23 |
-| slug | string | 23 |
-| tags | array | 23 |
-| title | string | 23 |
-| updatedAt | date | 23 |
+| field       | BSON type | documents |
+| ----------- | --------- | --------: |
+| __v         | int       |        23 |
+| _id         | objectId  |        23 |
+| category    | objectId  |        13 |
+| category    | string    |        10 |
+| createdAt   | date      |        23 |
+| description | string    |        23 |
+| icon        | string    |        23 |
+| slug        | string    |        23 |
+| tags        | array     |        23 |
+| title       | string    |        23 |
+| updatedAt   | date      |        23 |
 
 ## questionSets
 
@@ -214,15 +214,15 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| topic + level + setType | 16 | 37 |
+| natural key             | duplicate groups | documents in groups |
+| ----------------------- | ---------------: | ------------------: |
+| topic + level + setType |               16 |                  37 |
 
 ### Dangling references
 
@@ -241,35 +241,35 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 1377 |
-| _id | objectId | 1377 |
-| createdAt | date | 1377 |
-| level | int | 1377 |
-| questions.correctOptionId | null | 3120 |
-| questions.correctOptionId | string | 981 |
-| questions.feedback.correct | string | 4131 |
-| questions.feedback.evaluationGuidance | string | 1200 |
-| questions.feedback.incorrect | string | 4131 |
-| questions.feedback.sampleAnswer | string | 1680 |
-| questions.feedback | object | 4131 |
-| questions.hints | array | 3939 |
-| questions.id | string | 4131 |
-| questions.options.id | string | 3195 |
-| questions.options.text | string | 3195 |
-| questions.options | array | 1941 |
-| questions.options | null | 2160 |
-| questions.prompt | string | 4131 |
-| questions.rubrics.keyPoints | array | 4131 |
-| questions.rubrics.misconceptions | array | 4131 |
-| questions.rubrics | object | 4131 |
-| questions.targetConcepts | array | 4131 |
-| questions.type | string | 4131 |
-| questions | array | 1377 |
-| setType | string | 1377 |
-| topic | objectId | 1377 |
-| updatedAt | date | 1377 |
+| field                                 | BSON type | documents |
+| ------------------------------------- | --------- | --------: |
+| __v                                   | int       |      1377 |
+| _id                                   | objectId  |      1377 |
+| createdAt                             | date      |      1377 |
+| level                                 | int       |      1377 |
+| questions.correctOptionId             | null      |      3120 |
+| questions.correctOptionId             | string    |       981 |
+| questions.feedback.correct            | string    |      4131 |
+| questions.feedback.evaluationGuidance | string    |      1200 |
+| questions.feedback.incorrect          | string    |      4131 |
+| questions.feedback.sampleAnswer       | string    |      1680 |
+| questions.feedback                    | object    |      4131 |
+| questions.hints                       | array     |      3939 |
+| questions.id                          | string    |      4131 |
+| questions.options.id                  | string    |      3195 |
+| questions.options.text                | string    |      3195 |
+| questions.options                     | array     |      1941 |
+| questions.options                     | null      |      2160 |
+| questions.prompt                      | string    |      4131 |
+| questions.rubrics.keyPoints           | array     |      4131 |
+| questions.rubrics.misconceptions      | array     |      4131 |
+| questions.rubrics                     | object    |      4131 |
+| questions.targetConcepts              | array     |      4131 |
+| questions.type                        | string    |      4131 |
+| questions                             | array     |      1377 |
+| setType                               | string    |      1377 |
+| topic                                 | objectId  |      1377 |
+| updatedAt                             | date      |      1377 |
 
 ## sessions
 
@@ -281,16 +281,16 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| student + topic (total) | 0 | 0 |
-| student + topic (active) | 0 | 0 |
+| natural key              | duplicate groups | documents in groups |
+| ------------------------ | ---------------: | ------------------: |
+| student + topic (total)  |                0 |                   0 |
+| student + topic (active) |                0 |                   0 |
 
 ### Dangling references
 
@@ -299,7 +299,7 @@ _none found_
 
 ### Enum distributions
 
-- status: 
+- status:
 
 ### Malformed embedded questions
 
@@ -319,16 +319,16 @@ _none_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| student + topic (total) | 0 | 0 |
-| student + topic (active) | 0 | 0 |
+| natural key              | duplicate groups | documents in groups |
+| ------------------------ | ---------------: | ------------------: |
+| student + topic (total)  |                0 |                   0 |
+| student + topic (active) |                0 |                   0 |
 
 ### Dangling references
 
@@ -345,22 +345,22 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 3 |
-| _id | objectId | 3 |
-| createdAt | date | 3 |
-| currentLevel | int | 3 |
-| overallEvaluation.recommendations | array | 1 |
-| overallEvaluation.strengths | array | 1 |
-| overallEvaluation.summary | string | 1 |
-| overallEvaluation.weaknesses | array | 1 |
-| overallEvaluation | object | 1 |
-| startedAt | date | 3 |
-| status | string | 3 |
-| student | objectId | 3 |
-| topic | objectId | 3 |
-| updatedAt | date | 3 |
+| field                             | BSON type | documents |
+| --------------------------------- | --------- | --------: |
+| __v                               | int       |         3 |
+| _id                               | objectId  |         3 |
+| createdAt                         | date      |         3 |
+| currentLevel                      | int       |         3 |
+| overallEvaluation.recommendations | array     |         1 |
+| overallEvaluation.strengths       | array     |         1 |
+| overallEvaluation.summary         | string    |         1 |
+| overallEvaluation.weaknesses      | array     |         1 |
+| overallEvaluation                 | object    |         1 |
+| startedAt                         | date      |         3 |
+| status                            | string    |         3 |
+| student                           | objectId  |         3 |
+| topic                             | objectId  |         3 |
+| updatedAt                         | date      |         3 |
 
 ## liveQuestions
 
@@ -374,17 +374,17 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| session + level + questionNumber (all) | 22 | 50 |
-| session + level + questionNumber (pending) | 0 | 0 |
-| session + level + questionNumber (not rejected) | 3 | 6 |
+| natural key                                     | duplicate groups | documents in groups |
+| ----------------------------------------------- | ---------------: | ------------------: |
+| session + level + questionNumber (all)          |               22 |                  50 |
+| session + level + questionNumber (pending)      |                0 |                   0 |
+| session + level + questionNumber (not rejected) |                3 |                   6 |
 
 ### Dangling references
 
@@ -402,48 +402,48 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 203 |
-| _id | objectId | 203 |
-| answer.answer | string | 169 |
-| answer.answerText | string | 117 |
-| answer.correctAnswer | string | 169 |
-| answer.correctAnswerText | string | 117 |
-| answer.evaluatedBy | string | 169 |
-| answer.feedback | string | 169 |
-| answer.id | string | 169 |
-| answer.questionId | string | 169 |
-| answer.questionPrompt | string | 150 |
-| answer.questionType | string | 169 |
-| answer.score | double | 14 |
-| answer.score | int | 155 |
-| answer.strengths | array | 169 |
-| answer.targetConcepts | array | 169 |
-| answer.weaknesses | array | 169 |
-| answeredAt | date | 169 |
-| answer | object | 169 |
-| createdAt | date | 203 |
-| level | int | 203 |
-| liveSession | objectId | 203 |
-| question.correctOptionId | string | 159 |
-| question.feedback.correct | string | 203 |
-| question.feedback.incorrect | string | 203 |
-| question.feedback | object | 203 |
-| question.id | string | 203 |
-| question.options.id | string | 477 |
-| question.options.text | string | 477 |
-| question.options | array | 159 |
-| question.prompt | string | 203 |
-| question.rubrics.keyPoints | array | 203 |
-| question.rubrics.misconceptions | array | 203 |
-| question.rubrics | object | 203 |
-| question.targetConcepts | array | 203 |
-| question.type | string | 203 |
-| questionNumber | int | 203 |
-| question | object | 203 |
-| status | string | 203 |
-| updatedAt | date | 203 |
+| field                           | BSON type | documents |
+| ------------------------------- | --------- | --------: |
+| __v                             | int       |       203 |
+| _id                             | objectId  |       203 |
+| answer.answer                   | string    |       169 |
+| answer.answerText               | string    |       117 |
+| answer.correctAnswer            | string    |       169 |
+| answer.correctAnswerText        | string    |       117 |
+| answer.evaluatedBy              | string    |       169 |
+| answer.feedback                 | string    |       169 |
+| answer.id                       | string    |       169 |
+| answer.questionId               | string    |       169 |
+| answer.questionPrompt           | string    |       150 |
+| answer.questionType             | string    |       169 |
+| answer.score                    | double    |        14 |
+| answer.score                    | int       |       155 |
+| answer.strengths                | array     |       169 |
+| answer.targetConcepts           | array     |       169 |
+| answer.weaknesses               | array     |       169 |
+| answeredAt                      | date      |       169 |
+| answer                          | object    |       169 |
+| createdAt                       | date      |       203 |
+| level                           | int       |       203 |
+| liveSession                     | objectId  |       203 |
+| question.correctOptionId        | string    |       159 |
+| question.feedback.correct       | string    |       203 |
+| question.feedback.incorrect     | string    |       203 |
+| question.feedback               | object    |       203 |
+| question.id                     | string    |       203 |
+| question.options.id             | string    |       477 |
+| question.options.text           | string    |       477 |
+| question.options                | array     |       159 |
+| question.prompt                 | string    |       203 |
+| question.rubrics.keyPoints      | array     |       203 |
+| question.rubrics.misconceptions | array     |       203 |
+| question.rubrics                | object    |       203 |
+| question.targetConcepts         | array     |       203 |
+| question.type                   | string    |       203 |
+| questionNumber                  | int       |       203 |
+| question                        | object    |       203 |
+| status                          | string    |       203 |
+| updatedAt                       | date      |       203 |
 
 ## setAttempts
 
@@ -458,18 +458,18 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| session + questionSet | 9 | 21 |
-| liveSession + questionSet | 0 | 0 |
-| session + level | 9 | 21 |
-| liveSession + level | 9 | 18 |
+| natural key               | duplicate groups | documents in groups |
+| ------------------------- | ---------------: | ------------------: |
+| session + questionSet     |                9 |                  21 |
+| liveSession + questionSet |                0 |                   0 |
+| session + level           |                9 |                  21 |
+| liveSession + level       |                9 |                  18 |
 
 ### Dangling references
 
@@ -489,45 +489,45 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 145 |
-| _id | objectId | 145 |
-| answers.answer | string | 435 |
-| answers.answerText | string | 135 |
-| answers.correctAnswer | string | 435 |
-| answers.correctAnswerText | string | 135 |
-| answers.evaluatedBy | string | 435 |
-| answers.feedback | string | 435 |
-| answers.id | string | 435 |
-| answers.questionId | string | 435 |
-| answers.questionPrompt | string | 168 |
-| answers.questionType | string | 435 |
-| answers.score | double | 30 |
-| answers.score | int | 405 |
-| answers.strength | array | 72 |
-| answers.strengths | array | 363 |
-| answers.targetConcepts | array | 435 |
-| answers.weakness | array | 72 |
-| answers.weaknesses | array | 363 |
-| answers | array | 145 |
-| createdAt | date | 145 |
-| evaluatedAt | date | 145 |
-| level | int | 145 |
-| liveSession | objectId | 64 |
-| passed | bool | 145 |
-| questionSet | objectId | 145 |
-| session | objectId | 81 |
-| setScore | double | 38 |
-| setScore | int | 107 |
-| strength | array | 24 |
-| strengths | array | 121 |
-| submittedAt | date | 145 |
-| topic | objectId | 145 |
-| updatedAt | date | 145 |
-| user | objectId | 145 |
-| weakness | array | 24 |
-| weaknesses | array | 121 |
+| field                     | BSON type | documents |
+| ------------------------- | --------- | --------: |
+| __v                       | int       |       145 |
+| _id                       | objectId  |       145 |
+| answers.answer            | string    |       435 |
+| answers.answerText        | string    |       135 |
+| answers.correctAnswer     | string    |       435 |
+| answers.correctAnswerText | string    |       135 |
+| answers.evaluatedBy       | string    |       435 |
+| answers.feedback          | string    |       435 |
+| answers.id                | string    |       435 |
+| answers.questionId        | string    |       435 |
+| answers.questionPrompt    | string    |       168 |
+| answers.questionType      | string    |       435 |
+| answers.score             | double    |        30 |
+| answers.score             | int       |       405 |
+| answers.strength          | array     |        72 |
+| answers.strengths         | array     |       363 |
+| answers.targetConcepts    | array     |       435 |
+| answers.weakness          | array     |        72 |
+| answers.weaknesses        | array     |       363 |
+| answers                   | array     |       145 |
+| createdAt                 | date      |       145 |
+| evaluatedAt               | date      |       145 |
+| level                     | int       |       145 |
+| liveSession               | objectId  |        64 |
+| passed                    | bool      |       145 |
+| questionSet               | objectId  |       145 |
+| session                   | objectId  |        81 |
+| setScore                  | double    |        38 |
+| setScore                  | int       |       107 |
+| strength                  | array     |        24 |
+| strengths                 | array     |       121 |
+| submittedAt               | date      |       145 |
+| topic                     | objectId  |       145 |
+| updatedAt                 | date      |       145 |
+| user                      | objectId  |       145 |
+| weakness                  | array     |        24 |
+| weaknesses                | array     |       121 |
 
 ## sessionEvaluations
 
@@ -543,16 +543,16 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
+| name | key         | unique | expireAfterSeconds |
+| ---- | ----------- | ------ | ------------------ |
+| _id_ | `{"_id":1}` | false  |                    |
 
 ### Duplicate natural keys
 
-| natural key | duplicate groups | documents in groups |
-| --- | ---: | ---: |
-| session + fromLevel + toLevel | 0 | 0 |
-| liveSession + fromLevel + toLevel | 0 | 0 |
+| natural key                       | duplicate groups | documents in groups |
+| --------------------------------- | ---------------: | ------------------: |
+| session + fromLevel + toLevel     |                0 |                   0 |
+| liveSession + fromLevel + toLevel |                0 |                   0 |
 
 ### Dangling references
 
@@ -571,32 +571,32 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 7 |
-| _id | objectId | 7 |
-| attemptIds[] | string | 80 |
-| attemptIds | array | 7 |
-| createdAt | date | 7 |
-| fromLevel | int | 7 |
-| liveSession | objectId | 2 |
-| overallScore | double | 1 |
-| overallScore | int | 6 |
-| recommendation | array | 1 |
-| recommendations[] | string | 3 |
-| recommendations | array | 6 |
-| session | objectId | 5 |
-| stength | array | 1 |
-| strengths[] | string | 211 |
-| strengths | array | 6 |
-| student | objectId | 7 |
-| summary | string | 7 |
-| toLevel | int | 7 |
-| topic | objectId | 7 |
-| updatedAt | date | 7 |
-| weakness | array | 1 |
-| weaknesses[] | string | 3 |
-| weaknesses | array | 6 |
+| field             | BSON type | documents |
+| ----------------- | --------- | --------: |
+| __v               | int       |         7 |
+| _id               | objectId  |         7 |
+| attemptIds[]      | string    |        80 |
+| attemptIds        | array     |         7 |
+| createdAt         | date      |         7 |
+| fromLevel         | int       |         7 |
+| liveSession       | objectId  |         2 |
+| overallScore      | double    |         1 |
+| overallScore      | int       |         6 |
+| recommendation    | array     |         1 |
+| recommendations[] | string    |         3 |
+| recommendations   | array     |         6 |
+| session           | objectId  |         5 |
+| stength           | array     |         1 |
+| strengths[]       | string    |       211 |
+| strengths         | array     |         6 |
+| student           | objectId  |         7 |
+| summary           | string    |         7 |
+| toLevel           | int       |         7 |
+| topic             | objectId  |         7 |
+| updatedAt         | date      |         7 |
+| weakness          | array     |         1 |
+| weaknesses[]      | string    |         3 |
+| weaknesses        | array     |         6 |
 
 ## aiLogs
 
@@ -608,10 +608,10 @@ _none found_
 
 ### Indexes
 
-| name | key | unique | expireAfterSeconds |
-| --- | --- | --- | --- |
-| _id_ | `{"_id":1}` | false |  |
-| createdAt_-1 | `{"createdAt":-1}` | false |  |
+| name         | key                | unique | expireAfterSeconds |
+| ------------ | ------------------ | ------ | ------------------ |
+| _id_         | `{"_id":1}`        | false  |                    |
+| createdAt_-1 | `{"createdAt":-1}` | false  |                    |
 
 ### Duplicate natural keys
 
@@ -631,17 +631,17 @@ _none found_
 
 ### Field shape (name + BSON type frequency)
 
-| field | BSON type | documents |
-| --- | --- | ---: |
-| __v | int | 148 |
-| _id | objectId | 148 |
-| aiModel | string | 148 |
-| createdAt | date | 148 |
-| liveQuestion | objectId | 148 |
-| operation | string | 148 |
-| output | string | 148 |
-| prompt | string | 148 |
-| updatedAt | date | 148 |
+| field        | BSON type | documents |
+| ------------ | --------- | --------: |
+| __v          | int       |       148 |
+| _id          | objectId  |       148 |
+| aiModel      | string    |       148 |
+| createdAt    | date      |       148 |
+| liveQuestion | objectId  |       148 |
+| operation    | string    |       148 |
+| output       | string    |       148 |
+| prompt       | string    |       148 |
+| updatedAt    | date      |       148 |
 
 ## Findings for the Go BSON mappers
 
@@ -667,4 +667,3 @@ Structural facts independent of this snapshot:
   or null; mappers must treat them as omitempty pointers.
 - Embedded question shapes are polymorphic on `type`; malformed
   counts above describe exactly which legacy deviations exist.
-

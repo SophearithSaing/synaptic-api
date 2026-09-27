@@ -23,10 +23,7 @@ export class CookieJar {
           const at = attribute.indexOf('=');
           return at === -1
             ? [attribute.toLowerCase(), true]
-            : [
-                attribute.slice(0, at).toLowerCase(),
-                attribute.slice(at + 1),
-              ];
+            : [attribute.slice(0, at).toLowerCase(), attribute.slice(at + 1)];
         }),
       );
 

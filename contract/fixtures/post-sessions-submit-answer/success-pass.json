@@ -50,12 +50,8 @@
             "correctAnswerText": "seed-l0-q1 option one",
             "score": 1,
             "feedback": "Correct feedback.",
-            "targetConcepts": [
-              "binary-addition"
-            ],
-            "strengths": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
+            "strengths": ["binary-addition"],
             "weaknesses": [],
             "evaluatedBy": "system"
           },
@@ -70,21 +66,15 @@
             "correctAnswerText": "seed-l0-q2 option two",
             "score": 1,
             "feedback": "Correct feedback.",
-            "targetConcepts": [
-              "binary-addition"
-            ],
-            "strengths": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
+            "strengths": ["binary-addition"],
             "weaknesses": [],
             "evaluatedBy": "system"
           }
         ],
         "setScore": 1,
         "passed": true,
-        "strengths": [
-          "binary-addition"
-        ],
+        "strengths": ["binary-addition"],
         "weaknesses": [],
         "submittedAt": "<isoDate>",
         "evaluatedAt": "<isoDate>",
@@ -101,21 +91,14 @@
             "id": "seed-l1-q1",
             "type": "written",
             "prompt": "Explain two's complement.",
-            "targetConcepts": [
-              "twos-complement"
-            ],
+            "targetConcepts": ["twos-complement"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Invert bits.",
-                "Add one."
-              ],
-              "misconceptions": [
-                "Sign bit only."
-              ]
+              "keyPoints": ["Invert bits.", "Add one."],
+              "misconceptions": ["Sign bit only."]
             }
           }
         ],

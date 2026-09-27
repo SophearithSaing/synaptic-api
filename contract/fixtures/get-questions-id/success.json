@@ -22,10 +22,7 @@
         "slug": "binary-basics",
         "description": "Binary numbers and arithmetic.",
         "icon": "binary",
-        "tags": [
-          "binary",
-          "arithmetic"
-        ],
+        "tags": ["binary", "arithmetic"],
         "category": "<objectId:03>",
         "createdAt": "<isoDate>",
         "updatedAt": "<isoDate>",
@@ -53,20 +50,14 @@
             }
           ],
           "correctOptionId": "o1",
-          "targetConcepts": [
-            "binary-addition"
-          ],
+          "targetConcepts": ["binary-addition"],
           "feedback": {
             "correct": "Correct feedback.",
             "incorrect": "Incorrect feedback."
           },
           "rubrics": {
-            "keyPoints": [
-              "Key point."
-            ],
-            "misconceptions": [
-              "Misconception."
-            ]
+            "keyPoints": ["Key point."],
+            "misconceptions": ["Misconception."]
           }
         },
         {
@@ -88,20 +79,14 @@
             }
           ],
           "correctOptionId": "o2",
-          "targetConcepts": [
-            "binary-addition"
-          ],
+          "targetConcepts": ["binary-addition"],
           "feedback": {
             "correct": "Correct feedback.",
             "incorrect": "Incorrect feedback."
           },
           "rubrics": {
-            "keyPoints": [
-              "Key point."
-            ],
-            "misconceptions": [
-              "Misconception."
-            ]
+            "keyPoints": ["Key point."],
+            "misconceptions": ["Misconception."]
           }
         }
       ],

@@ -52,20 +52,14 @@
                 }
               ],
               "correctOptionId": "binary-basics-l1-q1-o2",
-              "targetConcepts": [
-                "stub-concept"
-              ],
+              "targetConcepts": ["stub-concept"],
               "feedback": {
                 "correct": "Stub correct feedback.",
                 "incorrect": "Stub incorrect feedback."
               },
               "rubrics": {
-                "keyPoints": [
-                  "Stub key point."
-                ],
-                "misconceptions": [
-                  "Stub misconception."
-                ]
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
               }
             },
             "level": 1,
@@ -101,20 +95,14 @@
                 }
               ],
               "correctOptionId": "binary-basics-l0-q3-o2",
-              "targetConcepts": [
-                "stub-concept"
-              ],
+              "targetConcepts": ["stub-concept"],
               "feedback": {
                 "correct": "Stub correct feedback.",
                 "incorrect": "Stub incorrect feedback."
               },
               "rubrics": {
-                "keyPoints": [
-                  "Stub key point."
-                ],
-                "misconceptions": [
-                  "Stub misconception."
-                ]
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
               }
             },
             "level": 0,
@@ -150,20 +138,14 @@
                 }
               ],
               "correctOptionId": "binary-basics-l0-q2-o2",
-              "targetConcepts": [
-                "stub-concept"
-              ],
+              "targetConcepts": ["stub-concept"],
               "feedback": {
                 "correct": "Stub correct feedback.",
                 "incorrect": "Stub incorrect feedback."
               },
               "rubrics": {
-                "keyPoints": [
-                  "Stub key point."
-                ],
-                "misconceptions": [
-                  "Stub misconception."
-                ]
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
               }
             },
             "level": 0,
@@ -199,20 +181,14 @@
                 }
               ],
               "correctOptionId": "binary-basics-l0-q1-o2",
-              "targetConcepts": [
-                "stub-concept"
-              ],
+              "targetConcepts": ["stub-concept"],
               "feedback": {
                 "correct": "Stub correct feedback.",
                 "incorrect": "Stub incorrect feedback."
               },
               "rubrics": {
-                "keyPoints": [
-                  "Stub key point."
-                ],
-                "misconceptions": [
-                  "Stub misconception."
-                ]
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
               }
             },
             "level": 0,
@@ -248,20 +224,14 @@
                 }
               ],
               "correctOptionId": "binary-basics-l0-q1-o2",
-              "targetConcepts": [
-                "stub-concept"
-              ],
+              "targetConcepts": ["stub-concept"],
               "feedback": {
                 "correct": "Stub correct feedback.",
                 "incorrect": "Stub incorrect feedback."
               },
               "rubrics": {
-                "keyPoints": [
-                  "Stub key point."
-                ],
-                "misconceptions": [
-                  "Stub misconception."
-                ]
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
               }
             },
             "level": 0,

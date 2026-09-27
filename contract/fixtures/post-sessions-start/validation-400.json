@@ -19,9 +19,7 @@
       "content-type": "application/json; charset=utf-8"
     },
     "body": {
-      "message": [
-        "topicId must be a mongodb id"
-      ],
+      "message": ["topicId must be a mongodb id"],
       "error": "Bad Request",
       "statusCode": 400
     }

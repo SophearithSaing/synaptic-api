@@ -40,20 +40,14 @@
               }
             ],
             "correctOptionId": "o1",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Key point."
-              ],
-              "misconceptions": [
-                "Misconception."
-              ]
+              "keyPoints": ["Key point."],
+              "misconceptions": ["Misconception."]
             }
           },
           {
@@ -75,20 +69,14 @@
               }
             ],
             "correctOptionId": "o2",
-            "targetConcepts": [
-              "binary-addition"
-            ],
+            "targetConcepts": ["binary-addition"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Key point."
-              ],
-              "misconceptions": [
-                "Misconception."
-              ]
+              "keyPoints": ["Key point."],
+              "misconceptions": ["Misconception."]
             }
           }
         ],
@@ -105,21 +93,14 @@
             "id": "seed-l1-q1",
             "type": "written",
             "prompt": "Explain two's complement.",
-            "targetConcepts": [
-              "twos-complement"
-            ],
+            "targetConcepts": ["twos-complement"],
             "feedback": {
               "correct": "Correct feedback.",
               "incorrect": "Incorrect feedback."
             },
             "rubrics": {
-              "keyPoints": [
-                "Invert bits.",
-                "Add one."
-              ],
-              "misconceptions": [
-                "Sign bit only."
-              ]
+              "keyPoints": ["Invert bits.", "Add one."],
+              "misconceptions": ["Sign bit only."]
             }
           }
         ],
@@ -151,20 +132,14 @@
               }
             ],
             "correctOptionId": "o1",
-            "targetConcepts": [
-              "hardware-basics"
-            ],
+            "targetConcepts": ["hardware-basics"],
             "feedback": {
               "correct": "Correct.",
               "incorrect": "Incorrect."
             },
             "rubrics": {
-              "keyPoints": [
-                "Central processing."
-              ],
-              "misconceptions": [
-                "Personal computer."
-              ]
+              "keyPoints": ["Central processing."],
+              "misconceptions": ["Personal computer."]
             }
           }
         ],

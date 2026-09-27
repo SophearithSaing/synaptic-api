@@ -29,7 +29,8 @@ export const stubState = {
 /** Builds a fixed generated question for the requested type. */
 function buildGeneratedQuestion(requestBody) {
   const userPrompt = JSON.parse(requestBody.messages[1].content);
-  const questionType = userPrompt.questionType === 'written' ? 'written' : 'mcq';
+  const questionType =
+    userPrompt.questionType === 'written' ? 'written' : 'mcq';
   const question = {
     id: 'stub-q',
     type: questionType,
