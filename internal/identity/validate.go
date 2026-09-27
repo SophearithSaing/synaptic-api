@@ -126,7 +126,7 @@ func (rules fieldRules) checkFailures(value string) []string {
 	if rules.check != nil {
 		messages = violation(
 			messages,
-			rules.check(value),
+			!rules.check(value),
 			msgMatches, rules.prop, rules.patternSrc,
 		)
 	}

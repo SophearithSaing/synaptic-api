@@ -175,12 +175,20 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, map[string]string{
-		"email":    user.Email,
-		"username": user.Username,
-		"role":     string(user.Role),
-		"userId":   user.ID,
+	web.WriteJSON(w, http.StatusOK, meResponse{
+		Email:    user.Email,
+		Username: user.Username,
+		Role:     string(user.Role),
+		UserID:   user.ID,
 	})
+}
+
+// meResponse is the ordered GET /auth/me body shape.
+type meResponse struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	UserID   string `json:"userId"`
 }
 
 // sameSite picks the environment-specific SameSite policy.
@@ -193,11 +201,12 @@ func (h *Handler) sameSite() http.SameSite {
 }
 
 // authCookie builds an auth cookie with the environment policy.
+// Positive maxAge cookies carry both Max-Age and Expires.
 func (h *Handler) authCookie(
 	name, value, path string,
 	maxAge time.Duration,
 ) *http.Cookie {
-	return &http.Cookie{
+	cookie := &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     path,
@@ -206,6 +215,11 @@ func (h *Handler) authCookie(
 		SameSite: h.sameSite(),
 		MaxAge:   int(maxAge / time.Second),
 	}
+	if maxAge > 0 {
+		cookie.Expires = time.Now().Add(maxAge)
+	}
+
+	return cookie
 }
 
 // clearCookie expires an auth cookie with no Max-Age.

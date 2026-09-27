@@ -67,7 +67,9 @@ func New(cfg config.Config) (*App, error) {
 		"POST /auth/login":    loginThrottle,
 	})
 	store := mongostore.NewIdentityStore(mongoClient.Database(cfg.MongoDatabase))
-	issuer := identity.NewTokenIssuer(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience)
+	issuer := identity.NewTokenIssuer(
+		cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL,
+	)
 	service := identity.NewService(store, issuer, identity.Options{
 		AccessTTL:     cfg.JWTAccessTTL,
 		RefreshTTL:    cfg.JWTRefreshTTL,

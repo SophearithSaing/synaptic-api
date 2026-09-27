@@ -14,17 +14,22 @@ import (
 // TokenIssuer signs and verifies HS256 access tokens with pinned
 // issuer, audience, and methods.
 type TokenIssuer struct {
-	secret   []byte
-	issuer   string
-	audience string
+	secret    []byte
+	issuer    string
+	audience  string
+	accessTTL time.Duration
 }
 
 // NewTokenIssuer builds a TokenIssuer from configuration secrets.
-func NewTokenIssuer(secret, issuer, audience string) *TokenIssuer {
+func NewTokenIssuer(
+	secret, issuer, audience string,
+	accessTTL time.Duration,
+) *TokenIssuer {
 	return &TokenIssuer{
-		secret:   []byte(secret),
-		issuer:   issuer,
-		audience: audience,
+		secret:    []byte(secret),
+		issuer:    issuer,
+		audience:  audience,
+		accessTTL: accessTTL,
 	}
 }
 
@@ -40,6 +45,7 @@ func (t *TokenIssuer) Issue(
 		"iss":      t.issuer,
 		"aud":      t.audience,
 		"iat":      jwt.NewNumericDate(now),
+		"exp":      jwt.NewNumericDate(now.Add(t.accessTTL)),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
 		SignedString(t.secret)

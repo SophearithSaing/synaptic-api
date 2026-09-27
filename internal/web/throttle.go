@@ -109,10 +109,16 @@ func rejectThrottled(w http.ResponseWriter, retryAfter time.Duration) {
 		"Retry-After",
 		strconv.Itoa(int(math.Ceil(retryAfter.Seconds()))),
 	)
-	WriteJSON(w, http.StatusTooManyRequests, &Error{
+	WriteJSON(w, http.StatusTooManyRequests, throttledBody{
 		StatusCode: http.StatusTooManyRequests,
 		Message:    throttledMessage,
 	})
+}
+
+// throttledBody is the pinned 429 body with statusCode first.
+type throttledBody struct {
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
 }
 
 // Middleware returns rate-limiting middleware applying the global

@@ -7,16 +7,17 @@ import (
 	"net/http"
 )
 
-// Error is an application failure rendered as a stable JSON body matching
-// the legacy NestJS error shape.
+// Error is an application failure rendered as a stable JSON body
+// matching the legacy NestJS error shape. Field order matches the
+// legacy encoder output.
 type Error struct {
-	// StatusCode is the HTTP status code.
-	StatusCode int `json:"statusCode"`
-	// Message describes the failure for the client. It may be a string or
-	// a list of validation messages.
+	// Message describes the failure for the client. It may be a string
+	// or a list of validation messages.
 	Message any `json:"message"`
 	// ErrorName is the conventional HTTP error label, when applicable.
 	ErrorName string `json:"error,omitempty"`
+	// StatusCode is the HTTP status code.
+	StatusCode int `json:"statusCode"`
 }
 
 // Error returns the message when it is a string, or the status text.
