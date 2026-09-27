@@ -224,9 +224,13 @@ func TestRealRegisterPersistsExactBSON(t *testing.T) {
 	if _, revoked := session["revokedAt"]; revoked {
 		t.Error("new authSession must omit revokedAt")
 	}
-	expiresAt, ok := session["expiresAt"].(time.Time)
-	if !ok || !expiresAt.After(time.Now().Add(6*24*time.Hour)) {
-		t.Errorf("expiresAt %v", session["expiresAt"])
+	expiresAt, ok := session["expiresAt"].(bson.DateTime)
+	if !ok {
+		t.Fatalf("expiresAt type %T", session["expiresAt"])
+	}
+	expiry := time.UnixMilli(int64(expiresAt))
+	if !expiry.After(time.Now().Add(6 * 24 * time.Hour)) {
+		t.Errorf("expiresAt %v", expiry)
 	}
 }
 
