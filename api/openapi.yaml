@@ -1,0 +1,2080 @@
+openapi: 3.0.3
+info:
+  title: Synaptic API
+  version: 0.0.1
+  description: |
+    Behavioral contract captured from the NestJS implementation on `main`
+    (source of truth: the 7 controllers, guards, interceptors, DTOs and
+    `src/main.ts` / `src/app.module.ts` under `src/`). 33 routes.
+
+    ## Request pipeline order (per request)
+
+    1. CORS (credentials enabled, single origin from `CLIENT_URL`,
+       default `http://localhost:4200`).
+    2. Body parsing (JSON and urlencoded, 5 MB limit; oversized -> 413).
+    3. `ThrottlerGuard` (global) -> 429 when the per-IP limit is exceeded.
+    4. `CsrfGuard` (global) -> 403 for unsafe methods without a valid
+       double-submit token pair.
+    5. Route guards: `JwtAuthGuard` -> 401, then `RolesGuard` -> 403.
+    6. Global `ValidationPipe` (`whitelist: true`,
+       `forbidNonWhitelisted: true`, `transform: true`) -> 400 on schema
+       violations, on unknown properties
+       (`property <name> should not exist`), and on parameter pipe
+       failures (`MongoIdPipe`, `ParseArrayPipe`).
+    7. Handler/service errors (404, 409, 503, unhandled -> 500).
+
+    ## Authentication
+
+    JWT access tokens are accepted from EITHER the `Authorization: Bearer`
+    header OR the `access_token` cookie (header takes precedence). Tokens
+    are signed with `JWT_SECRET` and must match `JWT_ISSUER` /
+    `JWT_AUDIENCE`; payload is `{ email, username, sub }`. `sub` must
+    reference an existing user or the request is 401. Refresh uses the
+    `refresh_token` cookie (value `<authSessionId>.<secret>`), only sent
+    to paths under `/auth`.
+
+    ## CSRF (double-submit cookie)
+
+    Every non-safe method (not GET/HEAD/OPTIONS) must send the
+    `csrf_token` cookie AND an `x-csrf-token` header with the identical
+    value, or the request fails with 403 `Invalid CSRF token`. This
+    applies to ALL mutating routes including `/auth/register`,
+    `/auth/login`, `/auth/refresh` and `/auth/logout`. Obtain a token via
+    `GET /auth/csrf`.
+
+    ## Error body shape
+
+    Nest default: `{ "statusCode": <int>, "message": <string|string[]>,
+    "error": <string> }`. DTO validation failures return `message` as an
+    array of strings. `UnauthorizedException` and role-denial
+    `ForbiddenException` thrown without arguments omit the `error` key.
+    Unhandled errors return 500 `{ "statusCode": 500, "message":
+    "Internal server error" }`. Unmatched routes return 404
+    `{ "statusCode": 404, "message": "Cannot <METHOD> <path>", "error":
+    "Not Found" }`.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development (PORT env, default 3000)
+
+tags:
+  - name: root
+  - name: auth
+  - name: ai
+  - name: categories
+  - name: topics
+  - name: questions
+  - name: sessions
+  - name: live-sessions
+
+# Auth cookie attributes exactly as set by src/auth/auth-cookie.ts.
+# No cookie ever sets Domain, so all cookies are host-only.
+x-auth-cookies:
+  access_token:
+    value: JWT access token
+    httpOnly: true
+    secure: true
+    sameSite: 'None'
+    path: /
+    maxAge: >-
+      Derived from env JWT_ACCESS_EXPIRES_IN (e.g. 1d = 86400 s).
+      Set on register/login/refresh; cleared on logout.
+  refresh_token:
+    value: '"<authSessionId>.<secret>" (ObjectId hex + base64url secret)'
+    httpOnly: true
+    secure: true
+    sameSite: 'None'
+    path: /auth
+    maxAge: >-
+      Derived from env JWT_REFRESH_EXPIRES_IN (e.g. 7d = 604800 s).
+      Set on register/login/refresh (rotated on refresh); cleared on
+      logout.
+  csrf_token:
+    value: 32 random bytes, base64url
+    httpOnly: false
+    secure: true
+    sameSite: 'None'
+    path: /
+    maxAge: none (session cookie); set by GET /auth/csrf
+
+x-throttling:
+  description: >-
+    Global @nestjs/throttler guard, tracked per client IP. Exceeding the
+    limit returns 429 {"statusCode":429,"message":"ThrottlerException:
+    Too Many Requests"}. Overrides apply to the route for the remainder
+    of the block duration.
+  default: { limit: 100, ttlMs: 60000, blockDurationMs: 60000 }
+  overrides:
+    'POST /auth/register': { limit: 3, ttlMs: 60000, blockDurationMs: 300000 }
+    'POST /auth/login': { limit: 5, ttlMs: 60000, blockDurationMs: 300000 }
+
+paths:
+  /:
+    get:
+      tags: [root]
+      operationId: getHello
+      summary: Basic greeting / liveness probe
+      description: Public. Returns a plain string as `text/html`.
+      security: []
+      responses:
+        '200':
+          description: Greeting string
+          content:
+            text/html:
+              schema: { type: string, example: 'Hello World!' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Register a new user
+      description: |
+        Public, but requires the CSRF double-submit pair. Throttled to
+        3 requests/minute per IP with a 5-minute block. On success sets
+        the `access_token` and `refresh_token` cookies (see
+        `x-auth-cookies`). `username` is trimmed; `email` is trimmed and
+        lowercased before validation. Username uniqueness is
+        case-insensitive (Mongo collation strength 2); email uniqueness
+        is exact.
+      security:
+        - csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Registered; auth cookies set
+          headers:
+            Set-Cookie:
+              description: >-
+                `access_token` (path=/, HttpOnly) and `refresh_token`
+                (path=/auth, HttpOnly); both Secure + SameSite=None.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthStatusResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                username:
+                  value:
+                    statusCode: 409
+                    message: Username already exists
+                    error: Conflict
+                email:
+                  value:
+                    statusCode: 409
+                    message: Email already exists
+                    error: Conflict
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/csrf:
+    get:
+      tags: [auth]
+      operationId: getCsrfToken
+      summary: Issue a CSRF token
+      description: >-
+        Public. Returns a fresh token and also sets it as the JS-readable
+        (not HttpOnly) `csrf_token` cookie. The token must be echoed in
+        the `x-csrf-token` header of every mutating request.
+      security: []
+      responses:
+        '200':
+          description: CSRF token issued
+          headers:
+            Set-Cookie:
+              description: >-
+                `csrf_token=<token>; Path=/; Secure; SameSite=None`
+                (no HttpOnly, no Max-Age: session cookie).
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CsrfTokenResponse' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticatedUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refresh
+      summary: Rotate the auth session
+      description: >-
+        Reads the `refresh_token` cookie (no request body). On success the
+        refresh token is rotated and both auth cookies are re-set. Fails
+        401 when the cookie is missing/malformed, the session is unknown,
+        revoked or expired, the secret does not match, or the user no
+        longer exists.
+      security:
+        - refreshCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      responses:
+        '201':
+          description: Session rotated; auth cookies re-set
+          headers:
+            Set-Cookie:
+              description: New `access_token` and `refresh_token` cookies.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthStatusResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Log out the current session
+      description: >-
+        Revokes the auth session referenced by the `refresh_token` cookie
+        (best-effort: a missing or malformed token is silently ignored and
+        never fails) and clears both auth cookies. The `csrf_token`
+        cookie is NOT cleared. Returns 201 with an empty body.
+      security:
+        - csrfCookie: []
+          csrfHeader: []
+      responses:
+        '201':
+          description: Logged out; empty body
+          headers:
+            Set-Cookie:
+              description: >-
+                Expired `access_token` (path=/) and `refresh_token`
+                (path=/auth) cookies.
+              schema: { type: string }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Log in with username/email + password
+      description: |
+        Public, but requires the CSRF double-submit pair. Throttled to
+        5 requests/minute per IP with a 5-minute block. `identifier` is
+        trimmed; values containing `@` are matched against the lowercased
+        email, anything else against the username (case-insensitive).
+        On success sets the `access_token` and `refresh_token` cookies.
+      security:
+        - csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '201':
+          description: Logged in; auth cookies set
+          headers:
+            Set-Cookie:
+              description: '`access_token` and `refresh_token` cookies.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthStatusResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Unknown identifier or wrong password
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 401
+                message: Unauthorized
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /ai/logs:
+    get:
+      tags: [ai]
+      operationId: getAiLogs
+      summary: Get paginated AI completion logs
+      description: >-
+        Admin only. Sorted by `createdAt` descending. Query values are
+        transformed to numbers; non-numeric or out-of-range values fail
+        with 400.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Requested page of AI logs
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiLogPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/RoleForbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /categories/category/create:
+    post:
+      tags: [categories]
+      operationId: createCategory
+      summary: Create a category
+      description: >-
+        Admin only. Note the doubled path segments (controller prefix
+        `categories` + route `category/create`). A duplicate `slug`
+        violates the unique Mongo index and surfaces as 500, not 409.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
+      responses:
+        '201':
+          description: Created category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /categories/categories:
+    get:
+      tags: [categories]
+      operationId: getCategories
+      summary: List all categories
+      description: >-
+        Any authenticated role. Note the doubled path segments. Sorted by
+        `title` ascending.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: All categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /categories/{id}:
+    get:
+      tags: [categories]
+      operationId: getCategoryById
+      summary: Get a category by ID
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '200':
+          description: The requested category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Category not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+    delete:
+      tags: [categories]
+      operationId: deleteCategory
+      summary: Delete a category
+      description: Admin only. Returns 204 with an empty body.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '204': { description: Category deleted; empty body }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Category not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /topics/create:
+    post:
+      tags: [topics]
+      operationId: createTopic
+      summary: Create a topic
+      description: >-
+        Admin only. `category` must reference an existing category ID
+        (not verified at validation time; a dangling ID is persisted and
+        only breaks later on populate). A duplicate `slug` surfaces as
+        500, not 409.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTopicRequest' }
+      responses:
+        '201':
+          description: Created topic (category populated)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Topic' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /topics:
+    get:
+      tags: [topics]
+      operationId: getTopics
+      summary: List all topics
+      description: Any authenticated role. Sorted by `title` ascending.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: All topics
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Topic' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /topics/{id}:
+    get:
+      tags: [topics]
+      operationId: getTopicById
+      summary: Get a topic by ID
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '200':
+          description: The requested topic (category populated)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Topic' }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Topic not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+    delete:
+      tags: [topics]
+      operationId: deleteTopic
+      summary: Delete a topic
+      description: Admin only. Returns 204 with an empty body.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '204': { description: Topic deleted; empty body }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Topic not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /questions/create:
+    post:
+      tags: [questions]
+      operationId: createQuestionSets
+      summary: Create question sets (bulk)
+      description: >-
+        Admin only. Body is a JSON array validated item-by-item via
+        `ParseArrayPipe` (a non-array body fails 400; an empty array
+        passes and returns `[]`).
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/CreateQuestionSetRequest' }
+      responses:
+        '201':
+          description: Created question sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QuestionSet' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /questions/update:
+    patch:
+      tags: [questions]
+      operationId: bulkUpdateQuestionSets
+      summary: Update question sets (bulk)
+      description: >-
+        Admin only. Each item must carry the target `id`; items are
+        applied independently via `Promise.all`, so one missing set fails
+        the whole request with 404 and sibling updates may already be
+        persisted.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BulkUpdateQuestionSetRequest'
+      responses:
+        '200':
+          description: Updated question sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QuestionSet' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Question set not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /questions/topic/{slug}:
+    get:
+      tags: [questions]
+      operationId: getQuestionSetsByTopicSlug
+      summary: List question sets for a topic slug
+      description: >-
+        Any authenticated role. `populateTopic` is a raw string compare:
+        the topic is embedded only when the value is exactly `true`
+        (default: no).
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+        - name: populateTopic
+          in: query
+          schema: { type: string, enum: ['true', 'false'], default: 'false' }
+      responses:
+        '200':
+          description: Question sets for the topic (possibly empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QuestionSet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Topic not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /questions/{id}:
+    get:
+      tags: [questions]
+      operationId: getQuestionSetById
+      summary: Get a question set by ID
+      description: >-
+        Any authenticated role. Note the inverted `populateTopic`
+        default compared to the slug route: the topic is embedded unless
+        the value is exactly `false`.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+        - name: populateTopic
+          in: query
+          schema: { type: string, enum: ['true', 'false'], default: 'true' }
+      responses:
+        '200':
+          description: The requested question set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionSet' }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Question set not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+    patch:
+      tags: [questions]
+      operationId: updateQuestionSet
+      summary: Update a question set
+      description: Admin only. All body fields optional.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateQuestionSetRequest' }
+      responses:
+        '200':
+          description: Updated question set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionSet' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Question set not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+    delete:
+      tags: [questions]
+      operationId: deleteQuestionSet
+      summary: Delete a question set
+      description: Admin only. Returns 204 with an empty body.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '204': { description: Question set deleted; empty body }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Question set not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/start:
+    post:
+      tags: [sessions]
+      operationId: startSession
+      summary: Start a learning session
+      description: >-
+        Any authenticated role. Creates an active session at level 0 and
+        returns the topic's level-0 question set. 404 when the topic does
+        not exist or has no level-0 question set.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartSessionRequest' }
+      responses:
+        '201':
+          description: Session started
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StartSessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Topic or level-0 question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                topic:
+                  value:
+                    statusCode: 404
+                    message: Topic not found
+                    error: Not Found
+                questionSet:
+                  value:
+                    statusCode: 404
+                    message: Question set not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/continue:
+    post:
+      tags: [sessions]
+      operationId: continueSession
+      summary: Continue a learning session
+      description: >-
+        Returns the question set for the session's current level. Only
+        the owning student can continue a session.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContinueSessionRequest' }
+      responses:
+        '201':
+          description: Current-level question set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionSet' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Session or current-level question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                session:
+                  value:
+                    statusCode: 404
+                    message: Session not found
+                    error: Not Found
+                questionSet:
+                  value:
+                    statusCode: 404
+                    message: Question set not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/submit-answer:
+    post:
+      tags: [sessions]
+      operationId: submitAnswer
+      summary: Submit answers for the current question set
+      description: >-
+        Evaluates answers (MCQ locally, written answers via the AI
+        provider) and persists a set attempt. When every answer scores
+        >= 0.5 the session advances a level and the next level's question
+        set is returned (`nextQuestionSet`, null when none exists).
+        Every 10 passed levels a session evaluation is generated.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitAnswerRequest' }
+      responses:
+        '201':
+          description: Evaluated attempt and optional next question set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmitAnswerResponse' }
+        '400':
+          description: >-
+            Validation failure, an unknown question ID, or a malformed
+            MCQ question
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                validation:
+                  value:
+                    statusCode: 400
+                    message: ['answers should not be empty']
+                    error: Bad Request
+                unknownQuestion:
+                  value:
+                    statusCode: 400
+                    message: Question not found in question set
+                    error: Bad Request
+                malformedMcq:
+                  value:
+                    statusCode: 400
+                    message: MCQ correct option not found
+                    error: Bad Request
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Session or question set not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                session:
+                  value:
+                    statusCode: 404
+                    message: Session not found
+                    error: Not Found
+                questionSet:
+                  value:
+                    statusCode: 404
+                    message: Question set not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /sessions/in-progress:
+    get:
+      tags: [sessions]
+      operationId: getInProgressSessions
+      summary: List the authenticated user's active sessions
+      description: >-
+        Sorted by `updatedAt` descending. `topic` is populated (with `id`
+        in place of `_id`); `student` is the raw user ID string.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: Active sessions (possibly empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/{id}:
+    delete:
+      tags: [sessions]
+      operationId: deleteSession
+      summary: Delete a learning session
+      description: >-
+        Only the owning student can delete a session. Returns 204 with an
+        empty body.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '204': { description: Session deleted; empty body }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Session not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/live/start:
+    post:
+      tags: [live-sessions]
+      operationId: startLiveSession
+      summary: Start a live (AI-generated) session
+      description: >-
+        Creates an active live session at level 0 and generates the first
+        question through the AI provider (an `aiLogs` record is persisted
+        per generation).
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StartLiveSessionRequest' }
+      responses:
+        '201':
+          description: Live session started with its first question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartLiveSessionResponse'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Topic not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /sessions/live/reject:
+    post:
+      tags: [live-sessions]
+      operationId: rejectLiveQuestion
+      summary: Reject a pending live question and generate a replacement
+      description: >-
+        Marks the pending (or previously failed) question `rejected` and
+        generates a replacement with the same question number; the
+        rejection reason is fed back into the AI prompt.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RejectLiveQuestionRequest' }
+      responses:
+        '201':
+          description: Replacement question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartLiveSessionResponse'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Live session, live question, or topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                liveSession:
+                  value:
+                    statusCode: 404
+                    message: Live session not found
+                    error: Not Found
+                liveQuestion:
+                  value:
+                    statusCode: 404
+                    message: Live question not found
+                    error: Not Found
+                topic:
+                  value:
+                    statusCode: 404
+                    message: Topic not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /sessions/live/submit-answer:
+    post:
+      tags: [live-sessions]
+      operationId: submitLiveAnswer
+      summary: Submit an answer to a live question
+      description: >-
+        Evaluates the answer (MCQ locally, written via AI). Scores >= 0.5
+        mark the question `passed`, otherwise `failed`. After 3 accepted
+        questions a live question set + set attempt are persisted; a
+        failed attempt ends the level (`nextQuestion: null`), a passed
+        attempt advances the level and generates the next question, and
+        level 100 completes the session. A failed answer before 3
+        accepted questions returns `nextQuestion: null` (retry via
+        `/sessions/live/continue`).
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitLiveAnswerRequest' }
+      responses:
+        '201':
+          description: Evaluated answer(s) and optional next question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitLiveAnswerResponse'
+        '400':
+          description: >-
+            Validation failure or the live session already has three
+            questions at the current level
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 400
+                message: Live session already has three questions
+                error: Bad Request
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Live session, live question, or topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                liveSession:
+                  value:
+                    statusCode: 404
+                    message: Live session not found
+                    error: Not Found
+                liveQuestion:
+                  value:
+                    statusCode: 404
+                    message: Live question not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /sessions/live/continue:
+    post:
+      tags: [live-sessions]
+      operationId: continueLiveSession
+      summary: Continue a live session
+      description: >-
+        Returns the current pending question, re-offers the first failed
+        question when a level failed early, recovers an interrupted level
+        transition, or generates the next question for the current level.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContinueLiveSessionRequest'
+      responses:
+        '201':
+          description: Current or next pending question
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartLiveSessionResponse'
+        '400':
+          description: >-
+            Validation failure or the live session already has three
+            questions at the current level
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 400
+                message: Live session already has three questions
+                error: Bad Request
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Live session or topic not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                liveSession:
+                  value:
+                    statusCode: 404
+                    message: Live session not found
+                    error: Not Found
+                topic:
+                  value:
+                    statusCode: 404
+                    message: Topic not found
+                    error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/AiUnavailable' }
+
+  /sessions/live/in-progress:
+    get:
+      tags: [live-sessions]
+      operationId: getInProgressLiveSessions
+      summary: List the authenticated user's active live sessions
+      description: Sorted by `updatedAt` descending; `topic` is populated.
+      security:
+        - bearerAuth: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: Active live sessions (possibly empty)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LiveSession' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/Throttled' }
+
+  /sessions/live/{id}:
+    delete:
+      tags: [live-sessions]
+      operationId: deleteLiveSession
+      summary: Delete a live session
+      description: >-
+        Only the owning student can delete a live session. Returns 204
+        with an empty body.
+      security:
+        - bearerAuth: []
+          csrfCookie: []
+          csrfHeader: []
+        - accessCookie: []
+          csrfCookie: []
+          csrfHeader: []
+      parameters:
+        - { $ref: '#/components/parameters/MongoIdParam' }
+      responses:
+        '204': { description: Live session deleted; empty body }
+        '400': { $ref: '#/components/responses/InvalidMongoId' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/CsrfForbidden' }
+        '404':
+          description: Live session not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Live session not found
+                error: Not Found
+        '429': { $ref: '#/components/responses/Throttled' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Checked before the `access_token` cookie.
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: HttpOnly JWT cookie, path=/ (see `x-auth-cookies`).
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: HttpOnly refresh cookie, path=/auth.
+    csrfCookie:
+      type: apiKey
+      in: cookie
+      name: csrf_token
+      description: Must match the `x-csrf-token` header on unsafe methods.
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: x-csrf-token
+      description: Must match the `csrf_token` cookie on unsafe methods.
+
+  parameters:
+    MongoIdParam:
+      name: id
+      in: path
+      required: true
+      description: >-
+        MongoDB ObjectId; non-ObjectId values fail `MongoIdPipe` with 400
+        `Invalid MongoDB ObjectId`.
+      schema:
+        type: string
+        pattern: '^[0-9a-fA-F]{24}$'
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: >-
+        DTO validation failed (constraint messages, or `property <name>
+        should not exist` for unknown properties)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 400
+            message:
+              - username must be longer than or equal to 3 characters
+              - property role should not exist
+            error: Bad Request
+    InvalidMongoId:
+      description: Path parameter is not a valid MongoDB ObjectId
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 400
+            message: Invalid MongoDB ObjectId
+            error: Bad Request
+    Unauthorized:
+      description: Missing, invalid, or expired credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 401
+            message: Unauthorized
+    CsrfForbidden:
+      description: Missing or mismatched CSRF double-submit token pair
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 403
+            message: Invalid CSRF token
+            error: Forbidden
+    RoleForbidden:
+      description: Authenticated user's role is not allowed
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 403
+            message: Forbidden resource
+            error: Forbidden
+    Forbidden:
+      description: CSRF failure or insufficient role
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            csrf:
+              value:
+                statusCode: 403
+                message: Invalid CSRF token
+                error: Forbidden
+            role:
+              value:
+                statusCode: 403
+                message: Forbidden resource
+                error: Forbidden
+    Throttled:
+      description: Rate limit exceeded (see `x-throttling`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 429
+            message: 'ThrottlerException: Too Many Requests'
+    AiUnavailable:
+      description: >-
+        AI provider not configured, or its response was empty, invalid,
+        or incomplete
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            notConfigured:
+              value:
+                statusCode: 503
+                message: AI is not configured
+                error: Service Unavailable
+            empty:
+              value:
+                statusCode: 503
+                message: AI response was empty
+                error: Service Unavailable
+            invalid:
+              value:
+                statusCode: 503
+                message: AI response was invalid
+                error: Service Unavailable
+            incomplete:
+              value:
+                statusCode: 503
+                message: AI response was incomplete
+                error: Service Unavailable
+    InternalError:
+      description: >-
+        Unhandled failure (e.g. Mongo duplicate-key on a unique `slug`,
+        AI provider SDK errors)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            statusCode: 500
+            message: Internal server error
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode: { type: integer }
+        message:
+          description: String, or an array of strings for DTO validation.
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+        error:
+          type: string
+          description: >-
+            HTTP reason phrase; absent for `UnauthorizedException` and
+            other exceptions thrown without an explicit message.
+
+    ObjectId:
+      type: string
+      pattern: '^[0-9a-fA-F]{24}$'
+      example: 665f1e2b9d1a2c3b4d5e6f70
+
+    Role:
+      type: string
+      enum: [user, admin]
+
+    AuthenticatedUser:
+      type: object
+      required: [email, username, userId, role]
+      properties:
+        email: { type: string, format: email }
+        username: { type: string }
+        userId: { $ref: '#/components/schemas/ObjectId' }
+        role: { $ref: '#/components/schemas/Role' }
+
+    AuthStatusResponse:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated: { type: boolean, enum: [true] }
+
+    CsrfTokenResponse:
+      type: object
+      required: [csrf_token]
+      properties:
+        csrf_token:
+          type: string
+          description: 32 random bytes, base64url-encoded.
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+          pattern: '^[a-zA-Z0-9_.-]+$'
+          description: Trimmed before validation.
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Trimmed and lowercased before validation.
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+          description: Must contain lowercase, uppercase, and a digit.
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      additionalProperties: false
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          maxLength: 254
+          pattern: '^\S+$'
+          description: Username or email; trimmed before validation.
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    Category:
+      type: object
+      required: [id, title, slug, description, icon]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        icon: { type: string }
+
+    CreateCategoryRequest:
+      type: object
+      required: [title, slug, description, icon]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        icon: { type: string, minLength: 1 }
+
+    Topic:
+      type: object
+      required: [id, title, slug, description, icon, tags, category]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        tags:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items: { type: string }
+        category: { $ref: '#/components/schemas/Category' }
+
+    CreateTopicRequest:
+      type: object
+      required: [title, slug, description, icon, tags, category]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        icon: { type: string, minLength: 1 }
+        tags:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items: { type: string, minLength: 1 }
+        category: { $ref: '#/components/schemas/ObjectId' }
+
+    QuestionType:
+      type: string
+      enum: [mcq, written]
+
+    QuestionOption:
+      type: object
+      required: [id, text]
+      properties:
+        id: { type: string, minLength: 1 }
+        text: { type: string, minLength: 1 }
+
+    QuestionFeedback:
+      type: object
+      required: [correct, incorrect]
+      properties:
+        correct: { type: string, minLength: 1 }
+        incorrect: { type: string, minLength: 1 }
+
+    QuestionRubric:
+      type: object
+      required: [keyPoints, misconceptions]
+      properties:
+        keyPoints:
+          type: array
+          minItems: 1
+          items: { type: string }
+        misconceptions:
+          type: array
+          minItems: 1
+          items: { type: string }
+
+    Question:
+      type: object
+      required: [id, type, prompt, targetConcepts, feedback, rubrics]
+      properties:
+        id: { type: string, minLength: 1 }
+        type: { $ref: '#/components/schemas/QuestionType' }
+        prompt: { type: string, minLength: 1 }
+        options:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/QuestionOption' }
+          description: Required (and only validated) when `type` is `mcq`.
+        correctOptionId:
+          type: string
+          description: Required (and only validated) when `type` is `mcq`.
+        targetConcepts:
+          type: array
+          minItems: 1
+          items: { type: string }
+        feedback: { $ref: '#/components/schemas/QuestionFeedback' }
+        rubrics: { $ref: '#/components/schemas/QuestionRubric' }
+
+    QuestionSetType:
+      type: string
+      enum: [regular, live]
+
+    PopulatedTopic:
+      type: object
+      description: >-
+        Raw populated Mongoose topic document as serialized by
+        `QuestionSetResponseDto` (`_id`, `__v` and the `category`
+        ObjectId are NOT remapped).
+      properties:
+        _id: { $ref: '#/components/schemas/ObjectId' }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        category: { $ref: '#/components/schemas/ObjectId' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        __v: { type: integer }
+
+    QuestionSet:
+      type: object
+      required: [id, topic, setType, level, questions]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        topic:
+          description: ObjectId hex string, or the populated topic.
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - $ref: '#/components/schemas/PopulatedTopic'
+        setType: { $ref: '#/components/schemas/QuestionSetType' }
+        level: { type: integer, minimum: 0 }
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Question' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateQuestionSetRequest:
+      type: object
+      required: [topic, setType, level, questions]
+      additionalProperties: false
+      properties:
+        topic: { $ref: '#/components/schemas/ObjectId' }
+        setType: { $ref: '#/components/schemas/QuestionSetType' }
+        level: { type: number, minimum: 0 }
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Question' }
+
+    UpdateQuestionSetRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        topic: { $ref: '#/components/schemas/ObjectId' }
+        setType: { $ref: '#/components/schemas/QuestionSetType' }
+        level: { type: number, minimum: 0 }
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Question' }
+
+    BulkUpdateQuestionSetRequest:
+      type: object
+      required: [id]
+      additionalProperties: false
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        topic: { $ref: '#/components/schemas/ObjectId' }
+        setType: { $ref: '#/components/schemas/QuestionSetType' }
+        level: { type: number, minimum: 0 }
+        questions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Question' }
+
+    SessionStatus:
+      type: string
+      enum: [active, completed, stopped]
+
+    OverallEvaluation:
+      type: object
+      required: [summary, strengths, weaknesses, recommendations]
+      properties:
+        summary: { type: string }
+        strengths:
+          type: array
+          items: { type: string }
+        weaknesses:
+          type: array
+          items: { type: string }
+        recommendations:
+          type: array
+          items: { type: string }
+
+    SessionTopic:
+      type: object
+      description: >-
+        Populated topic as serialized by `SessionResponseDto`: `_id` is
+        remapped to `id`; `category` stays an ObjectId hex string.
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        category: { $ref: '#/components/schemas/ObjectId' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        __v: { type: integer }
+
+    Session:
+      type: object
+      required: [id, student, topic, currentLevel, status]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        student:
+          description: User ID hex string (never populated).
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - type: object
+        topic:
+          description: ObjectId hex string, or the populated topic.
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - $ref: '#/components/schemas/SessionTopic'
+        currentLevel: { type: integer }
+        status: { $ref: '#/components/schemas/SessionStatus' }
+        overallEvaluation:
+          $ref: '#/components/schemas/OverallEvaluation'
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    LiveSession:
+      type: object
+      required: [id, student, topic, currentLevel, status]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        student:
+          description: User ID hex string (never populated).
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - type: object
+        topic:
+          description: ObjectId hex string, or the populated topic.
+          oneOf:
+            - $ref: '#/components/schemas/ObjectId'
+            - $ref: '#/components/schemas/SessionTopic'
+        currentLevel: { type: integer }
+        status: { $ref: '#/components/schemas/SessionStatus' }
+        overallEvaluation:
+          $ref: '#/components/schemas/OverallEvaluation'
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    StartSessionRequest:
+      type: object
+      required: [topicId]
+      additionalProperties: false
+      properties:
+        topicId: { $ref: '#/components/schemas/ObjectId' }
+
+    StartSessionResponse:
+      type: object
+      required: [sessionId, questionSet]
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+        questionSet: { $ref: '#/components/schemas/QuestionSet' }
+
+    ContinueSessionRequest:
+      type: object
+      required: [sessionId]
+      additionalProperties: false
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+
+    SubmitAnswerItem:
+      type: object
+      required: [questionId, answer]
+      properties:
+        questionId:
+          type: string
+          minLength: 1
+          description: Matches `Question.id` inside the question set.
+        answer:
+          type: string
+          minLength: 1
+          description: MCQ option ID or written answer text.
+
+    SubmitAnswerRequest:
+      type: object
+      required: [sessionId, questionSetId, answers]
+      additionalProperties: false
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+        questionSetId: { $ref: '#/components/schemas/ObjectId' }
+        answers:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/SubmitAnswerItem' }
+
+    EvaluatedBy:
+      type: string
+      enum: [system, ai]
+
+    Answer:
+      type: object
+      required:
+        - id
+        - questionId
+        - questionPrompt
+        - questionType
+        - answer
+        - correctAnswer
+        - score
+        - feedback
+        - targetConcepts
+        - strengths
+        - weaknesses
+        - evaluatedBy
+      properties:
+        id:
+          type: string
+          description: '`ans-<questionId>`'
+        questionId: { type: string }
+        questionPrompt: { type: string }
+        questionType: { $ref: '#/components/schemas/QuestionType' }
+        answer: { type: string }
+        answerText:
+          type: string
+          description: MCQ only; text of the selected option.
+        correctAnswer: { type: string }
+        correctAnswerText:
+          type: string
+          description: MCQ only; text of the correct option.
+        score:
+          type: number
+          description: 0 or 1 for MCQ; AI score rounded to 1 decimal.
+        feedback: { type: string }
+        targetConcepts:
+          type: array
+          items: { type: string }
+        strengths:
+          type: array
+          items: { type: string }
+        weaknesses:
+          type: array
+          items: { type: string }
+        evaluatedBy: { $ref: '#/components/schemas/EvaluatedBy' }
+
+    SetAttempt:
+      type: object
+      required:
+        - id
+        - user
+        - topic
+        - questionSet
+        - level
+        - answers
+        - setScore
+        - passed
+        - strengths
+        - weaknesses
+        - submittedAt
+        - evaluatedAt
+        - createdAt
+        - updatedAt
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        user: { $ref: '#/components/schemas/ObjectId' }
+        session:
+          description: Set for regular-session attempts.
+          allOf:
+            - $ref: '#/components/schemas/ObjectId'
+        liveSession:
+          description: Set for live-session attempts.
+          allOf:
+            - $ref: '#/components/schemas/ObjectId'
+        topic: { $ref: '#/components/schemas/ObjectId' }
+        questionSet: { $ref: '#/components/schemas/ObjectId' }
+        level: { type: integer }
+        answers:
+          type: array
+          items: { $ref: '#/components/schemas/Answer' }
+        setScore:
+          type: number
+          description: Mean answer score, rounded to 1 decimal.
+        passed:
+          type: boolean
+          description: True when every answer scores >= 0.5.
+        strengths:
+          type: array
+          items: { type: string }
+        weaknesses:
+          type: array
+          items: { type: string }
+        aiSummary: { type: string }
+        submittedAt: { type: string, format: date-time }
+        evaluatedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    SubmitAnswerResponse:
+      type: object
+      required: [attempt, nextQuestionSet]
+      properties:
+        attempt: { $ref: '#/components/schemas/SetAttempt' }
+        nextQuestionSet:
+          nullable: true
+          description: >-
+            Next level's question set when the attempt passed and a next
+            level exists; otherwise null.
+          allOf:
+            - $ref: '#/components/schemas/QuestionSet'
+
+    StartLiveSessionRequest:
+      type: object
+      required: [topicId]
+      additionalProperties: false
+      properties:
+        topicId: { $ref: '#/components/schemas/ObjectId' }
+
+    StartLiveSessionResponse:
+      type: object
+      required: [sessionId, questionId, question]
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+        questionId:
+          description: Live question document ID.
+          allOf:
+            - $ref: '#/components/schemas/ObjectId'
+        question: { $ref: '#/components/schemas/Question' }
+
+    RejectLiveQuestionRequest:
+      type: object
+      required: [sessionId, questionId, reason]
+      additionalProperties: false
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+        questionId: { $ref: '#/components/schemas/ObjectId' }
+        reason: { type: string, minLength: 1 }
+
+    SubmitLiveAnswerRequest:
+      type: object
+      required: [sessionId, questionId, answer]
+      additionalProperties: false
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+        questionId: { $ref: '#/components/schemas/ObjectId' }
+        answer: { type: string, minLength: 1 }
+
+    ContinueLiveSessionRequest:
+      type: object
+      required: [sessionId]
+      additionalProperties: false
+      properties:
+        sessionId: { $ref: '#/components/schemas/ObjectId' }
+
+    SubmitLiveAnswerResponse:
+      type: object
+      required: [answers, nextQuestion]
+      properties:
+        answers:
+          type: array
+          items: { $ref: '#/components/schemas/Answer' }
+          description: >-
+            All three evaluated answers when a level completed, otherwise
+            just the submitted answer.
+        nextQuestion:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/StartLiveSessionResponse'
+
+    LiveQuestionStatus:
+      type: string
+      enum: [pending, rejected, passed, failed]
+
+    AiLogOperation:
+      type: string
+      enum: [question-generation]
+
+    AiLogLiveQuestion:
+      type: object
+      required: [id, question, level, questionNumber, status]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        question: { $ref: '#/components/schemas/Question' }
+        level: { type: integer }
+        questionNumber: { type: integer }
+        status: { $ref: '#/components/schemas/LiveQuestionStatus' }
+
+    AiLog:
+      type: object
+      required: [id, operation, aiModel, prompt, output, liveQuestion, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/ObjectId' }
+        operation: { $ref: '#/components/schemas/AiLogOperation' }
+        aiModel: { type: string }
+        prompt: { type: string }
+        output: { type: string }
+        liveQuestion:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AiLogLiveQuestion'
+        createdAt: { type: string, format: date-time }
+
+    AiLogPage:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AiLog' }
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
