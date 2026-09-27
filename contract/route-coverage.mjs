@@ -13,74 +13,9 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
+import { extractControllerRoutes, routeKey } from './routes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-
-const CONTROLLERS = [
-  'src/app.controller.ts',
-  'src/auth/auth.controller.ts',
-  'src/ai/ai.controller.ts',
-  'src/categories/categories.controller.ts',
-  'src/topics/topics.controller.ts',
-  'src/questions/questions.controller.ts',
-  'src/sessions/sessions.controller.ts',
-];
-
-const METHOD_DECORATORS = ['Get', 'Post', 'Patch', 'Put', 'Delete'];
-
-/** Reads a decorator string argument, e.g. `'live/start'` -> `live/start`. */
-function readRouteArg(source, decorator, fromIndex) {
-  const at = source.indexOf(`@${decorator}(`, fromIndex);
-  if (at === -1) {
-    return null;
-  }
-  const open = at + decorator.length + 2;
-  const close = source.indexOf(')', open);
-  const arg = source.slice(open, close).trim();
-  const match = arg.match(/^['"`](.*?)['"`]$/);
-  return { path: match ? match[1] : '', end: close };
-}
-
-/** Joins a controller prefix and a route path into a URL path. */
-function joinPath(prefix, routePath) {
-  const parts = [prefix, routePath].filter((part) => part && part !== '/');
-  return `/${parts.join('/')}`;
-}
-
-/** Converts a Nest `:param` path into an OpenAPI `{param}` path. */
-function toOpenApiPath(nestPath) {
-  return nestPath.replace(/:([^/]+)/g, '{$1}');
-}
-
-function extractControllerRoutes(file) {
-  const source = readFileSync(join(root, file), 'utf8');
-  const controllerMatch = source.match(/@Controller\(\s*(?:['"`](.*?)['"`])?\s*\)/);
-
-  if (!controllerMatch) {
-    throw new Error(`No @Controller decorator found in ${file}`);
-  }
-
-  const prefix = controllerMatch[1] ?? '';
-  const routes = [];
-
-  for (const method of METHOD_DECORATORS) {
-    let from = 0;
-    for (;;) {
-      const found = readRouteArg(source, method, from);
-      if (!found) {
-        break;
-      }
-      routes.push({
-        method: method.toUpperCase(),
-        path: toOpenApiPath(joinPath(prefix, found.path)),
-        controller: file,
-      });
-      from = found.end;
-    }
-  }
-
-  return routes;
-}
 
 function extractSpecRoutes(spec) {
   const routes = [];
@@ -94,34 +29,36 @@ function extractSpecRoutes(spec) {
   return routes;
 }
 
-const key = (route) => `${route.method} ${route.path}`;
-
-const controllerRoutes = CONTROLLERS.flatMap(extractControllerRoutes);
+const controllerRoutes = extractControllerRoutes(root);
 const spec = yaml.load(readFileSync(join(root, 'api/openapi.yaml'), 'utf8'));
 const specRoutes = extractSpecRoutes(spec);
 
-const controllerKeys = new Set(controllerRoutes.map(key));
-const specKeys = new Set(specRoutes.map(key));
+const controllerKeys = new Set(controllerRoutes.map(routeKey));
+const specKeys = new Set(specRoutes.map(routeKey));
 
-const missingInSpec = controllerRoutes.filter((route) => !specKeys.has(key(route)));
-const extraInSpec = specRoutes.filter((route) => !controllerKeys.has(key(route)));
+const missingInSpec = controllerRoutes.filter(
+  (route) => !specKeys.has(routeKey(route)),
+);
+const extraInSpec = specRoutes.filter(
+  (route) => !controllerKeys.has(routeKey(route)),
+);
 
 console.log(`Controller routes: ${controllerRoutes.length}`);
 console.log(`Spec routes:       ${specRoutes.length}`);
 console.log('');
 console.log('Route matrix (controller -> spec):');
 for (const route of controllerRoutes) {
-  const covered = specKeys.has(key(route)) ? 'OK ' : 'MISSING';
-  console.log(`  [${covered}] ${key(route)}  (${route.controller})`);
+  const covered = specKeys.has(routeKey(route)) ? 'OK ' : 'MISSING';
+  console.log(`  [${covered}] ${routeKey(route)}  (${route.controller})`);
 }
 
 let failed = false;
 
 if (missingInSpec.length > 0) {
   failed = true;
-    console.log('\nMissing from api/openapi.yaml:');
+  console.log('\nMissing from api/openapi.yaml:');
   for (const route of missingInSpec) {
-    console.log(`  ${key(route)}  (${route.controller})`);
+    console.log(`  ${routeKey(route)}  (${route.controller})`);
   }
 }
 
@@ -129,7 +66,7 @@ if (extraInSpec.length > 0) {
   failed = true;
   console.log('\nDeclared in api/openapi.yaml but not implemented:');
   for (const route of extraInSpec) {
-    console.log(`  ${key(route)}`);
+    console.log(`  ${routeKey(route)}`);
   }
 }
 
@@ -156,7 +93,8 @@ function resolvePointer(specRoot, ref) {
     .slice(2)
     .split('/')
     .reduce(
-      (node, segment) => node?.[segment.replace(/~1/g, '/').replace(/~0/g, '~')],
+      (node, segment) =>
+        node?.[segment.replace(/~1/g, '/').replace(/~0/g, '~')],
       specRoot,
     );
 }
@@ -182,15 +120,15 @@ for (const [path, item] of Object.entries(spec.paths ?? {})) {
     const label = `${method.toUpperCase()} ${path}`;
     const declared = new Set(
       (operation.parameters ?? [])
-        .map((param) =>
-          param.$ref ? resolvePointer(spec, param.$ref) : param,
-        )
+        .map((param) => (param.$ref ? resolvePointer(spec, param.$ref) : param))
         .filter((param) => param?.in === 'path')
         .map((param) => param.name),
     );
     for (const param of pathParams) {
       if (!declared.has(param)) {
-        structuralProblems.push(`${label}: path param {${param}} not declared`);
+        structuralProblems.push(
+          `${label}: path param {${param}} not declared`,
+        );
       }
     }
     const responses = operation.responses ?? {};
