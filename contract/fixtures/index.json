@@ -1,0 +1,764 @@
+{
+  "routes": [
+    {
+      "route": "DELETE /categories/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "delete-categories-id/success.json",
+          "status": 204
+        },
+        {
+          "case": "not-found-404",
+          "file": "delete-categories-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "role-403",
+          "file": "delete-categories-id/role-403.json",
+          "status": 403
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "delete-categories-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "DELETE /questions/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "delete-questions-id/success.json",
+          "status": 204
+        },
+        {
+          "case": "not-found-404",
+          "file": "delete-questions-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "role-403",
+          "file": "delete-questions-id/role-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "DELETE /sessions/live/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "delete-sessions-live-id/success.json",
+          "status": 204
+        },
+        {
+          "case": "not-found-404",
+          "file": "delete-sessions-live-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "delete-sessions-live-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "DELETE /sessions/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "delete-sessions-id/success.json",
+          "status": 204
+        },
+        {
+          "case": "not-found-404",
+          "file": "delete-sessions-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "delete-sessions-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "DELETE /topics/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "delete-topics-id/success.json",
+          "status": 204
+        },
+        {
+          "case": "not-found-404",
+          "file": "delete-topics-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "role-403",
+          "file": "delete-topics-id/role-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "GET /",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-root/success.json",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "route": "GET /ai/logs",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-ai-logs/success.json",
+          "status": 200
+        },
+        {
+          "case": "success-pagination",
+          "file": "get-ai-logs/success-pagination.json",
+          "status": 200
+        },
+        {
+          "case": "validation-400",
+          "file": "get-ai-logs/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "role-403",
+          "file": "get-ai-logs/role-403.json",
+          "status": 403
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-ai-logs/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /auth/csrf",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-auth-csrf/success.json",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "route": "GET /auth/me",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-auth-me/success.json",
+          "status": 200
+        },
+        {
+          "case": "success-bearer",
+          "file": "get-auth-me/success-bearer.json",
+          "status": 200
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-auth-me/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /categories/categories",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-categories-categories/success.json",
+          "status": 200
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-categories-categories/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /categories/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-categories-id/success.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "get-categories-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "get-categories-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "GET /questions/topic/{slug}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-questions-topic-slug/success.json",
+          "status": 200
+        },
+        {
+          "case": "success-populated",
+          "file": "get-questions-topic-slug/success-populated.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "get-questions-topic-slug/not-found-404.json",
+          "status": 404
+        }
+      ]
+    },
+    {
+      "route": "GET /questions/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-questions-id/success.json",
+          "status": 200
+        },
+        {
+          "case": "success-unpopulated",
+          "file": "get-questions-id/success-unpopulated.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "get-questions-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "get-questions-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "GET /sessions/in-progress",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-sessions-in-progress/success.json",
+          "status": 200
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-sessions-in-progress/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /sessions/live/in-progress",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-sessions-live-in-progress/success.json",
+          "status": 200
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-sessions-live-in-progress/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /topics",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-topics/success.json",
+          "status": 200
+        },
+        {
+          "case": "unauth-401",
+          "file": "get-topics/unauth-401.json",
+          "status": 401
+        }
+      ]
+    },
+    {
+      "route": "GET /topics/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "get-topics-id/success.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "get-topics-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "get-topics-id/invalid-id-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "PATCH /questions/update",
+      "cases": [
+        {
+          "case": "success",
+          "file": "patch-questions-update/success.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "patch-questions-update/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "role-403",
+          "file": "patch-questions-update/role-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "PATCH /questions/{id}",
+      "cases": [
+        {
+          "case": "success",
+          "file": "patch-questions-id/success.json",
+          "status": 200
+        },
+        {
+          "case": "not-found-404",
+          "file": "patch-questions-id/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "invalid-id-400",
+          "file": "patch-questions-id/invalid-id-400.json",
+          "status": 400
+        },
+        {
+          "case": "role-403",
+          "file": "patch-questions-id/role-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "POST /auth/login",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-auth-login/success.json",
+          "status": 201
+        },
+        {
+          "case": "validation-400",
+          "file": "post-auth-login/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "wrong-password-401",
+          "file": "post-auth-login/wrong-password-401.json",
+          "status": 401
+        },
+        {
+          "case": "throttled-429",
+          "file": "post-auth-login/throttled-429.json",
+          "status": 429
+        }
+      ]
+    },
+    {
+      "route": "POST /auth/logout",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-auth-logout/success.json",
+          "status": 201
+        },
+        {
+          "case": "no-cookie-201",
+          "file": "post-auth-logout/no-cookie-201.json",
+          "status": 201
+        }
+      ]
+    },
+    {
+      "route": "POST /auth/refresh",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-auth-refresh/success.json",
+          "status": 201
+        },
+        {
+          "case": "unauth-401",
+          "file": "post-auth-refresh/unauth-401.json",
+          "status": 401
+        },
+        {
+          "case": "csrf-403",
+          "file": "post-auth-refresh/csrf-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "POST /auth/register",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-auth-register/success.json",
+          "status": 201
+        },
+        {
+          "case": "validation-400",
+          "file": "post-auth-register/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "unknown-field-400",
+          "file": "post-auth-register/unknown-field-400.json",
+          "status": 400
+        },
+        {
+          "case": "conflict-409",
+          "file": "post-auth-register/conflict-409.json",
+          "status": 409
+        },
+        {
+          "case": "conflict-email-409",
+          "file": "post-auth-register/conflict-email-409.json",
+          "status": 409
+        },
+        {
+          "case": "csrf-403",
+          "file": "post-auth-register/csrf-403.json",
+          "status": 403
+        },
+        {
+          "case": "throttled-429",
+          "file": "post-auth-register/throttled-429.json",
+          "status": 429
+        }
+      ]
+    },
+    {
+      "route": "POST /categories/category/create",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-categories-category-create/success.json",
+          "status": 201
+        },
+        {
+          "case": "validation-400",
+          "file": "post-categories-category-create/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "role-403",
+          "file": "post-categories-category-create/role-403.json",
+          "status": 403
+        },
+        {
+          "case": "unauth-401",
+          "file": "post-categories-category-create/unauth-401.json",
+          "status": 401
+        },
+        {
+          "case": "duplicate-slug-500",
+          "file": "post-categories-category-create/duplicate-slug-500.json",
+          "status": 500
+        },
+        {
+          "case": "csrf-403",
+          "file": "post-categories-category-create/csrf-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "POST /questions/create",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-questions-create/success.json",
+          "status": 201
+        },
+        {
+          "case": "validation-400",
+          "file": "post-questions-create/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "non-array-400",
+          "file": "post-questions-create/non-array-400.json",
+          "status": 400
+        },
+        {
+          "case": "role-403",
+          "file": "post-questions-create/role-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/continue",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-sessions-continue/success.json",
+          "status": 201
+        },
+        {
+          "case": "not-found-404",
+          "file": "post-sessions-continue/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-continue/validation-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/live/continue",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-sessions-live-continue/success.json",
+          "status": 201
+        },
+        {
+          "case": "not-found-404",
+          "file": "post-sessions-live-continue/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-live-continue/validation-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/live/reject",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-sessions-live-reject/success.json",
+          "status": 201
+        },
+        {
+          "case": "session-not-found-404",
+          "file": "post-sessions-live-reject/session-not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "question-not-found-404",
+          "file": "post-sessions-live-reject/question-not-found-404.json",
+          "status": 404
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/live/start",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-sessions-live-start/success.json",
+          "status": 201
+        },
+        {
+          "case": "not-found-404",
+          "file": "post-sessions-live-start/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-live-start/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "ai-invalid-503",
+          "file": "post-sessions-live-start/ai-invalid-503.json",
+          "status": 503
+        },
+        {
+          "case": "ai-empty-503",
+          "file": "post-sessions-live-start/ai-empty-503.json",
+          "status": 503
+        },
+        {
+          "case": "ai-http-error-500",
+          "file": "post-sessions-live-start/ai-http-error-500.json",
+          "status": 500
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/live/submit-answer",
+      "cases": [
+        {
+          "case": "success-correct",
+          "file": "post-sessions-live-submit-answer/success-correct.json",
+          "status": 201
+        },
+        {
+          "case": "fail-answer",
+          "file": "post-sessions-live-submit-answer/fail-answer.json",
+          "status": 201
+        },
+        {
+          "case": "level-complete",
+          "file": "post-sessions-live-submit-answer/level-complete.json",
+          "status": 201
+        },
+        {
+          "case": "session-not-found-404",
+          "file": "post-sessions-live-submit-answer/session-not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "question-not-found-404",
+          "file": "post-sessions-live-submit-answer/question-not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-live-submit-answer/validation-400.json",
+          "status": 400
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/start",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-sessions-start/success.json",
+          "status": 201
+        },
+        {
+          "case": "not-found-404",
+          "file": "post-sessions-start/not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "no-question-set-404",
+          "file": "post-sessions-start/no-question-set-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-start/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "unauth-401",
+          "file": "post-sessions-start/unauth-401.json",
+          "status": 401
+        },
+        {
+          "case": "csrf-403",
+          "file": "post-sessions-start/csrf-403.json",
+          "status": 403
+        }
+      ]
+    },
+    {
+      "route": "POST /sessions/submit-answer",
+      "cases": [
+        {
+          "case": "success-pass",
+          "file": "post-sessions-submit-answer/success-pass.json",
+          "status": 201
+        },
+        {
+          "case": "fail-attempt",
+          "file": "post-sessions-submit-answer/fail-attempt.json",
+          "status": 201
+        },
+        {
+          "case": "success-written-pass",
+          "file": "post-sessions-submit-answer/success-written-pass.json",
+          "status": 201
+        },
+        {
+          "case": "unknown-question-400",
+          "file": "post-sessions-submit-answer/unknown-question-400.json",
+          "status": 400
+        },
+        {
+          "case": "session-not-found-404",
+          "file": "post-sessions-submit-answer/session-not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "set-not-found-404",
+          "file": "post-sessions-submit-answer/set-not-found-404.json",
+          "status": 404
+        },
+        {
+          "case": "validation-400",
+          "file": "post-sessions-submit-answer/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "ai-invalid-503",
+          "file": "post-sessions-submit-answer/ai-invalid-503.json",
+          "status": 503
+        }
+      ]
+    },
+    {
+      "route": "POST /topics/create",
+      "cases": [
+        {
+          "case": "success",
+          "file": "post-topics-create/success.json",
+          "status": 201
+        },
+        {
+          "case": "validation-400",
+          "file": "post-topics-create/validation-400.json",
+          "status": 400
+        },
+        {
+          "case": "role-403",
+          "file": "post-topics-create/role-403.json",
+          "status": 403
+        },
+        {
+          "case": "duplicate-slug-500",
+          "file": "post-topics-create/duplicate-slug-500.json",
+          "status": 500
+        }
+      ]
+    }
+  ]
+}

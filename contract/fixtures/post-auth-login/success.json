@@ -1,0 +1,30 @@
+{
+  "route": "POST /auth/login",
+  "case": "success",
+  "request": {
+    "method": "POST",
+    "path": "/auth/login",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:03>",
+      "x-csrf-token": "<csrfToken:03>"
+    },
+    "body": {
+      "identifier": "student",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": [
+        "access_token=<jwt>; Max-Age=86400; Path=/; Expires=<httpDate>; HttpOnly; Secure; SameSite=None",
+        "refresh_token=<refreshToken:03>; Max-Age=604800; Path=/auth; Expires=<httpDate>; HttpOnly; Secure; SameSite=None"
+      ]
+    },
+    "body": {
+      "authenticated": true
+    }
+  }
+}

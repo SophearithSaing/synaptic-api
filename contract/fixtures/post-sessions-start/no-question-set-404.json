@@ -1,0 +1,28 @@
+{
+  "route": "POST /sessions/start",
+  "case": "no-question-set-404",
+  "note": "Topic exists but has no level-0 question set.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "topicId": "<objectId:05>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Question set not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

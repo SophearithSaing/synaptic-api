@@ -1,0 +1,23 @@
+{
+  "route": "DELETE /questions/{id}",
+  "case": "role-403",
+  "request": {
+    "method": "DELETE",
+    "path": "/questions/<objectId:06>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Forbidden resource",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

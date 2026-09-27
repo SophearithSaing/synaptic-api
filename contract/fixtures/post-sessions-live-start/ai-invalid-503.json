@@ -1,0 +1,28 @@
+{
+  "route": "POST /sessions/live/start",
+  "case": "ai-invalid-503",
+  "note": "Stubbed provider returns non-JSON for question generation.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "topicId": "<objectId:04>"
+    }
+  },
+  "response": {
+    "status": 503,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "AI response was invalid",
+      "error": "Service Unavailable",
+      "statusCode": 503
+    }
+  }
+}

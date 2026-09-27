@@ -1,0 +1,27 @@
+{
+  "route": "PATCH /questions/{id}",
+  "case": "role-403",
+  "request": {
+    "method": "PATCH",
+    "path": "/questions/<objectId:11>",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "level": 4
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Forbidden resource",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

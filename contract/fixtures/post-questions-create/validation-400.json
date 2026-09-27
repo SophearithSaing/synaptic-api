@@ -1,0 +1,34 @@
+{
+  "route": "POST /questions/create",
+  "case": "validation-400",
+  "request": {
+    "method": "POST",
+    "path": "/questions/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": [
+      {
+        "topic": "<objectId:04>",
+        "setType": "regular",
+        "level": 3
+      }
+    ]
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": [
+        "questions should not be empty",
+        "questions must be an array"
+      ],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

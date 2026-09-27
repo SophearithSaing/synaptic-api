@@ -1,0 +1,34 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "set-not-found-404",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:12>",
+      "questionSetId": "<objectId:08>",
+      "answers": [
+        {
+          "questionId": "seed-l0-q1",
+          "answer": "o1"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Question set not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "route": "GET /topics/{id}",
+  "case": "not-found-404",
+  "request": {
+    "method": "GET",
+    "path": "/topics/<objectId:08>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Topic not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

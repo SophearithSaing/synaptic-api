@@ -1,0 +1,29 @@
+{
+  "route": "POST /auth/register",
+  "case": "csrf-403",
+  "note": "csrf_token cookie is sent but the x-csrf-token header is not.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>; access_token=<jwt>; refresh_token=<refreshToken:01>"
+    },
+    "body": {
+      "username": "dave",
+      "email": "dave@example.com",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Invalid CSRF token",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

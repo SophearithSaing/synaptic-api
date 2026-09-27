@@ -1,0 +1,23 @@
+{
+  "route": "DELETE /sessions/{id}",
+  "case": "not-found-404",
+  "request": {
+    "method": "DELETE",
+    "path": "/sessions/<objectId:08>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Session not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

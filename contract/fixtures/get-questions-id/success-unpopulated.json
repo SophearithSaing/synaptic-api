@@ -1,0 +1,85 @@
+{
+  "route": "GET /questions/{id}",
+  "case": "success-unpopulated",
+  "request": {
+    "method": "GET",
+    "path": "/questions/<objectId:06>?populateTopic=false",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "id": "<objectId:06>",
+      "topic": "<objectId:04>",
+      "setType": "regular",
+      "level": 0,
+      "questions": [
+        {
+          "id": "seed-l0-q1",
+          "type": "mcq",
+          "prompt": "What is 1 + 1 in binary?",
+          "options": [
+            {
+              "id": "o1",
+              "text": "seed-l0-q1 option one"
+            },
+            {
+              "id": "o2",
+              "text": "seed-l0-q1 option two"
+            },
+            {
+              "id": "o3",
+              "text": "seed-l0-q1 option three"
+            }
+          ],
+          "correctOptionId": "o1",
+          "targetConcepts": ["binary-addition"],
+          "feedback": {
+            "correct": "Correct feedback.",
+            "incorrect": "Incorrect feedback."
+          },
+          "rubrics": {
+            "keyPoints": ["Key point."],
+            "misconceptions": ["Misconception."]
+          }
+        },
+        {
+          "id": "seed-l0-q2",
+          "type": "mcq",
+          "prompt": "What is 10 + 1 in binary?",
+          "options": [
+            {
+              "id": "o1",
+              "text": "seed-l0-q2 option one"
+            },
+            {
+              "id": "o2",
+              "text": "seed-l0-q2 option two"
+            },
+            {
+              "id": "o3",
+              "text": "seed-l0-q2 option three"
+            }
+          ],
+          "correctOptionId": "o2",
+          "targetConcepts": ["binary-addition"],
+          "feedback": {
+            "correct": "Correct feedback.",
+            "incorrect": "Incorrect feedback."
+          },
+          "rubrics": {
+            "keyPoints": ["Key point."],
+            "misconceptions": ["Misconception."]
+          }
+        }
+      ],
+      "createdAt": "<isoDate>",
+      "updatedAt": "<isoDate>"
+    }
+  }
+}

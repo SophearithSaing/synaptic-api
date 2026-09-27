@@ -1,0 +1,24 @@
+{
+  "route": "GET /auth/me",
+  "case": "success-bearer",
+  "note": "JWT supplied via Authorization header instead of the cookie.",
+  "request": {
+    "method": "GET",
+    "path": "/auth/me",
+    "headers": {
+      "authorization": "Bearer <jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "email": "student@example.com",
+      "username": "student",
+      "role": "user",
+      "userId": "<objectId:01>"
+    }
+  }
+}

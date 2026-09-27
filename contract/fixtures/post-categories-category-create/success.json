@@ -1,0 +1,32 @@
+{
+  "route": "POST /categories/category/create",
+  "case": "success",
+  "request": {
+    "method": "POST",
+    "path": "/categories/category/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "title": "Networking",
+      "slug": "networking",
+      "description": "Networks and protocols.",
+      "icon": "wifi"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "id": "<objectId:09>",
+      "title": "Networking",
+      "slug": "networking",
+      "description": "Networks and protocols.",
+      "icon": "wifi"
+    }
+  }
+}

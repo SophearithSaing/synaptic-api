@@ -1,0 +1,30 @@
+{
+  "route": "POST /auth/register",
+  "case": "conflict-409",
+  "note": "Seeded username; uniqueness is case-insensitive.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>; access_token=<jwt>; refresh_token=<refreshToken:01>",
+      "x-csrf-token": "<csrfToken:01>"
+    },
+    "body": {
+      "username": "student",
+      "email": "unique@example.com",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Username already exists",
+      "error": "Conflict",
+      "statusCode": 409
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "success-written-pass",
+  "note": "Written answer evaluated by the (stubbed) AI provider.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:12>",
+      "questionSetId": "<objectId:07>",
+      "answers": [
+        {
+          "questionId": "seed-l1-q1",
+          "answer": "Invert every bit and add one."
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "attempt": {
+        "id": "<objectId:16>",
+        "user": "<objectId:01>",
+        "session": "<objectId:12>",
+        "topic": "<objectId:04>",
+        "questionSet": "<objectId:07>",
+        "level": 1,
+        "answers": [
+          {
+            "id": "ans-seed-l1-q1",
+            "questionId": "seed-l1-q1",
+            "questionPrompt": "Explain two's complement.",
+            "questionType": "written",
+            "answer": "Invert every bit and add one.",
+            "correctAnswer": "Stub correct answer.",
+            "score": 1,
+            "feedback": "Stub passing feedback.",
+            "targetConcepts": ["twos-complement"],
+            "strengths": ["stub-concept"],
+            "weaknesses": [],
+            "evaluatedBy": "ai"
+          }
+        ],
+        "setScore": 1,
+        "passed": true,
+        "strengths": ["twos-complement"],
+        "weaknesses": [],
+        "submittedAt": "<isoDate>",
+        "evaluatedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      "nextQuestionSet": null
+    }
+  }
+}

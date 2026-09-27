@@ -1,0 +1,27 @@
+{
+  "route": "POST /sessions/live/start",
+  "case": "not-found-404",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "topicId": "<objectId:08>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Topic not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

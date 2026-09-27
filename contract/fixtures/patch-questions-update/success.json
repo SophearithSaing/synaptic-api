@@ -1,0 +1,66 @@
+{
+  "route": "PATCH /questions/update",
+  "case": "success",
+  "request": {
+    "method": "PATCH",
+    "path": "/questions/update",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": [
+      {
+        "id": "<objectId:11>",
+        "level": 3
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": [
+      {
+        "id": "<objectId:11>",
+        "topic": "<objectId:04>",
+        "setType": "regular",
+        "level": 3,
+        "questions": [
+          {
+            "id": "created-q1",
+            "type": "mcq",
+            "prompt": "What does CPU stand for?",
+            "options": [
+              {
+                "id": "o1",
+                "text": "Central Processing Unit"
+              },
+              {
+                "id": "o2",
+                "text": "Computer Personal Unit"
+              },
+              {
+                "id": "o3",
+                "text": "Central Program Utility"
+              }
+            ],
+            "correctOptionId": "o1",
+            "targetConcepts": ["hardware-basics"],
+            "feedback": {
+              "correct": "Correct.",
+              "incorrect": "Incorrect."
+            },
+            "rubrics": {
+              "keyPoints": ["Central processing."],
+              "misconceptions": ["Personal computer."]
+            }
+          }
+        ],
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      }
+    ]
+  }
+}

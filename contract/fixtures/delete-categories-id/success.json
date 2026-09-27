@@ -1,0 +1,17 @@
+{
+  "route": "DELETE /categories/{id}",
+  "case": "success",
+  "request": {
+    "method": "DELETE",
+    "path": "/categories/<objectId:09>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    }
+  },
+  "response": {
+    "status": 204,
+    "headers": {},
+    "body": ""
+  }
+}

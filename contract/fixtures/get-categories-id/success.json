@@ -1,0 +1,24 @@
+{
+  "route": "GET /categories/{id}",
+  "case": "success",
+  "request": {
+    "method": "GET",
+    "path": "/categories/<objectId:03>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "id": "<objectId:03>",
+      "title": "Core Concepts",
+      "slug": "core-concepts",
+      "description": "Foundational computing theory.",
+      "icon": "cpu"
+    }
+  }
+}

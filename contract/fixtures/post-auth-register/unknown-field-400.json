@@ -1,0 +1,31 @@
+{
+  "route": "POST /auth/register",
+  "case": "unknown-field-400",
+  "note": "forbidNonWhitelisted rejects the unknown `role` property.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>; access_token=<jwt>; refresh_token=<refreshToken:01>",
+      "x-csrf-token": "<csrfToken:01>"
+    },
+    "body": {
+      "username": "carol",
+      "email": "carol@example.com",
+      "password": "Password1",
+      "role": "admin"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": ["property role should not exist"],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

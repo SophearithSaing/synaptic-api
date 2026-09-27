@@ -1,0 +1,23 @@
+{
+  "route": "DELETE /categories/{id}",
+  "case": "invalid-id-400",
+  "request": {
+    "method": "DELETE",
+    "path": "/categories/not-an-id",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Invalid MongoDB ObjectId",
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

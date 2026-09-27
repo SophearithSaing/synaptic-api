@@ -1,0 +1,30 @@
+{
+  "route": "POST /categories/category/create",
+  "case": "unauth-401",
+  "note": "Valid CSRF pair but no JWT.",
+  "request": {
+    "method": "POST",
+    "path": "/categories/category/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:10>",
+      "x-csrf-token": "<csrfToken:10>"
+    },
+    "body": {
+      "title": "Networking",
+      "slug": "networking",
+      "description": "Networks and protocols.",
+      "icon": "wifi"
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Unauthorized",
+      "statusCode": 401
+    }
+  }
+}

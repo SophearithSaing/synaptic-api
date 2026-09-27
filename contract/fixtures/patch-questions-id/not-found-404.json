@@ -1,0 +1,27 @@
+{
+  "route": "PATCH /questions/{id}",
+  "case": "not-found-404",
+  "request": {
+    "method": "PATCH",
+    "path": "/questions/<objectId:08>",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "level": 4
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Question set not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

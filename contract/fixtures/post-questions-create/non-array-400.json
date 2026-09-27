@@ -1,0 +1,31 @@
+{
+  "route": "POST /questions/create",
+  "case": "non-array-400",
+  "note": "ParseArrayPipe rejects a non-array body.",
+  "request": {
+    "method": "POST",
+    "path": "/questions/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "topic": "<objectId:04>",
+      "setType": "regular",
+      "level": 3,
+      "questions": []
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Validation failed (parsable array expected)",
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

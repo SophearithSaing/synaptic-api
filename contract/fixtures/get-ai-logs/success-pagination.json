@@ -1,0 +1,110 @@
+{
+  "route": "GET /ai/logs",
+  "case": "success-pagination",
+  "request": {
+    "method": "GET",
+    "path": "/ai/logs?page=2&limit=4",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "items": [
+        {
+          "id": "<objectId:28>",
+          "operation": "question-generation",
+          "aiModel": "openai/gpt-oss-120b",
+          "prompt": "{\"topicSlug\":\"binary-basics\",\"topicTitle\":\"Binary Basics\",\"topicDescription\":\"Binary numbers and arithmetic.\",\"topicTags\":[\"binary\",\"arithmetic\"],\"level\":0,\"questionNumber\":1,\"questionType\":\"mcq\",\"recentAcceptedQuestions\":[],\"rejectedQuestion\":{\"id\":\"binary-basics-l0-q1\",\"type\":\"mcq\",\"prompt\":\"Stub mcq question (binary-basics level 0)\",\"options\":[{\"id\":\"binary-basics-l0-q1-o1\",\"text\":\"Stub option one\"},{\"id\":\"binary-basics-l0-q1-o2\",\"text\":\"Stub option two\"},{\"id\":\"binary-basics-l0-q1-o3\",\"text\":\"Stub option three\"}],\"correctOptionId\":\"binary-basics-l0-q1-o2\",\"targetConcepts\":[\"stub-concept\"],\"feedback\":{\"correct\":\"Stub correct feedback.\",\"incorrect\":\"Stub incorrect feedback.\"},\"rubrics\":{\"keyPoints\":[\"Stub key point.\"],\"misconceptions\":[\"Stub misconception.\"]}},\"rejectionReason\":\"Question was too easy.\",\"instructions\":[\"Generate exactly one question for the questionType.\",\"Avoid repeats or close paraphrases in recentAcceptedQuestions.\",\"Use recentAcceptedQuestions targetConcepts to vary focus.\",\"Use short option IDs such as o1, o2, and o3 for MCQ questions.\",\"Use rejectedQuestion and rejectionReason to avoid the same issue.\"]}",
+          "output": "{\"question\":{\"id\":\"stub-q\",\"type\":\"mcq\",\"prompt\":\"Stub mcq question (binary-basics level 0)\",\"targetConcepts\":[\"stub-concept\"],\"feedback\":{\"correct\":\"Stub correct feedback.\",\"incorrect\":\"Stub incorrect feedback.\"},\"rubrics\":{\"keyPoints\":[\"Stub key point.\"],\"misconceptions\":[\"Stub misconception.\"]},\"options\":[{\"id\":\"o1\",\"text\":\"Stub option one\"},{\"id\":\"o2\",\"text\":\"Stub option two\"},{\"id\":\"o3\",\"text\":\"Stub option three\"}],\"correctOptionId\":\"o2\"}}",
+          "liveQuestion": {
+            "id": "<objectId:20>",
+            "question": {
+              "id": "binary-basics-l0-q1",
+              "type": "mcq",
+              "prompt": "Stub mcq question (binary-basics level 0)",
+              "options": [
+                {
+                  "id": "binary-basics-l0-q1-o1",
+                  "text": "Stub option one"
+                },
+                {
+                  "id": "binary-basics-l0-q1-o2",
+                  "text": "Stub option two"
+                },
+                {
+                  "id": "binary-basics-l0-q1-o3",
+                  "text": "Stub option three"
+                }
+              ],
+              "correctOptionId": "binary-basics-l0-q1-o2",
+              "targetConcepts": ["stub-concept"],
+              "feedback": {
+                "correct": "Stub correct feedback.",
+                "incorrect": "Stub incorrect feedback."
+              },
+              "rubrics": {
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
+              }
+            },
+            "level": 0,
+            "questionNumber": 1,
+            "status": "passed"
+          },
+          "createdAt": "<isoDate>"
+        },
+        {
+          "id": "<objectId:29>",
+          "operation": "question-generation",
+          "aiModel": "openai/gpt-oss-120b",
+          "prompt": "{\"topicSlug\":\"binary-basics\",\"topicTitle\":\"Binary Basics\",\"topicDescription\":\"Binary numbers and arithmetic.\",\"topicTags\":[\"binary\",\"arithmetic\"],\"level\":0,\"questionNumber\":1,\"questionType\":\"mcq\",\"recentAcceptedQuestions\":[],\"instructions\":[\"Generate exactly one question for the questionType.\",\"Avoid repeats or close paraphrases in recentAcceptedQuestions.\",\"Use recentAcceptedQuestions targetConcepts to vary focus.\",\"Use short option IDs such as o1, o2, and o3 for MCQ questions.\"]}",
+          "output": "{\"question\":{\"id\":\"stub-q\",\"type\":\"mcq\",\"prompt\":\"Stub mcq question (binary-basics level 0)\",\"targetConcepts\":[\"stub-concept\"],\"feedback\":{\"correct\":\"Stub correct feedback.\",\"incorrect\":\"Stub incorrect feedback.\"},\"rubrics\":{\"keyPoints\":[\"Stub key point.\"],\"misconceptions\":[\"Stub misconception.\"]},\"options\":[{\"id\":\"o1\",\"text\":\"Stub option one\"},{\"id\":\"o2\",\"text\":\"Stub option two\"},{\"id\":\"o3\",\"text\":\"Stub option three\"}],\"correctOptionId\":\"o2\"}}",
+          "liveQuestion": {
+            "id": "<objectId:19>",
+            "question": {
+              "id": "binary-basics-l0-q1",
+              "type": "mcq",
+              "prompt": "Stub mcq question (binary-basics level 0)",
+              "options": [
+                {
+                  "id": "binary-basics-l0-q1-o1",
+                  "text": "Stub option one"
+                },
+                {
+                  "id": "binary-basics-l0-q1-o2",
+                  "text": "Stub option two"
+                },
+                {
+                  "id": "binary-basics-l0-q1-o3",
+                  "text": "Stub option three"
+                }
+              ],
+              "correctOptionId": "binary-basics-l0-q1-o2",
+              "targetConcepts": ["stub-concept"],
+              "feedback": {
+                "correct": "Stub correct feedback.",
+                "incorrect": "Stub incorrect feedback."
+              },
+              "rubrics": {
+                "keyPoints": ["Stub key point."],
+                "misconceptions": ["Stub misconception."]
+              }
+            },
+            "level": 0,
+            "questionNumber": 1,
+            "status": "rejected"
+          },
+          "createdAt": "<isoDate>"
+        }
+      ],
+      "total": 6,
+      "page": 2,
+      "limit": 4
+    }
+  }
+}

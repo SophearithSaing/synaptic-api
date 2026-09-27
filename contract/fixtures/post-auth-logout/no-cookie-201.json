@@ -1,0 +1,23 @@
+{
+  "route": "POST /auth/logout",
+  "case": "no-cookie-201",
+  "note": "No refresh cookie: logout still succeeds and clears cookies.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/logout",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:08>",
+      "x-csrf-token": "<csrfToken:08>"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "set-cookie": [
+        "access_token=; Path=/; Expires=<httpDate>; HttpOnly; Secure; SameSite=None",
+        "refresh_token=; Path=/auth; Expires=<httpDate>; HttpOnly; Secure; SameSite=None"
+      ]
+    },
+    "body": ""
+  }
+}

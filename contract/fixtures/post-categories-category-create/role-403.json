@@ -1,0 +1,30 @@
+{
+  "route": "POST /categories/category/create",
+  "case": "role-403",
+  "request": {
+    "method": "POST",
+    "path": "/categories/category/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "title": "Forbidden",
+      "slug": "forbidden",
+      "description": "Student role.",
+      "icon": "x"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Forbidden resource",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

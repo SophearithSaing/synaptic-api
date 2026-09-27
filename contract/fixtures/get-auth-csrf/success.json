@@ -1,0 +1,20 @@
+{
+  "route": "GET /auth/csrf",
+  "case": "success",
+  "note": "Issues the JS-readable csrf_token cookie and body token.",
+  "request": {
+    "method": "GET",
+    "path": "/auth/csrf",
+    "headers": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": ["csrf_token=<csrfToken:01>; Path=/; Secure; SameSite=None"]
+    },
+    "body": {
+      "csrf_token": "<csrfToken:01>"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "route": "GET /ai/logs",
+  "case": "validation-400",
+  "request": {
+    "method": "GET",
+    "path": "/ai/logs?limit=0",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": ["limit must not be less than 1"],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "route": "POST /auth/login",
+  "case": "throttled-429",
+  "note": "6th login request within 60s (route limit 5, 5-min block).",
+  "request": {
+    "method": "POST",
+    "path": "/auth/login",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:04>; access_token=<jwt>; refresh_token=<refreshToken:04>",
+      "x-csrf-token": "<csrfToken:04>"
+    },
+    "body": {
+      "identifier": "student",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "retry-after": "<retryAfter>"
+    },
+    "body": {
+      "statusCode": 429,
+      "message": "ThrottlerException: Too Many Requests"
+    }
+  }
+}

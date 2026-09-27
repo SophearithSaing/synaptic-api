@@ -1,0 +1,27 @@
+{
+  "route": "PATCH /questions/{id}",
+  "case": "invalid-id-400",
+  "request": {
+    "method": "PATCH",
+    "path": "/questions/not-an-id",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "level": 4
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Invalid MongoDB ObjectId",
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

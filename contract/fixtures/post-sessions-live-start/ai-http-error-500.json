@@ -1,0 +1,27 @@
+{
+  "route": "POST /sessions/live/start",
+  "case": "ai-http-error-500",
+  "note": "Stubbed provider HTTP failure surfaces as unhandled 500.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "topicId": "<objectId:04>"
+    }
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "statusCode": 500,
+      "message": "Internal server error"
+    }
+  }
+}

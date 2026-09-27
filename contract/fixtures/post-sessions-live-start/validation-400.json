@@ -1,0 +1,27 @@
+{
+  "route": "POST /sessions/live/start",
+  "case": "validation-400",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "topicId": "not-an-id"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": ["topicId must be a mongodb id"],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

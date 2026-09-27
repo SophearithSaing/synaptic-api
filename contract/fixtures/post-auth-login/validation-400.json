@@ -1,0 +1,29 @@
+{
+  "route": "POST /auth/login",
+  "case": "validation-400",
+  "note": "identifier must not contain whitespace.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/login",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:03>; access_token=<jwt>; refresh_token=<refreshToken:03>",
+      "x-csrf-token": "<csrfToken:03>"
+    },
+    "body": {
+      "identifier": "bad identifier",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": ["identifier must match /^\\S+$/ regular expression"],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}
