@@ -24,6 +24,14 @@ func chain(
 	return handler
 }
 
+// Chain wraps the handler with middleware in registration order.
+func Chain(
+	handler http.Handler,
+	middleware ...func(http.Handler) http.Handler,
+) http.Handler {
+	return chain(handler, middleware...)
+}
+
 // requestID assigns a unique ID to each request, honoring an incoming
 // X-Request-Id header, and exposes it on the response and context.
 func requestID(next http.Handler) http.Handler {

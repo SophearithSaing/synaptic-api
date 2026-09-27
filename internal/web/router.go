@@ -8,10 +8,16 @@ import (
 // ReadyProbe reports whether a dependency is ready to serve traffic.
 type ReadyProbe func(ctx context.Context) error
 
-// NewRouter builds the root router with global middleware and the
-// infrastructure endpoints. Feature routes are registered on the mux by
-// the caller using Go 1.22+ method and wildcard patterns.
-func NewRouter(clientURL string, ready ReadyProbe) http.Handler {
+// NewRouter builds the root router with global middleware, extra
+// application middleware (e.g. rate limiting), and the infrastructure
+// endpoints. Each mounter registers feature routes on the mux; the
+// catch-all keeps unmatched routes on the legacy contract.
+func NewRouter(
+	clientURL string,
+	ready ReadyProbe,
+	middleware []func(http.Handler) http.Handler,
+	mounters []func(mux *http.ServeMux),
+) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) {
@@ -41,11 +47,23 @@ func NewRouter(clientURL string, ready ReadyProbe) http.Handler {
 		},
 	)
 
+	for _, mount := range mounters {
+		mount(mux)
+	}
+
 	// Catch-all: reproduce the legacy Express 404 body for unknown routes
 	// and unsupported methods instead of the default Go 404/405 bodies.
 	mux.HandleFunc("/", notFoundHandler)
 
-	return chain(mux, requestID, cors(clientURL), requestLogger, recoverer)
+	extra := append([]func(http.Handler) http.Handler{}, middleware...)
+	extra = append(extra, recoverer)
+
+	return chain(mux, append(
+		[]func(http.Handler) http.Handler{
+			requestID, cors(clientURL), requestLogger,
+		},
+		extra...,
+	)...)
 }
 
 // notFoundHandler reproduces the legacy Express 404 body so unknown routes

@@ -5,12 +5,14 @@ package app
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 
 	"github.com/SophearithSaing/synaptic-api/internal/config"
+	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
 	"github.com/SophearithSaing/synaptic-api/internal/web"
 )
@@ -23,6 +25,19 @@ const disconnectTimeout = 10 * time.Second
 
 // readyPingTimeout bounds each readiness probe.
 const readyPingTimeout = 2 * time.Second
+
+// throttle ambient and per-route limits match the pinned contract.
+var (
+	globalThrottle = web.ThrottleConfig{
+		Limit: 100, TTL: time.Minute, Block: time.Minute,
+	}
+	registerThrottle = web.ThrottleConfig{
+		Limit: 3, TTL: time.Minute, Block: 5 * time.Minute,
+	}
+	loginThrottle = web.ThrottleConfig{
+		Limit: 5, TTL: time.Minute, Block: 5 * time.Minute,
+	}
+)
 
 // App is the wired application.
 type App struct {
@@ -40,12 +55,40 @@ func New(cfg config.Config) (*App, error) {
 		return nil, err
 	}
 
-	router := web.NewRouter(cfg.ClientURL, func(ctx context.Context) error {
+	ready := func(ctx context.Context) error {
 		pingCtx, cancel := context.WithTimeout(ctx, readyPingTimeout)
 		defer cancel()
 
 		return mongoClient.Ping(pingCtx, readpref.Primary())
+	}
+
+	throttler := web.NewThrottler(globalThrottle, map[string]web.ThrottleConfig{
+		"POST /auth/register": registerThrottle,
+		"POST /auth/login":    loginThrottle,
 	})
+	store := mongostore.NewIdentityStore(mongoClient.Database(cfg.MongoDatabase))
+	issuer := identity.NewTokenIssuer(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience)
+	service := identity.NewService(store, issuer, identity.Options{
+		AccessTTL:     cfg.JWTAccessTTL,
+		RefreshTTL:    cfg.JWTRefreshTTL,
+		SecureCookies: cfg.SecureCookies(),
+	})
+	handler := identity.NewHandler(
+		service,
+		identity.NewAuthenticator(issuer, store),
+		identity.Options{
+			AccessTTL:     cfg.JWTAccessTTL,
+			RefreshTTL:    cfg.JWTRefreshTTL,
+			SecureCookies: cfg.SecureCookies(),
+		},
+	)
+
+	router := web.NewRouter(
+		cfg.ClientURL,
+		ready,
+		[]func(http.Handler) http.Handler{throttler.Middleware},
+		[]func(mux *http.ServeMux){handler.Mount},
+	)
 
 	return &App{
 		server: web.NewServer(cfg.Port, router),

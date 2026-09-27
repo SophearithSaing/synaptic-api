@@ -12,7 +12,7 @@ import (
 )
 
 func newRouter() http.Handler {
-	return web.NewRouter("http://localhost:4200", nil)
+	return web.NewRouter("http://localhost:4200", nil, nil, nil)
 }
 
 func TestRootReturnsHelloWorld(t *testing.T) {
@@ -63,6 +63,8 @@ func TestHealthReady(t *testing.T) {
 		router := web.NewRouter(
 			"http://localhost:4200",
 			func(context.Context) error { return errors.New("mongo down") },
+			nil,
+			nil,
 		)
 		recorder := httptest.NewRecorder()
 		router.ServeHTTP(
