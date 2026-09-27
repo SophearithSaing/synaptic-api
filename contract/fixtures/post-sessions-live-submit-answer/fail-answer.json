@@ -1,0 +1,50 @@
+{
+  "route": "POST /sessions/live/submit-answer",
+  "case": "fail-answer",
+  "note": "Wrong option before 3 accepted questions: nextQuestion null.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:18>",
+      "questionId": "<objectId:21>",
+      "answer": "binary-basics-l0-q2-o1"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "answers": [
+        {
+          "id": "ans-binary-basics-l0-q2",
+          "questionId": "binary-basics-l0-q2",
+          "questionPrompt": "Stub mcq question (binary-basics level 0)",
+          "questionType": "mcq",
+          "answer": "binary-basics-l0-q2-o1",
+          "answerText": "Stub option one",
+          "correctAnswer": "binary-basics-l0-q2-o2",
+          "correctAnswerText": "Stub option two",
+          "score": 0,
+          "feedback": "Stub incorrect feedback.",
+          "targetConcepts": [
+            "stub-concept"
+          ],
+          "strengths": [],
+          "weaknesses": [
+            "stub-concept"
+          ],
+          "evaluatedBy": "system"
+        }
+      ],
+      "nextQuestion": null
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "route": "POST /sessions/start",
+  "case": "csrf-403",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/start",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    },
+    "body": {
+      "topicId": "<objectId:04>"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Invalid CSRF token",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

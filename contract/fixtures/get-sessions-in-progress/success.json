@@ -1,0 +1,128 @@
+{
+  "route": "GET /sessions/in-progress",
+  "case": "success",
+  "note": "Active sessions sorted by updatedAt descending.",
+  "request": {
+    "method": "GET",
+    "path": "/sessions/in-progress",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": [
+      {
+        "id": "<objectId:17>",
+        "student": {
+          "id": "<objectId:01>",
+          "i0": 6221056,
+          "i1": 0,
+          "i2": 0,
+          "i3": 1
+        },
+        "topic": {
+          "id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": {
+            "id": "<objectId:03>",
+            "i0": 6221056,
+            "i1": 0,
+            "i2": 0,
+            "i3": 17
+          },
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "currentLevel": 0,
+        "status": "active",
+        "startedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      {
+        "id": "<objectId:12>",
+        "student": {
+          "id": "<objectId:01>",
+          "i0": 6221056,
+          "i1": 0,
+          "i2": 0,
+          "i3": 1
+        },
+        "topic": {
+          "id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": {
+            "id": "<objectId:03>",
+            "i0": 6221056,
+            "i1": 0,
+            "i2": 0,
+            "i3": 17
+          },
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "currentLevel": 2,
+        "status": "active",
+        "startedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      {
+        "id": "<objectId:14>",
+        "student": {
+          "id": "<objectId:01>",
+          "i0": 6221056,
+          "i1": 0,
+          "i2": 0,
+          "i3": 1
+        },
+        "topic": {
+          "id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": {
+            "id": "<objectId:03>",
+            "i0": 6221056,
+            "i1": 0,
+            "i2": 0,
+            "i3": 17
+          },
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "currentLevel": 0,
+        "status": "active",
+        "startedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      }
+    ]
+  }
+}

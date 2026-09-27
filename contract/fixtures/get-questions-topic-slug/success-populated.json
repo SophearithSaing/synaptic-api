@@ -1,0 +1,217 @@
+{
+  "route": "GET /questions/topic/{slug}",
+  "case": "success-populated",
+  "request": {
+    "method": "GET",
+    "path": "/questions/topic/binary-basics?populateTopic=true",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": [
+      {
+        "id": "<objectId:06>",
+        "topic": {
+          "_id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": "<objectId:03>",
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "setType": "regular",
+        "level": 0,
+        "questions": [
+          {
+            "id": "seed-l0-q1",
+            "type": "mcq",
+            "prompt": "What is 1 + 1 in binary?",
+            "options": [
+              {
+                "id": "o1",
+                "text": "seed-l0-q1 option one"
+              },
+              {
+                "id": "o2",
+                "text": "seed-l0-q1 option two"
+              },
+              {
+                "id": "o3",
+                "text": "seed-l0-q1 option three"
+              }
+            ],
+            "correctOptionId": "o1",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "feedback": {
+              "correct": "Correct feedback.",
+              "incorrect": "Incorrect feedback."
+            },
+            "rubrics": {
+              "keyPoints": [
+                "Key point."
+              ],
+              "misconceptions": [
+                "Misconception."
+              ]
+            }
+          },
+          {
+            "id": "seed-l0-q2",
+            "type": "mcq",
+            "prompt": "What is 10 + 1 in binary?",
+            "options": [
+              {
+                "id": "o1",
+                "text": "seed-l0-q2 option one"
+              },
+              {
+                "id": "o2",
+                "text": "seed-l0-q2 option two"
+              },
+              {
+                "id": "o3",
+                "text": "seed-l0-q2 option three"
+              }
+            ],
+            "correctOptionId": "o2",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "feedback": {
+              "correct": "Correct feedback.",
+              "incorrect": "Incorrect feedback."
+            },
+            "rubrics": {
+              "keyPoints": [
+                "Key point."
+              ],
+              "misconceptions": [
+                "Misconception."
+              ]
+            }
+          }
+        ],
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      {
+        "id": "<objectId:07>",
+        "topic": {
+          "_id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": "<objectId:03>",
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "setType": "regular",
+        "level": 1,
+        "questions": [
+          {
+            "id": "seed-l1-q1",
+            "type": "written",
+            "prompt": "Explain two's complement.",
+            "targetConcepts": [
+              "twos-complement"
+            ],
+            "feedback": {
+              "correct": "Correct feedback.",
+              "incorrect": "Incorrect feedback."
+            },
+            "rubrics": {
+              "keyPoints": [
+                "Invert bits.",
+                "Add one."
+              ],
+              "misconceptions": [
+                "Sign bit only."
+              ]
+            }
+          }
+        ],
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      {
+        "id": "<objectId:11>",
+        "topic": {
+          "_id": "<objectId:04>",
+          "title": "Binary Basics",
+          "slug": "binary-basics",
+          "description": "Binary numbers and arithmetic.",
+          "icon": "binary",
+          "tags": [
+            "binary",
+            "arithmetic"
+          ],
+          "category": "<objectId:03>",
+          "createdAt": "<isoDate>",
+          "updatedAt": "<isoDate>",
+          "__v": 0
+        },
+        "setType": "regular",
+        "level": 4,
+        "questions": [
+          {
+            "id": "created-q1",
+            "type": "mcq",
+            "prompt": "What does CPU stand for?",
+            "options": [
+              {
+                "id": "o1",
+                "text": "Central Processing Unit"
+              },
+              {
+                "id": "o2",
+                "text": "Computer Personal Unit"
+              },
+              {
+                "id": "o3",
+                "text": "Central Program Utility"
+              }
+            ],
+            "correctOptionId": "o1",
+            "targetConcepts": [
+              "hardware-basics"
+            ],
+            "feedback": {
+              "correct": "Correct.",
+              "incorrect": "Incorrect."
+            },
+            "rubrics": {
+              "keyPoints": [
+                "Central processing."
+              ],
+              "misconceptions": [
+                "Personal computer."
+              ]
+            }
+          }
+        ],
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      }
+    ]
+  }
+}

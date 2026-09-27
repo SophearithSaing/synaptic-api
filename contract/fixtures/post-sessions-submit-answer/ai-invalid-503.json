@@ -1,0 +1,35 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "ai-invalid-503",
+  "note": "Stubbed provider returns non-JSON for the written evaluation.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:17>",
+      "questionSetId": "<objectId:07>",
+      "answers": [
+        {
+          "questionId": "seed-l1-q1",
+          "answer": "Some written answer."
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 503,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "AI response was invalid",
+      "error": "Service Unavailable",
+      "statusCode": 503
+    }
+  }
+}

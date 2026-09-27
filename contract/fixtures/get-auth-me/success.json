@@ -1,0 +1,23 @@
+{
+  "route": "GET /auth/me",
+  "case": "success",
+  "request": {
+    "method": "GET",
+    "path": "/auth/me",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>; refresh_token=<refreshToken:05>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "email": "student@example.com",
+      "username": "student",
+      "role": "user",
+      "userId": "<objectId:01>"
+    }
+  }
+}

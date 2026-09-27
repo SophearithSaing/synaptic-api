@@ -1,0 +1,29 @@
+{
+  "route": "POST /categories/category/create",
+  "case": "csrf-403",
+  "request": {
+    "method": "POST",
+    "path": "/categories/category/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>"
+    },
+    "body": {
+      "title": "Networking",
+      "slug": "networking",
+      "description": "Networks and protocols.",
+      "icon": "wifi"
+    }
+  },
+  "response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Invalid CSRF token",
+      "error": "Forbidden",
+      "statusCode": 403
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "route": "POST /topics/create",
+  "case": "duplicate-slug-500",
+  "note": "Unique-index violation surfaces as 500, not 409.",
+  "request": {
+    "method": "POST",
+    "path": "/topics/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "title": "Binary Again",
+      "slug": "binary-basics",
+      "description": "Duplicate slug.",
+      "icon": "binary",
+      "tags": [
+        "binary"
+      ],
+      "category": "<objectId:03>"
+    }
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "statusCode": 500,
+      "message": "Internal server error"
+    }
+  }
+}

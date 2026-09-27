@@ -1,0 +1,31 @@
+{
+  "route": "POST /auth/register",
+  "case": "success",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>",
+      "x-csrf-token": "<csrfToken:01>"
+    },
+    "body": {
+      "username": "alice",
+      "email": "alice@example.com",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": [
+        "access_token=<jwt>; Max-Age=86400; Path=/; Expires=<httpDate>; HttpOnly; Secure; SameSite=None",
+        "refresh_token=<refreshToken:01>; Max-Age=604800; Path=/auth; Expires=<httpDate>; HttpOnly; Secure; SameSite=None"
+      ]
+    },
+    "body": {
+      "authenticated": true
+    }
+  }
+}

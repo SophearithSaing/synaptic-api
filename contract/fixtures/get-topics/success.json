@@ -1,0 +1,71 @@
+{
+  "route": "GET /topics",
+  "case": "success",
+  "request": {
+    "method": "GET",
+    "path": "/topics",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": [
+      {
+        "id": "<objectId:04>",
+        "title": "Binary Basics",
+        "slug": "binary-basics",
+        "description": "Binary numbers and arithmetic.",
+        "icon": "binary",
+        "tags": [
+          "binary",
+          "arithmetic"
+        ],
+        "category": {
+          "id": "<objectId:03>",
+          "title": "Core Concepts",
+          "slug": "core-concepts",
+          "description": "Foundational computing theory.",
+          "icon": "cpu"
+        }
+      },
+      {
+        "id": "<objectId:05>",
+        "title": "Empty Topic",
+        "slug": "empty-topic",
+        "description": "Topic without question sets.",
+        "icon": "empty",
+        "tags": [
+          "misc"
+        ],
+        "category": {
+          "id": "<objectId:03>",
+          "title": "Core Concepts",
+          "slug": "core-concepts",
+          "description": "Foundational computing theory.",
+          "icon": "cpu"
+        }
+      },
+      {
+        "id": "<objectId:10>",
+        "title": "Logic Gates",
+        "slug": "logic-gates",
+        "description": "Boolean logic and gates.",
+        "icon": "gate",
+        "tags": [
+          "logic"
+        ],
+        "category": {
+          "id": "<objectId:03>",
+          "title": "Core Concepts",
+          "slug": "core-concepts",
+          "description": "Foundational computing theory.",
+          "icon": "cpu"
+        }
+      }
+    ]
+  }
+}

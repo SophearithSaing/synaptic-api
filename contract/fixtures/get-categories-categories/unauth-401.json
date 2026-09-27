@@ -1,0 +1,19 @@
+{
+  "route": "GET /categories/categories",
+  "case": "unauth-401",
+  "request": {
+    "method": "GET",
+    "path": "/categories/categories",
+    "headers": {}
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Unauthorized",
+      "statusCode": 401
+    }
+  }
+}

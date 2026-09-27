@@ -1,0 +1,29 @@
+{
+  "route": "POST /sessions/live/reject",
+  "case": "question-not-found-404",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/reject",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:18>",
+      "questionId": "<objectId:08>",
+      "reason": "No question."
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Live question not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

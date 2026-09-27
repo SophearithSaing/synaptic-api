@@ -1,0 +1,26 @@
+{
+  "route": "POST /auth/refresh",
+  "case": "success",
+  "note": "Rotates the refresh token and re-sets both auth cookies.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/refresh",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>; refresh_token=<refreshToken:05>",
+      "x-csrf-token": "<csrfToken:05>"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "set-cookie": [
+        "access_token=<jwt>; Max-Age=86400; Path=/; Expires=<httpDate>; HttpOnly; Secure; SameSite=None",
+        "refresh_token=<refreshToken:06>; Max-Age=604800; Path=/auth; Expires=<httpDate>; HttpOnly; Secure; SameSite=None"
+      ]
+    },
+    "body": {
+      "authenticated": true
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "fail-attempt",
+  "note": "All answers wrong: failed attempt, nextQuestionSet null.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:14>",
+      "questionSetId": "<objectId:06>",
+      "answers": [
+        {
+          "questionId": "seed-l0-q1",
+          "answer": "o2"
+        },
+        {
+          "questionId": "seed-l0-q2",
+          "answer": "o1"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "attempt": {
+        "id": "<objectId:15>",
+        "user": "<objectId:01>",
+        "session": "<objectId:14>",
+        "topic": "<objectId:04>",
+        "questionSet": "<objectId:06>",
+        "level": 0,
+        "answers": [
+          {
+            "id": "ans-seed-l0-q1",
+            "questionId": "seed-l0-q1",
+            "questionPrompt": "What is 1 + 1 in binary?",
+            "questionType": "mcq",
+            "answer": "o2",
+            "answerText": "seed-l0-q1 option two",
+            "correctAnswer": "o1",
+            "correctAnswerText": "seed-l0-q1 option one",
+            "score": 0,
+            "feedback": "Incorrect feedback.",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "strengths": [],
+            "weaknesses": [
+              "binary-addition"
+            ],
+            "evaluatedBy": "system"
+          },
+          {
+            "id": "ans-seed-l0-q2",
+            "questionId": "seed-l0-q2",
+            "questionPrompt": "What is 10 + 1 in binary?",
+            "questionType": "mcq",
+            "answer": "o1",
+            "answerText": "seed-l0-q2 option one",
+            "correctAnswer": "o2",
+            "correctAnswerText": "seed-l0-q2 option two",
+            "score": 0,
+            "feedback": "Incorrect feedback.",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "strengths": [],
+            "weaknesses": [
+              "binary-addition"
+            ],
+            "evaluatedBy": "system"
+          }
+        ],
+        "setScore": 0,
+        "passed": false,
+        "strengths": [],
+        "weaknesses": [
+          "binary-addition"
+        ],
+        "submittedAt": "<isoDate>",
+        "evaluatedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      "nextQuestionSet": null
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "route": "POST /sessions/live/submit-answer",
+  "case": "success-correct",
+  "note": "Correct MCQ option; the next question is generated.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:18>",
+      "questionId": "<objectId:20>",
+      "answer": "binary-basics-l0-q1-o2"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "answers": [
+        {
+          "id": "ans-binary-basics-l0-q1",
+          "questionId": "binary-basics-l0-q1",
+          "questionPrompt": "Stub mcq question (binary-basics level 0)",
+          "questionType": "mcq",
+          "answer": "binary-basics-l0-q1-o2",
+          "answerText": "Stub option two",
+          "correctAnswer": "binary-basics-l0-q1-o2",
+          "correctAnswerText": "Stub option two",
+          "score": 1,
+          "feedback": "Stub correct feedback.",
+          "targetConcepts": [
+            "stub-concept"
+          ],
+          "strengths": [
+            "stub-concept"
+          ],
+          "weaknesses": [],
+          "evaluatedBy": "system"
+        }
+      ],
+      "nextQuestion": {
+        "sessionId": "<objectId:18>",
+        "questionId": "<objectId:21>",
+        "question": {
+          "id": "binary-basics-l0-q2",
+          "type": "mcq",
+          "prompt": "Stub mcq question (binary-basics level 0)",
+          "options": [
+            {
+              "id": "binary-basics-l0-q2-o1",
+              "text": "Stub option one"
+            },
+            {
+              "id": "binary-basics-l0-q2-o2",
+              "text": "Stub option two"
+            },
+            {
+              "id": "binary-basics-l0-q2-o3",
+              "text": "Stub option three"
+            }
+          ],
+          "correctOptionId": "binary-basics-l0-q2-o2",
+          "targetConcepts": [
+            "stub-concept"
+          ],
+          "feedback": {
+            "correct": "Stub correct feedback.",
+            "incorrect": "Stub incorrect feedback."
+          },
+          "rubrics": {
+            "keyPoints": [
+              "Stub key point."
+            ],
+            "misconceptions": [
+              "Stub misconception."
+            ]
+          }
+        }
+      }
+    }
+  }
+}

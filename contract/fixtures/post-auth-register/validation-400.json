@@ -1,0 +1,32 @@
+{
+  "route": "POST /auth/register",
+  "case": "validation-400",
+  "note": "Password lacks an uppercase letter and a digit.",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>; access_token=<jwt>; refresh_token=<refreshToken:01>",
+      "x-csrf-token": "<csrfToken:01>"
+    },
+    "body": {
+      "username": "bobby",
+      "email": "bobby@example.com",
+      "password": "password"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": [
+        "password must match /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/ regular expression"
+      ],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

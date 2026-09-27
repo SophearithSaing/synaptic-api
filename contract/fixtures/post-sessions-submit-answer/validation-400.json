@@ -1,0 +1,31 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "validation-400",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:12>",
+      "questionSetId": "<objectId:06>",
+      "answers": []
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": [
+        "answers should not be empty"
+      ],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

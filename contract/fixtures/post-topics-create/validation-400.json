@@ -1,0 +1,38 @@
+{
+  "route": "POST /topics/create",
+  "case": "validation-400",
+  "request": {
+    "method": "POST",
+    "path": "/topics/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "title": "Too Many Tags",
+      "slug": "too-many-tags",
+      "description": "Three tags.",
+      "icon": "tag",
+      "tags": [
+        "a",
+        "b",
+        "c"
+      ],
+      "category": "<objectId:03>"
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": [
+        "tags must contain no more than 2 elements"
+      ],
+      "error": "Bad Request",
+      "statusCode": 400
+    }
+  }
+}

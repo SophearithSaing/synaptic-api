@@ -1,0 +1,46 @@
+{
+  "route": "POST /topics/create",
+  "case": "success",
+  "request": {
+    "method": "POST",
+    "path": "/topics/create",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    },
+    "body": {
+      "title": "Logic Gates",
+      "slug": "logic-gates",
+      "description": "Boolean logic and gates.",
+      "icon": "gate",
+      "tags": [
+        "logic"
+      ],
+      "category": "<objectId:03>"
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "id": "<objectId:10>",
+      "title": "Logic Gates",
+      "slug": "logic-gates",
+      "description": "Boolean logic and gates.",
+      "icon": "gate",
+      "tags": [
+        "logic"
+      ],
+      "category": {
+        "id": "<objectId:03>",
+        "title": "Core Concepts",
+        "slug": "core-concepts",
+        "description": "Foundational computing theory.",
+        "icon": "cpu"
+      }
+    }
+  }
+}

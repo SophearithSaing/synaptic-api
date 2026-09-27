@@ -1,0 +1,30 @@
+{
+  "route": "POST /auth/register",
+  "case": "throttled-429",
+  "note": "4th register request within 60s (route limit 3, 5-min block).",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:02>; access_token=<jwt>; refresh_token=<refreshToken:02>",
+      "x-csrf-token": "<csrfToken:02>"
+    },
+    "body": {
+      "username": "throttle4",
+      "email": "throttle4@example.com",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "retry-after": "<retryAfter>"
+    },
+    "body": {
+      "statusCode": 429,
+      "message": "ThrottlerException: Too Many Requests"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "route": "GET /topics/{id}",
+  "case": "success",
+  "request": {
+    "method": "GET",
+    "path": "/topics/<objectId:04>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "id": "<objectId:04>",
+      "title": "Binary Basics",
+      "slug": "binary-basics",
+      "description": "Binary numbers and arithmetic.",
+      "icon": "binary",
+      "tags": [
+        "binary",
+        "arithmetic"
+      ],
+      "category": {
+        "id": "<objectId:03>",
+        "title": "Core Concepts",
+        "slug": "core-concepts",
+        "description": "Foundational computing theory.",
+        "icon": "cpu"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "route": "POST /auth/register",
+  "case": "conflict-email-409",
+  "request": {
+    "method": "POST",
+    "path": "/auth/register",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:01>; access_token=<jwt>; refresh_token=<refreshToken:01>",
+      "x-csrf-token": "<csrfToken:01>"
+    },
+    "body": {
+      "username": "uniqueuser",
+      "email": "admin@example.com",
+      "password": "Password1"
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Email already exists",
+      "error": "Conflict",
+      "statusCode": 409
+    }
+  }
+}

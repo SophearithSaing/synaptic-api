@@ -1,0 +1,127 @@
+{
+  "route": "POST /sessions/submit-answer",
+  "case": "success-pass",
+  "note": "All MCQ answers correct: session advances to level 1.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/submit-answer",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:12>",
+      "questionSetId": "<objectId:06>",
+      "answers": [
+        {
+          "questionId": "seed-l0-q1",
+          "answer": "o1"
+        },
+        {
+          "questionId": "seed-l0-q2",
+          "answer": "o2"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "attempt": {
+        "id": "<objectId:13>",
+        "user": "<objectId:01>",
+        "session": "<objectId:12>",
+        "topic": "<objectId:04>",
+        "questionSet": "<objectId:06>",
+        "level": 0,
+        "answers": [
+          {
+            "id": "ans-seed-l0-q1",
+            "questionId": "seed-l0-q1",
+            "questionPrompt": "What is 1 + 1 in binary?",
+            "questionType": "mcq",
+            "answer": "o1",
+            "answerText": "seed-l0-q1 option one",
+            "correctAnswer": "o1",
+            "correctAnswerText": "seed-l0-q1 option one",
+            "score": 1,
+            "feedback": "Correct feedback.",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "strengths": [
+              "binary-addition"
+            ],
+            "weaknesses": [],
+            "evaluatedBy": "system"
+          },
+          {
+            "id": "ans-seed-l0-q2",
+            "questionId": "seed-l0-q2",
+            "questionPrompt": "What is 10 + 1 in binary?",
+            "questionType": "mcq",
+            "answer": "o2",
+            "answerText": "seed-l0-q2 option two",
+            "correctAnswer": "o2",
+            "correctAnswerText": "seed-l0-q2 option two",
+            "score": 1,
+            "feedback": "Correct feedback.",
+            "targetConcepts": [
+              "binary-addition"
+            ],
+            "strengths": [
+              "binary-addition"
+            ],
+            "weaknesses": [],
+            "evaluatedBy": "system"
+          }
+        ],
+        "setScore": 1,
+        "passed": true,
+        "strengths": [
+          "binary-addition"
+        ],
+        "weaknesses": [],
+        "submittedAt": "<isoDate>",
+        "evaluatedAt": "<isoDate>",
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      },
+      "nextQuestionSet": {
+        "id": "<objectId:07>",
+        "topic": "<objectId:04>",
+        "setType": "regular",
+        "level": 1,
+        "questions": [
+          {
+            "id": "seed-l1-q1",
+            "type": "written",
+            "prompt": "Explain two's complement.",
+            "targetConcepts": [
+              "twos-complement"
+            ],
+            "feedback": {
+              "correct": "Correct feedback.",
+              "incorrect": "Incorrect feedback."
+            },
+            "rubrics": {
+              "keyPoints": [
+                "Invert bits.",
+                "Add one."
+              ],
+              "misconceptions": [
+                "Sign bit only."
+              ]
+            }
+          }
+        ],
+        "createdAt": "<isoDate>",
+        "updatedAt": "<isoDate>"
+      }
+    }
+  }
+}

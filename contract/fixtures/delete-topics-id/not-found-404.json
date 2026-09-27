@@ -1,0 +1,23 @@
+{
+  "route": "DELETE /topics/{id}",
+  "case": "not-found-404",
+  "request": {
+    "method": "DELETE",
+    "path": "/topics/<objectId:08>",
+    "headers": {
+      "cookie": "csrf_token=<csrfToken:09>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:09>"
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "message": "Topic not found",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

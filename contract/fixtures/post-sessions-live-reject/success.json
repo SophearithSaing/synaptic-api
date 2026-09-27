@@ -1,0 +1,64 @@
+{
+  "route": "POST /sessions/live/reject",
+  "case": "success",
+  "note": "Rejection reason is fed back into the generation prompt.",
+  "request": {
+    "method": "POST",
+    "path": "/sessions/live/reject",
+    "headers": {
+      "content-type": "application/json",
+      "cookie": "csrf_token=<csrfToken:05>; access_token=<jwt>",
+      "x-csrf-token": "<csrfToken:05>"
+    },
+    "body": {
+      "sessionId": "<objectId:18>",
+      "questionId": "<objectId:19>",
+      "reason": "Question was too easy."
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "sessionId": "<objectId:18>",
+      "questionId": "<objectId:20>",
+      "question": {
+        "id": "binary-basics-l0-q1",
+        "type": "mcq",
+        "prompt": "Stub mcq question (binary-basics level 0)",
+        "options": [
+          {
+            "id": "binary-basics-l0-q1-o1",
+            "text": "Stub option one"
+          },
+          {
+            "id": "binary-basics-l0-q1-o2",
+            "text": "Stub option two"
+          },
+          {
+            "id": "binary-basics-l0-q1-o3",
+            "text": "Stub option three"
+          }
+        ],
+        "correctOptionId": "binary-basics-l0-q1-o2",
+        "targetConcepts": [
+          "stub-concept"
+        ],
+        "feedback": {
+          "correct": "Stub correct feedback.",
+          "incorrect": "Stub incorrect feedback."
+        },
+        "rubrics": {
+          "keyPoints": [
+            "Stub key point."
+          ],
+          "misconceptions": [
+            "Stub misconception."
+          ]
+        }
+      }
+    }
+  }
+}
