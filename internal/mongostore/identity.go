@@ -3,6 +3,7 @@ package mongostore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -28,15 +29,70 @@ func NewIdentityStore(database *mongo.Database) *IdentityStore {
 	}
 }
 
-// CreateUser inserts a user document and maps duplicate key errors to
-// the identity sentinels by index name.
-func (s *IdentityStore) CreateUser(
+// CreateUserAndSession inserts the user and the initial refresh session
+// in one transaction so a failed session cannot leave an account
+// without credentials. The transaction reuses the caller's context
+// deadline and the driver's commit retry policy.
+func (s *IdentityStore) CreateUserAndSession(
 	ctx context.Context,
 	user identity.Credentials,
-) (string, error) {
+	session identity.Session,
+) (string, string, error) {
+	client := s.users.Database().Client()
+
+	databaseSession, err := client.StartSession()
+	if err != nil {
+		return "", "", fmt.Errorf("start session: %w", err)
+	}
+	defer databaseSession.EndSession(ctx)
+
+	created, err := databaseSession.WithTransaction(
+		ctx,
+		func(ctx context.Context) (any, error) {
+			objectID, err := s.insertUser(ctx, newInsertedUser(user))
+			if err != nil {
+				return nil, err
+			}
+
+			sessionDocument := newSessionDocument(objectID, session)
+			if _, err := s.sessions.InsertOne(
+				ctx, sessionDocument,
+			); err != nil {
+				return nil, err
+			}
+
+			return registeredIDs{
+				UserID:    objectID,
+				SessionID: sessionDocument.ID,
+			}, nil
+		},
+	)
+	if err != nil {
+		return "", "", mapDuplicateKey(err)
+	}
+
+	ids, ok := created.(registeredIDs)
+	if !ok {
+		return "", "", fmt.Errorf(
+			"registration returned %T, want registeredIDs", created,
+		)
+	}
+
+	return ids.UserID.Hex(), ids.SessionID.Hex(), nil
+}
+
+// registeredIDs carries the identities the registration transaction
+// created.
+type registeredIDs struct {
+	UserID    bson.ObjectID
+	SessionID bson.ObjectID
+}
+
+// newInsertedUser builds the users document for a new account.
+func newInsertedUser(user identity.Credentials) UserDocument {
 	now := time.Now()
 
-	insert := UserDocument{
+	return UserDocument{
 		Username:  user.Username,
 		Email:     user.Email,
 		Password:  user.PasswordHash,
@@ -45,15 +101,62 @@ func (s *IdentityStore) CreateUser(
 		UpdatedAt: now,
 		Version:   0,
 	}
-	result, err := s.users.InsertOne(ctx, insert)
-	if err != nil {
-		return "", mapDuplicateKey(err)
-	}
-
-	return objectIDHex(result.InsertedID), nil
 }
 
-// FindUserByID resolves a user by hex ObjectId.
+// insertUser inserts the user document with a pre-assigned identity,
+// translating duplicate key conflicts into the identity sentinels.
+func (s *IdentityStore) insertUser(
+	ctx context.Context,
+	document UserDocument,
+) (bson.ObjectID, error) {
+	document.ID = bson.NewObjectID()
+
+	if _, err := s.users.InsertOne(ctx, document); err != nil {
+		return bson.NilObjectID, mapDuplicateKey(err)
+	}
+
+	return document.ID, nil
+}
+
+// newSessionDocument builds an authSessions document with a fresh
+// identity.
+func newSessionDocument(
+	userID bson.ObjectID,
+	session identity.Session,
+) AuthSessionDocument {
+	now := time.Now()
+
+	return AuthSessionDocument{
+		ID:               bson.NewObjectID(),
+		UserID:           userID,
+		RefreshTokenHash: session.RefreshHash,
+		ExpiresAt:        session.ExpiresAt,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		Version:          0,
+	}
+}
+
+// CreateSession inserts an auth session and returns its hex identity.
+func (s *IdentityStore) CreateSession(
+	ctx context.Context,
+	session identity.Session,
+) (string, error) {
+	userID, err := bson.ObjectIDFromHex(session.UserID)
+	if err != nil {
+		return "", err
+	}
+
+	document := newSessionDocument(userID, session)
+	if _, err := s.sessions.InsertOne(ctx, document); err != nil {
+		return "", err
+	}
+
+	return document.ID.Hex(), nil
+}
+
+// FindUserByID resolves a user by hex ObjectId. An unparsable id is a
+// lookup miss, not a lookup failure.
 func (s *IdentityStore) FindUserByID(
 	ctx context.Context,
 	id string,
@@ -68,78 +171,32 @@ func (s *IdentityStore) FindUserByID(
 	return decodeUser(document)
 }
 
-// FindUserByUsername resolves a user with the legacy case-insensitive
-// English collation.
-func (s *IdentityStore) FindUserByUsername(
+// FindAuthRecordByUsername resolves the login record with the legacy
+// case-insensitive English collation, carrying the user and the stored
+// bcrypt password hash from one query.
+func (s *IdentityStore) FindAuthRecordByUsername(
 	ctx context.Context,
 	username string,
-) (*identity.User, error) {
+) (*identity.AuthRecord, error) {
 	document := s.users.FindOne(ctx, bson.M{"username": username},
 		options.FindOne().SetCollation(&options.Collation{
 			Locale:   "en",
 			Strength: 2,
 		}))
 
-	return decodeUser(document)
+	return decodeAuthRecord(document)
 }
 
-// FindUserByEmail resolves a user by exact normalized email.
-func (s *IdentityStore) FindUserByEmail(
+// FindAuthRecordByEmail resolves the login record by exact normalized
+// email, carrying the user and the stored bcrypt password hash from
+// one query.
+func (s *IdentityStore) FindAuthRecordByEmail(
 	ctx context.Context,
 	email string,
-) (*identity.User, error) {
+) (*identity.AuthRecord, error) {
 	document := s.users.FindOne(ctx, bson.M{"email": email})
 
-	return decodeUser(document)
-}
-
-// PasswordHash resolves the stored bcrypt password hash.
-func (s *IdentityStore) PasswordHash(
-	ctx context.Context,
-	id string,
-) (string, error) {
-	objectID, err := bson.ObjectIDFromHex(id)
-	if err != nil {
-		return "", nil
-	}
-
-	var document UserDocument
-	err = s.users.FindOne(ctx, bson.M{"_id": objectID}).Decode(&document)
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return "", nil
-		}
-		return "", err
-	}
-
-	return document.Password, nil
-}
-
-// CreateSession inserts an auth session and returns its hex identity.
-func (s *IdentityStore) CreateSession(
-	ctx context.Context,
-	session identity.Session,
-) (string, error) {
-	userID, err := bson.ObjectIDFromHex(session.UserID)
-	if err != nil {
-		return "", err
-	}
-
-	now := time.Now()
-	insert := AuthSessionDocument{
-		UserID:           userID,
-		RefreshTokenHash: session.RefreshHash,
-		ExpiresAt:        session.ExpiresAt,
-		CreatedAt:        now,
-		UpdatedAt:        now,
-		Version:          0,
-	}
-	result, err := s.sessions.InsertOne(ctx, insert)
-	if err != nil {
-		return "", err
-	}
-
-	return objectIDHex(result.InsertedID), nil
+	return decodeAuthRecord(document)
 }
 
 // LoadSession resolves an auth session by hex ObjectId.
@@ -225,59 +282,124 @@ func (s *IdentityStore) RevokeSession(
 	return result.MatchedCount == 1, nil
 }
 
-// decodeUser maps a FindOne result to the domain user, tolerating
-// missing role defaults.
+// decodeUser maps a FindOne result to the domain user, mapping a
+// missing document to a nil result and tolerating missing roles.
 func decodeUser(document *mongo.SingleResult) (*identity.User, error) {
+	user, err := decodeUserDocument(document)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// decodeAuthRecord maps a FindOne result to the login record,
+// mapping a missing document to a nil record.
+func decodeAuthRecord(document *mongo.SingleResult) (*identity.AuthRecord, error) {
+	user, err := decodeUserDocument(document)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, nil
+	}
+
 	var raw UserDocument
 	if err := document.Decode(&raw); err != nil {
+		return nil, err
+	}
+
+	return &identity.AuthRecord{
+		User:         user,
+		PasswordHash: raw.Password,
+	}, nil
+}
+
+// decodeUserDocument decodes a users FindOne result. A missing
+// document reports a nil user without an error.
+func decodeUserDocument(document *mongo.SingleResult) (*identity.User, error) {
+	if err := document.Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	return mapUser(&raw), nil
-}
-
-// mapUser converts the BSON user document into the domain user. Legacy
-// documents may omit role; the default is the plain user role.
-func mapUser(document *UserDocument) *identity.User {
-	role := identity.Role(document.Role)
-	if role != identity.RoleAdmin {
-		role = identity.RoleUser
+	var raw UserDocument
+	if err := document.Decode(&raw); err != nil {
+		return nil, err
 	}
 
-	return &identity.User{
-		ID:       document.ID.Hex(),
-		Username: document.Username,
-		Email:    document.Email,
-		Role:     role,
+	user := &identity.User{
+		ID:       raw.ID.Hex(),
+		Username: raw.Username,
+		Email:    raw.Email,
+		Role:     identity.Role(raw.Role),
 	}
+	if user.Role != identity.RoleAdmin {
+		user.Role = identity.RoleUser
+	}
+
+	return user, nil
 }
 
 // mapDuplicateKey translates a Mongo duplicate-key error into the
-// identity sentinels by colliding index name.
+// identity sentinels by inspecting the raw server key pattern through
+// the write exception.
 func mapDuplicateKey(err error) error {
 	if !mongo.IsDuplicateKeyError(err) {
 		return err
 	}
 
-	message := err.Error()
-	switch {
-	case strings.Contains(message, "username_1"):
-		return identity.ErrUsernameTaken
-	case strings.Contains(message, "email_1"):
-		return identity.ErrEmailTaken
+	writeException := mongo.WriteException{}
+	if !errors.As(err, &writeException) {
+		return err
+	}
+
+	for _, writeError := range writeException.WriteErrors {
+		switch collidedKey(writeError.Raw) {
+		case "username":
+			return identity.ErrUsernameTaken
+		case "email":
+			return identity.ErrEmailTaken
+		}
 	}
 
 	return err
 }
 
-// objectIDHex converts an inserted _id value into a hex string.
-func objectIDHex(value any) string {
-	if objectID, ok := value.(bson.ObjectID); ok {
-		return objectID.Hex()
+// collidedKey reads the colliding index key field from the raw server
+// document of a duplicate-key error. Modern servers carry keyPattern
+// on the error document; some mongos positions only write it inside
+// errInfo.
+func collidedKey(raw bson.Raw) string {
+	for _, location := range []string{"keyPattern", "errInfo.keyPattern"} {
+		key := rawKeyValue(raw, location)
+		if key.Type != bson.TypeEmbeddedDocument {
+			continue
+		}
+
+		keys, err := key.Document().Elements()
+		if err != nil || len(keys) != 1 {
+			continue
+		}
+
+		return keys[0].Key()
 	}
 
 	return ""
+}
+
+// rawKeyValue reads a dotted lookup path as a raw value.
+func rawKeyValue(raw bson.Raw, path string) bson.RawValue {
+	head, tail, found := strings.Cut(path, ".")
+	value := raw.Lookup(head)
+	if !found {
+		return value
+	}
+	if value.Type != bson.TypeEmbeddedDocument {
+		return bson.RawValue{}
+	}
+
+	return rawKeyValue(value.Document(), tail)
 }

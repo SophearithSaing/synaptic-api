@@ -42,19 +42,21 @@ func (r *repoState) id() string {
 	return fmt.Sprintf("665f1e2b9d1a2c3b4d5e%04x", r.next)
 }
 
-// CreateUser implements identity.Repository.
-func (r *repoState) CreateUser(
+// CreateUserAndSession implements identity.Repository by inserting the
+// user and initial session in one simulated write.
+func (r *repoState) CreateUserAndSession(
 	_ context.Context,
 	user identity.Credentials,
-) (string, error) {
+	session identity.Session,
+) (string, string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, ok := r.byName[strings.ToLower(user.Username)]; ok {
-		return "", identity.ErrUsernameTaken
+		return "", "", identity.ErrUsernameTaken
 	}
 	if _, ok := r.byEmail[user.Email]; ok {
-		return "", identity.ErrEmailTaken
+		return "", "", identity.ErrEmailTaken
 	}
 
 	id := r.id()
@@ -68,7 +70,15 @@ func (r *repoState) CreateUser(
 	r.byEmail[user.Email] = id
 	r.passwords[id] = user.PasswordHash
 
-	return id, nil
+	sessionID := r.id()
+	r.sessions[sessionID] = &identity.Session{
+		ID:          sessionID,
+		UserID:      id,
+		RefreshHash: session.RefreshHash,
+		ExpiresAt:   session.ExpiresAt,
+	}
+
+	return id, sessionID, nil
 }
 
 // FindUserByID implements identity.Repository.
@@ -82,37 +92,53 @@ func (r *repoState) FindUserByID(
 	return copyUser(r.users[id]), nil
 }
 
-// FindUserByUsername implements identity.Repository.
-func (r *repoState) FindUserByUsername(
+// FindAuthRecordByUsername implements identity.Repository with the
+// legacy case-insensitive username match, carrying the stored password
+// hash.
+func (r *repoState) FindAuthRecordByUsername(
 	_ context.Context,
 	username string,
-) (*identity.User, error) {
+) (*identity.AuthRecord, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return copyUser(r.users[r.byName[strings.ToLower(username)]]), nil
+	record, _ := r.authRecordLocked(
+		r.users[r.byName[strings.ToLower(username)]],
+	)
+
+	return record, nil
 }
 
-// FindUserByEmail implements identity.Repository.
-func (r *repoState) FindUserByEmail(
+// FindAuthRecordByEmail implements identity.Repository, carrying the
+// stored password hash.
+func (r *repoState) FindAuthRecordByEmail(
 	_ context.Context,
 	email string,
-) (*identity.User, error) {
+) (*identity.AuthRecord, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return copyUser(r.users[r.byEmail[email]]), nil
+	record, _ := r.authRecordLocked(r.users[r.byEmail[email]])
+
+	return record, nil
 }
 
-// PasswordHash implements identity.Repository.
-func (r *repoState) PasswordHash(
-	_ context.Context,
-	id string,
-) (string, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// authRecordLocked copies the user together with its stored password
+// hash. Callers must hold mu. The error result keeps the repository
+// call shape consistent.
+func (r *repoState) authRecordLocked(
+	user *identity.User,
+) (*identity.AuthRecord, error) {
+	if user == nil {
+		return nil, nil
+	}
 
-	return r.passwords[id], nil
+	matched := *user
+
+	return &identity.AuthRecord{
+		User:         &matched,
+		PasswordHash: r.passwords[user.ID],
+	}, nil
 }
 
 // CreateSession implements identity.Repository.

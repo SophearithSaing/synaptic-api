@@ -1,7 +1,9 @@
 package identity_test
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +21,16 @@ func buildServer(
 	mode string,
 ) (http.Handler, *repoState, *identity.TokenIssuer) {
 	repo := newRepoState()
+	handler, issuer := buildServerOver(repo, mode)
+
+	return handler, repo, issuer
+}
+
+// buildServerOver wires the identity routes over the given repository
+// so failure-injection tests can share the wiring.
+func buildServerOver(
+	repo identity.Repository, mode string,
+) (http.Handler, *identity.TokenIssuer) {
 	issuer := identity.NewTokenIssuer(
 		"secret", "synaptic", "synaptic-client", 24*time.Hour)
 	options := identity.Options{
@@ -33,7 +45,69 @@ func buildServer(
 	mux := http.NewServeMux()
 	handler.Mount(mux)
 
-	return mux, repo, issuer
+	return mux, issuer
+}
+
+// failingRepo injects repository failures for the propagation tests.
+type failingRepo struct {
+	*repoState
+	fail string
+}
+
+// errRepoOutage models an unreachable store.
+var errRepoOutage = errors.New("repository outage")
+
+// failIf reports the injected outage for the named operation.
+func (r *failingRepo) failIf(operation string) error {
+	if r.fail == operation {
+		return errRepoOutage
+	}
+
+	return nil
+}
+
+// FindAuthRecordByUsername implements identity.Repository.
+func (r *failingRepo) FindAuthRecordByUsername(
+	ctx context.Context, username string,
+) (*identity.AuthRecord, error) {
+	if err := r.failIf("FindAuthRecordByUsername"); err != nil {
+		return nil, err
+	}
+
+	return r.repoState.FindAuthRecordByUsername(ctx, username)
+}
+
+// FindUserByID implements identity.Repository.
+func (r *failingRepo) FindUserByID(
+	ctx context.Context, id string,
+) (*identity.User, error) {
+	if err := r.failIf("FindUserByID"); err != nil {
+		return nil, err
+	}
+
+	return r.repoState.FindUserByID(ctx, id)
+}
+
+// LoadSession implements identity.Repository.
+func (r *failingRepo) LoadSession(
+	ctx context.Context, id string,
+) (*identity.Session, error) {
+	if err := r.failIf("LoadSession"); err != nil {
+		return nil, err
+	}
+
+	return r.repoState.LoadSession(ctx, id)
+}
+
+// RevokeSession implements identity.Repository.
+func (r *failingRepo) RevokeSession(
+	ctx context.Context, id string,
+) (bool, error) {
+	if err := r.failIf("RevokeSession"); err != nil {
+		return false, err
+	}
+
+	return r.repoState.RevokeSession(ctx, id)
 }
 
 // productionServer and developmentServer are buildServer presets.

@@ -11,6 +11,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Claims carries the identity claims of an access token on top of the
+// registered claim set.
+type Claims struct {
+	// Email is the user's normalized login email address.
+	Email string `json:"email"`
+	// Username is the user's public display name.
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
 // TokenIssuer signs and verifies HS256 access tokens with pinned
 // issuer, audience, and methods.
 type TokenIssuer struct {
@@ -38,14 +48,16 @@ func (t *TokenIssuer) Issue(
 	userID, email, username string,
 	now time.Time,
 ) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":      userID,
-		"email":    email,
-		"username": username,
-		"iss":      t.issuer,
-		"aud":      t.audience,
-		"iat":      jwt.NewNumericDate(now),
-		"exp":      jwt.NewNumericDate(now.Add(t.accessTTL)),
+	claims := Claims{
+		Email:    email,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			Issuer:    t.issuer,
+			Audience:  jwt.ClaimStrings{t.audience},
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(t.accessTTL)),
+		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).
 		SignedString(t.secret)
@@ -63,42 +75,28 @@ var errTokenMissingClaims = errors.New("token is missing required claims")
 // Verify checks the token signature, issuer, audience, and expiry, and
 // extracts the identity claims.
 func (t *TokenIssuer) Verify(token string) (*VerifiedToken, error) {
-	parsed, err := jwt.NewParser(
+	claims := &Claims{}
+	if _, err := jwt.NewParser(
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 		jwt.WithIssuer(t.issuer),
 		jwt.WithAudience(t.audience),
 		jwt.WithExpirationRequired(),
 		jwt.WithTimeFunc(time.Now),
-	).Parse(token, func(*jwt.Token) (any, error) {
+	).ParseWithClaims(token, claims, func(*jwt.Token) (any, error) {
 		return t.secret, nil
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, fmt.Errorf("verify token: %w", err)
 	}
 
-	claims, ok := parsed.Claims.(jwt.MapClaims)
-	if !ok {
+	if claims.Subject == "" || claims.Email == "" || claims.Username == "" {
 		return nil, errTokenMissingClaims
 	}
 
-	sub, err := claims.GetSubject()
-	if err != nil || sub == "" {
-		return nil, errTokenMissingClaims
-	}
-
-	email, username := claimString(claims, "email"), claimString(claims, "username")
-	if email == "" || username == "" {
-		return nil, errTokenMissingClaims
-	}
-
-	return &VerifiedToken{Sub: sub, Email: email, Username: username}, nil
-}
-
-// claimString reads a string claim.
-func claimString(claims jwt.MapClaims, name string) string {
-	value, _ := claims[name].(string)
-
-	return value
+	return &VerifiedToken{
+		Sub:      claims.Subject,
+		Email:    claims.Email,
+		Username: claims.Username,
+	}, nil
 }
 
 // RandomSecret returns a 32-byte base64url-encoded secret.

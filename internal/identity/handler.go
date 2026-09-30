@@ -144,10 +144,17 @@ func (h *Handler) refresh(w http.ResponseWriter, r *http.Request) {
 
 // logout revokes the session and clears both auth cookies with a bare
 // 201 and empty body: the response carries only the Set-Cookie
-// headers, no Content-Type.
+// headers, no Content-Type. A failed revocation keeps the auth cookies
+// so the client can retry the logout instead of losing its refresh
+// token while the session may still be live.
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie(refreshTokenCookieName)
-	_ = h.service.Logout(r.Context(), cookieValue(cookie))
+
+	err := h.service.Logout(r.Context(), cookieValue(cookie))
+	if err != nil {
+		web.WriteError(w, r, err)
+		return
+	}
 
 	http.SetCookie(w, h.clearCookie(accessTokenCookieName, "/"))
 	http.SetCookie(w, h.clearCookie(refreshTokenCookieName, "/auth"))

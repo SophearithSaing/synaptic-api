@@ -63,6 +63,15 @@ type SessionTokens struct {
 	RefreshToken string
 }
 
+// AuthRecord is the login view of an account: the resolved user with
+// its stored password hash, produced by one authentication query.
+type AuthRecord struct {
+	// User is the resolved account.
+	User *User
+	// PasswordHash is the stored bcrypt-encoded password.
+	PasswordHash string
+}
+
 // Options configures token lifetimes and cookie policy.
 type Options struct {
 	// AccessTTL is the access token and cookie lifetime.

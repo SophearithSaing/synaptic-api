@@ -6,20 +6,34 @@ import (
 )
 
 // Repository stores users and auth sessions. Implementations map the
-// exact users/authSessions BSON representations and translate duplicate
-// key errors into the sentinel errors above.
+// exact users/authSessions BSON representations, translate duplicate
+// key errors into the sentinel errors above, resolve each
+// authentication lookup in one query, and keep user creation,
+// initial session creation consistent.
 type Repository interface {
-	// CreateUser persists a new account and returns its hex identity.
-	CreateUser(ctx context.Context, user Credentials) (string, error)
+	// CreateUserAndSession persists a new account and its initial
+	// refresh session transactionally, returning the account and
+	// session hex identities. Duplicate keys map to the sentinels.
+	CreateUserAndSession(
+		ctx context.Context,
+		user Credentials,
+		session Session,
+	) (userID, sessionID string, err error)
 	// FindUserByID resolves a user by hex ObjectId.
 	FindUserByID(ctx context.Context, id string) (*User, error)
-	// FindUserByUsername resolves a user by case-insensitive username.
-	FindUserByUsername(ctx context.Context, username string) (*User, error)
-	// FindUserByEmail resolves a user by exact email address.
-	FindUserByEmail(ctx context.Context, email string) (*User, error)
-	// PasswordHash resolves the stored bcrypt hash of a user's
-	// password.
-	PasswordHash(ctx context.Context, id string) (string, error)
+	// FindAuthRecordByUsername resolves the login record of an
+	// account by case-insensitive username, or nil when no account
+	// matches. The record carries the user and the stored password
+	// hash from one query.
+	FindAuthRecordByUsername(
+		ctx context.Context,
+		username string,
+	) (*AuthRecord, error)
+	// FindAuthRecordByEmail resolves the login record of an account
+	// by exact email address, or nil when no account matches. The
+	// record carries the user and the stored password hash from one
+	// query.
+	FindAuthRecordByEmail(ctx context.Context, email string) (*AuthRecord, error)
 	// CreateSession persists a refresh session and returns its hex
 	// identity.
 	CreateSession(ctx context.Context, session Session) (string, error)
@@ -37,4 +51,11 @@ type Repository interface {
 	// RevokeSession sets revokedAt when the session is not already
 	// revoked.
 	RevokeSession(ctx context.Context, id string) (bool, error)
+}
+
+// UserResolver is the smallest identity lookup the authenticator
+// needs: it re-resolves an access-token subject on every request.
+type UserResolver interface {
+	// FindUserByID resolves a user by hex ObjectId.
+	FindUserByID(ctx context.Context, id string) (*User, error)
 }

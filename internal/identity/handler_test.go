@@ -576,3 +576,102 @@ func TestLogoutWithoutCookieStill201(t *testing.T) {
 		t.Fatalf("malformed logout: status %d", malformed.Code)
 	}
 }
+
+// TestLoginRepositoryFailurePropagates pins outages as 500s, not 401s.
+func TestLoginRepositoryFailurePropagates(t *testing.T) {
+	repo := &failingRepo{
+		repoState: newRepoState(),
+		fail:      "FindAuthRecordByUsername",
+	}
+	handler, _ := buildServerOver(repo, "production")
+	handler.ServeHTTP(httptest.NewRecorder(),
+		httptest.NewRequest(http.MethodGet, "/auth/csrf", nil))
+	token := csrfToken(handler)
+
+	recorder := call(
+		handler, http.MethodPost, "/auth/login",
+		"csrf_token="+token, token, loginBody("nobody", "Password1"),
+	)
+	assertJSON(t, recorder, http.StatusInternalServerError,
+		`{"message":"Internal server error","statusCode":500}`)
+}
+
+// TestRefreshRepositoryFailurePropagates pins session-load outages as
+// 500s.
+func TestRefreshRepositoryFailurePropagates(t *testing.T) {
+	base := newRepoState()
+	repo := &failingRepo{repoState: base, fail: "LoadSession"}
+	handler, _ := buildServerOver(repo, "production")
+
+	registration := register(handler, "outage", "outage@example.com", "Password1")
+	cookies := cookieList(registration)
+
+	token := csrfToken(handler)
+	recorder := call(
+		handler, http.MethodPost, "/auth/refresh",
+		csrfPair(cookieHeader(cookies, "refresh_token"), token), token, nil,
+	)
+	assertJSON(t, recorder, http.StatusInternalServerError,
+		`{"message":"Internal server error","statusCode":500}`)
+}
+
+// TestMeRepositoryFailurePropagates pins authenticator lookup outages
+// as 500s while unauthenticated requests stay 401s.
+func TestMeRepositoryFailurePropagates(t *testing.T) {
+	handler, issuer := buildServerOver(
+		&failingRepo{repoState: newRepoState(), fail: "FindUserByID"},
+		"production",
+	)
+
+	unauthenticated := call(handler, http.MethodGet, "/auth/me", "", "", nil)
+	assertJSON(t, unauthenticated, http.StatusUnauthorized,
+		`{"message":"Unauthorized","statusCode":401}`)
+
+	accessToken, err := issuer.Issue(
+		"665f1e2b9d1a2c3b4d5e6f70", "a@example.com", "alice", time.Now(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := buildRequest(http.MethodGet, "/auth/me", "", "", nil)
+	request.Header.Set("Authorization", "Bearer "+accessToken)
+	outage := httptest.NewRecorder()
+	handler.ServeHTTP(outage, request)
+	assertJSON(t, outage, http.StatusInternalServerError,
+		`{"message":"Internal server error","statusCode":500}`)
+}
+
+// TestLogoutRepositoryFailureKeepsCookies pins the failed-revocation
+// contract: a 500 with no cleared cookies so the client can retry.
+func TestLogoutRepositoryFailureKeepsCookies(t *testing.T) {
+	repo := &failingRepo{repoState: newRepoState(), fail: "RevokeSession"}
+	handler, _ := buildServerOver(repo, "production")
+
+	registration := register(handler, "alice", "alice@example.com", "Password1")
+	cookies := cookieList(registration)
+
+	logoutToken := csrfToken(handler)
+	recorder := call(
+		handler, http.MethodPost, "/auth/logout",
+		csrfPair(cookieHeader(cookies, "refresh_token"), logoutToken),
+		logoutToken, nil,
+	)
+	assertJSON(t, recorder, http.StatusInternalServerError,
+		`{"message":"Internal server error","statusCode":500}`)
+
+	if set := recorder.Header().Values("Set-Cookie"); len(set) != 0 {
+		t.Fatalf("failure must keep auth cookies, got %q", set)
+	}
+
+	// The session stays revocable: dropping the outage replays it.
+	healthy, _ := buildServerOver(repo.repoState, "production")
+	retryToken := csrfToken(healthy)
+	reread := call(
+		healthy, http.MethodPost, "/auth/logout",
+		csrfPair(cookieHeader(cookies, "refresh_token"), retryToken),
+		retryToken, nil,
+	)
+	if reread.Code != http.StatusCreated {
+		t.Fatalf("retry logout status %d", reread.Code)
+	}
+}

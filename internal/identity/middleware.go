@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -60,22 +61,30 @@ func isSafeMethod(method string) bool {
 
 // Authenticator resolves the bearer-or-cookie access token to the
 // current user, reloading the role from persistence on every request.
+// It depends only on the user lookup it actually performs.
 type Authenticator struct {
 	issuer *TokenIssuer
-	repo   Repository
+	users  UserResolver
 }
 
-// NewAuthenticator builds Authenticator middleware.
-func NewAuthenticator(issuer *TokenIssuer, repo Repository) *Authenticator {
-	return &Authenticator{issuer: issuer, repo: repo}
+// NewAuthenticator builds Authenticator middleware from the token
+// issuer and a user resolver.
+func NewAuthenticator(issuer *TokenIssuer, users UserResolver) *Authenticator {
+	return &Authenticator{issuer: issuer, users: users}
 }
 
-// Middleware authenticates the request or fails with 401.
+// Middleware authenticates the request or fails with 401. Repository
+// failures surface as 500s; only missing tokens or identities are 401s.
 func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := a.authenticate(r)
-		if err != nil {
+
+		switch {
+		case errors.Is(err, ErrUnauthorized):
 			web.WriteError(w, r, unauthorized)
+			return
+		case err != nil:
+			web.WriteError(w, r, err)
 			return
 		}
 
@@ -86,7 +95,8 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 }
 
 // authenticate extracts the token header-first, verifies it, and
-// re-resolves the user.
+// re-resolves the user. Unauthenticated requests report ErrUnauthorized
+// while lookup failures keep their error.
 func (a *Authenticator) authenticate(r *http.Request) (*User, error) {
 	token := bearerToken(r)
 	if token == "" {
@@ -100,11 +110,14 @@ func (a *Authenticator) authenticate(r *http.Request) (*User, error) {
 
 	verified, err := a.issuer.Verify(token)
 	if err != nil {
-		return nil, err
+		return nil, ErrUnauthorized
 	}
 
-	user, err := a.repo.FindUserByID(r.Context(), verified.Sub)
-	if err != nil || user == nil {
+	user, err := a.users.FindUserByID(r.Context(), verified.Sub)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
 		return nil, ErrUnauthorized
 	}
 

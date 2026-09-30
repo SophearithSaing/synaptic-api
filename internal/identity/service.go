@@ -25,80 +25,86 @@ func NewService(
 	return &Service{repo: repo, issuer: issuer, options: options}
 }
 
-// Register creates an account and a refresh session.
+// Register creates an account and its initial refresh session. The
+// repository transaction makes the pair all-or-nothing, so a failed
+// session cannot leave an account without credentials.
 func (s *Service) Register(
 	ctx context.Context,
 	credentials Credentials,
 ) (SessionTokens, error) {
-	id, err := s.repo.CreateUser(ctx, credentials)
+	secret, err := RandomSecret()
 	if err != nil {
 		return SessionTokens{}, err
 	}
 
-	user := User{
-		ID:       id,
-		Username: credentials.Username,
-		Email:    credentials.Email,
-		Role:     RoleUser,
+	hash, err := HashSecret(secret)
+	if err != nil {
+		return SessionTokens{}, err
 	}
 
-	access, err := s.issuer.Issue(
-		user.ID, user.Email, user.Username, time.Now(),
+	expiresAt := time.Now().Add(s.options.RefreshTTL)
+
+	userID, sessionID, err := s.repo.CreateUserAndSession(
+		ctx, credentials, Session{RefreshHash: hash, ExpiresAt: expiresAt},
 	)
 	if err != nil {
 		return SessionTokens{}, err
 	}
 
-	token, err := s.createSessionToken(ctx, user.ID)
+	access, err := s.issuer.Issue(
+		userID, credentials.Email, credentials.Username, time.Now(),
+	)
 	if err != nil {
 		return SessionTokens{}, err
 	}
 
-	return SessionTokens{AccessToken: access, RefreshToken: token}, nil
+	return SessionTokens{
+		AccessToken:  access,
+		RefreshToken: SerializeRefreshToken(sessionID, secret),
+	}, nil
 }
 
 // Login authenticates an identifier (username or email) and starts a
-// refresh session.
+// refresh session. The authentication record — user and stored
+// password hash — resolves in one repository query so the two reads
+// cannot observe different account states. Repository failures
+// propagate; only username/email resolution and credential checks
+// produce ErrUnauthorized.
 func (s *Service) Login(
 	ctx context.Context,
 	identifier, password string,
 ) (SessionTokens, error) {
-	var (
-		user *User
-		err  error
-	)
+	record, err := s.authRecord(ctx, identifier)
+	if err != nil {
+		return SessionTokens{}, err
+	}
+	if record == nil || record.User == nil ||
+		bcrypt.CompareHashAndPassword(
+			[]byte(record.PasswordHash), []byte(password),
+		) != nil {
+		return SessionTokens{}, ErrUnauthorized
+	}
+
+	return s.startSession(ctx, record.User)
+}
+
+// authRecord resolves the authentication record of an identifier:
+// exact email lookups for "@"-containing identifiers, otherwise the
+// legacy case-insensitive username match.
+func (s *Service) authRecord(
+	ctx context.Context,
+	identifier string,
+) (*AuthRecord, error) {
 	if strings.Contains(identifier, "@") {
-		user, err = s.repo.FindUserByEmail(ctx, identifier)
-	} else {
-		user, err = s.repo.FindUserByUsername(ctx, identifier)
-	}
-	if err != nil || user == nil {
-		return SessionTokens{}, ErrUnauthorized
+		return s.repo.FindAuthRecordByEmail(ctx, identifier)
 	}
 
-	hash, err := s.repo.PasswordHash(ctx, user.ID)
-	if err != nil || bcrypt.CompareHashAndPassword(
-		[]byte(hash), []byte(password),
-	) != nil {
-		return SessionTokens{}, ErrUnauthorized
-	}
-
-	access, err := s.issuer.Issue(
-		user.ID, user.Email, user.Username, time.Now(),
-	)
-	if err != nil {
-		return SessionTokens{}, err
-	}
-
-	token, err := s.createSessionToken(ctx, user.ID)
-	if err != nil {
-		return SessionTokens{}, err
-	}
-
-	return SessionTokens{AccessToken: access, RefreshToken: token}, nil
+	return s.repo.FindAuthRecordByUsername(ctx, identifier)
 }
 
 // Refresh validates a refresh token and atomically rotates its secret.
+// Repository failures propagate; only missing or mismatched identity
+// data reports ErrUnauthorized.
 func (s *Service) Refresh(
 	ctx context.Context,
 	refreshToken string,
@@ -109,10 +115,10 @@ func (s *Service) Refresh(
 	}
 
 	session, err := s.repo.LoadSession(ctx, sessionID)
-	if err != nil || session == nil {
-		return SessionTokens{}, ErrUnauthorized
+	if err != nil {
+		return SessionTokens{}, err
 	}
-	if session.RevokedAt != nil ||
+	if session == nil || session.RevokedAt != nil ||
 		!session.ExpiresAt.After(time.Now()) ||
 		bcrypt.CompareHashAndPassword(
 			[]byte(session.RefreshHash), []byte(secret),
@@ -121,7 +127,10 @@ func (s *Service) Refresh(
 	}
 
 	user, err := s.repo.FindUserByID(ctx, session.UserID)
-	if err != nil || user == nil {
+	if err != nil {
+		return SessionTokens{}, err
+	}
+	if user == nil {
 		return SessionTokens{}, ErrUnauthorized
 	}
 
@@ -163,8 +172,8 @@ func (s *Service) Refresh(
 }
 
 // Logout revokes the session referenced by the refresh token. Missing,
-// malformed, or unknown tokens and secret mismatches never fail: the
-// caller clears the cookies regardless.
+// malformed, unknown tokens, and secret mismatches are not failures:
+// revocation errors are.
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	sessionID, secret, err := ParseRefreshToken(refreshToken)
 	if err != nil {
@@ -172,7 +181,10 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	}
 
 	session, err := s.repo.LoadSession(ctx, sessionID)
-	if err != nil || session == nil {
+	if err != nil {
+		return err
+	}
+	if session == nil {
 		return nil
 	}
 	if bcrypt.CompareHashAndPassword(
@@ -186,12 +198,25 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return err
 }
 
-// UserByID re-resolves a user by id for role checks.
-func (s *Service) UserByID(
+// startSession issues the access token and creates the refresh session
+// for an authenticated user.
+func (s *Service) startSession(
 	ctx context.Context,
-	id string,
-) (*User, error) {
-	return s.repo.FindUserByID(ctx, id)
+	user *User,
+) (SessionTokens, error) {
+	access, err := s.issuer.Issue(
+		user.ID, user.Email, user.Username, time.Now(),
+	)
+	if err != nil {
+		return SessionTokens{}, err
+	}
+
+	token, err := s.createSessionToken(ctx, user.ID)
+	if err != nil {
+		return SessionTokens{}, err
+	}
+
+	return SessionTokens{AccessToken: access, RefreshToken: token}, nil
 }
 
 // createSessionToken persists a new refresh session and serializes its
