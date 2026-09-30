@@ -12,42 +12,29 @@ import (
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 )
 
-// ToRawJSON encodes BSON values as JSON exactly like the legacy
-// Express encoder produced: field order preserved from the stored
-// document, ObjectIds as hex strings, dates as JS ISO-8601 with
-// millisecond precision.
-func ToRawJSON(values ...bson.RawValue) (json.RawMessage, error) {
-	if len(values) == 1 {
-		return rawValueJSON(values[0])
-	}
-
+// rawValueJSON encodes one stored BSON value as JSON exactly like the
+// legacy Express encoder produced: field order preserved from the
+// stored document, ObjectIds as hex strings, dates as JS ISO-8601 with
+// millisecond precision. BSON types the legacy capture never covered
+// (binary, decimal, regex, timestamps, code, DB pointers) render as
+// MongoDB extended JSON so no valid stored document can fail encoding.
+func rawValueJSON(value bson.RawValue) (json.RawMessage, error) {
 	var out bytes.Buffer
-	stream := &rawJSONStreamer{out: &out}
-	if err := stream.write(values...); err != nil {
+	stream := &rawJSONEncoder{out: &out}
+	if err := stream.value(value); err != nil {
 		return nil, err
 	}
 
 	return out.Bytes(), nil
 }
 
-// rawJSONStreamer renders ordered BSON values as compact JSON.
-type rawJSONStreamer struct {
+// rawJSONEncoder renders one stored BSON value as compact JSON.
+type rawJSONEncoder struct {
 	out *bytes.Buffer
 }
 
-// write renders each BSON value.
-func (stream *rawJSONStreamer) write(values ...bson.RawValue) error {
-	for _, value := range values {
-		if err := stream.value(value); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // value renders one BSON value.
-func (stream *rawJSONStreamer) value(value bson.RawValue) error {
+func (stream *rawJSONEncoder) value(value bson.RawValue) error {
 	switch value.Type {
 	case bson.TypeObjectID:
 		stream.out.WriteString(strconv.Quote(value.ObjectID().Hex()))
@@ -81,8 +68,13 @@ func (stream *rawJSONStreamer) value(value bson.RawValue) error {
 	case bson.TypeDouble:
 		return stream.double(value.Double())
 	case bson.TypeBinary, bson.TypeRegex, bson.TypeDBPointer,
-		bson.TypeCodeWithScope, bson.TypeDecimal128, bson.TypeTimestamp:
-		return fmt.Errorf("unsupported BSON type %s", value.Type)
+		bson.TypeJavaScript, bson.TypeCodeWithScope,
+		bson.TypeDecimal128, bson.TypeTimestamp:
+		encoded, err := extJSONValue(value)
+		if err != nil {
+			return err
+		}
+		stream.out.Write(encoded)
 	default:
 		return fmt.Errorf("unsupported BSON type %s", value.Type)
 	}
@@ -90,19 +82,38 @@ func (stream *rawJSONStreamer) value(value bson.RawValue) error {
 	return nil
 }
 
-// rawValueJSON encodes one stored value.
-func rawValueJSON(value bson.RawValue) (json.RawMessage, error) {
-	var out bytes.Buffer
-	stream := &rawJSONStreamer{out: &out}
-	if err := stream.value(value); err != nil {
-		return nil, err
+// extJSONWrapper positions one BSON value inside a document so the
+// driver's extended JSON encoder accepts it; top-level values cannot
+// hold every type.
+type extJSONWrapper struct {
+	Value bson.RawValue `bson:"v"`
+}
+
+// extJSONValue renders a BSON value as MongoDB extended JSON, the
+// driver-supported conversion boundary for types without a pinned
+// legacy shape.
+func extJSONValue(value bson.RawValue) (json.RawMessage, error) {
+	encoded, err := bson.MarshalExtJSON(
+		extJSONWrapper{Value: value}, false, false,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("encode BSON value: %w", err)
 	}
 
-	return out.Bytes(), nil
+	const prefix = `{"v":`
+	const suffix = `}`
+	if !bytes.HasPrefix(encoded, []byte(prefix)) ||
+		!bytes.HasSuffix(encoded, []byte(suffix)) {
+		return nil, fmt.Errorf(
+			"unexpected extended JSON encoding %s", encoded,
+		)
+	}
+
+	return json.RawMessage(encoded[len(prefix) : len(encoded)-len(suffix)]), nil
 }
 
 // document renders an embedded document in stored field order.
-func (stream *rawJSONStreamer) document(raw bson.Raw) error {
+func (stream *rawJSONEncoder) document(raw bson.Raw) error {
 	stream.out.WriteByte('{')
 
 	first := true
@@ -131,7 +142,7 @@ func (stream *rawJSONStreamer) document(raw bson.Raw) error {
 }
 
 // array renders a BSON array in stored order.
-func (stream *rawJSONStreamer) array(raw bson.RawArray) error {
+func (stream *rawJSONEncoder) array(raw bson.RawArray) error {
 	stream.out.WriteByte('[')
 
 	values, visitErr := raw.Values()
@@ -154,7 +165,7 @@ func (stream *rawJSONStreamer) array(raw bson.RawArray) error {
 }
 
 // double renders a float using the shortest faithful representation.
-func (stream *rawJSONStreamer) double(value float64) error {
+func (stream *rawJSONEncoder) double(value float64) error {
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		return err

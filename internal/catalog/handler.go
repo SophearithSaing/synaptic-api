@@ -1,8 +1,8 @@
 package catalog
 
 import (
+	"errors"
 	"net/http"
-	"regexp"
 
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/web"
@@ -13,9 +13,6 @@ type Handler struct {
 	repo          Repository
 	authenticator *identity.Authenticator
 }
-
-// objectIDPattern mirrors the legacy MongoIdPipe validation.
-var objectIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{24}$`)
 
 // NewHandler builds the catalog routes handler.
 func NewHandler(
@@ -54,19 +51,14 @@ func (h *Handler) listCategories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, orEmpty(categories))
+	web.WriteJSON(w, http.StatusOK, categories)
 }
 
 // getCategory validates the id and returns one category.
 func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if !validObjectID(id) {
-		writeInvalidObjectID(w, r)
-		return
-	}
-
-	category, err := h.repo.CategoryByID(r.Context(), id)
-	if notFound(w, r, err) {
+	category, err := h.repo.CategoryByID(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeLookupError(w, r, err)
 		return
 	}
 
@@ -81,19 +73,14 @@ func (h *Handler) listTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, orEmpty(topics))
+	web.WriteJSON(w, http.StatusOK, topics)
 }
 
 // getTopic validates the id and returns one topic.
 func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if !validObjectID(id) {
-		writeInvalidObjectID(w, r)
-		return
-	}
-
-	topic, err := h.repo.TopicByID(r.Context(), id)
-	if notFound(w, r, err) {
+	topic, err := h.repo.TopicByID(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeLookupError(w, r, err)
 		return
 	}
 
@@ -103,16 +90,13 @@ func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
 // getQuestionSet returns one question set, populating the topic unless
 // the populateTopic query value is exactly "false".
 func (h *Handler) getQuestionSet(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if !validObjectID(id) {
-		writeInvalidObjectID(w, r)
-		return
-	}
-
 	populate := r.URL.Query().Get("populateTopic") != "false"
 
-	questionSet, err := h.repo.QuestionSetByID(r.Context(), id, populate)
-	if notFound(w, r, err) {
+	questionSet, err := h.repo.QuestionSetByID(
+		r.Context(), r.PathValue("id"), populate,
+	)
+	if err != nil {
+		writeLookupError(w, r, err)
 		return
 	}
 
@@ -130,58 +114,37 @@ func (h *Handler) listQuestionSetsByTopic(
 	questionSets, err := h.repo.QuestionSetsByTopicSlug(
 		r.Context(), r.PathValue("slug"), populate,
 	)
-	if notFound(w, r, err) {
+	if err != nil {
+		writeLookupError(w, r, err)
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, orEmpty(questionSets))
+	web.WriteJSON(w, http.StatusOK, questionSets)
 }
 
-// validObjectID mirrors the legacy MongoIdPipe validation.
-func validObjectID(id string) bool {
-	return objectIDPattern.MatchString(id)
-}
-
-// writeInvalidObjectID writes the pinned 400 body.
-func writeInvalidObjectID(w http.ResponseWriter, r *http.Request) {
-	web.WriteError(w, r, web.NewError(
-		http.StatusBadRequest, "Invalid MongoDB ObjectId",
-	))
-}
-
-// notFound writes the pinned 404 body for a missing document and
-// reports whether it wrote anything. Other failures keep their error
-// mapping.
-func notFound(w http.ResponseWriter, r *http.Request, err error) bool {
-	if err == nil {
-		return false
-	}
-	if _, ok := err.(Error); !ok {
+// writeLookupError maps catalog sentinels to their pinned bodies: an
+// unparsable ObjectId is 400 and each missing document is 404 with
+// its fixed message. Other failures keep their error mapping. Callers
+// invoke it only for a non-nil error.
+func writeLookupError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrInvalidObjectID):
+		web.WriteError(w, r, web.NewError(
+			http.StatusBadRequest, "Invalid MongoDB ObjectId",
+		))
+	case errors.Is(err, ErrCategoryNotFound):
+		web.WriteError(w, r, web.NewError(
+			http.StatusNotFound, "Category not found",
+		))
+	case errors.Is(err, ErrTopicNotFound):
+		web.WriteError(w, r, web.NewError(
+			http.StatusNotFound, "Topic not found",
+		))
+	case errors.Is(err, ErrQuestionSetNotFound):
+		web.WriteError(w, r, web.NewError(
+			http.StatusNotFound, "Question set not found",
+		))
+	default:
 		web.WriteError(w, r, err)
-		return true
 	}
-
-	web.WriteError(w, r, web.NewError(
-		http.StatusNotFound, catalogMessage(err),
-	))
-
-	return true
-}
-
-// catalogMessage prefixes missing documents with their pinned bodies.
-func catalogMessage(err error) string {
-	if message, ok := err.(Error); ok {
-		return string(message)
-	}
-
-	return err.Error()
-}
-
-// orEmpty keeps list responses as [] rather than null.
-func orEmpty[T any](values []T) []T {
-	if values == nil {
-		return []T{}
-	}
-
-	return values
 }

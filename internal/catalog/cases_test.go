@@ -50,8 +50,10 @@ func seededCatalog() (http.Handler, string) {
 		`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],` +
 		`"misconceptions":["Misconception."]}}]`)
 	questionSet := catalog.QuestionSet{
-		ID:        "665f1e2b9d1a2c3b4d5e0006",
-		Topic:     "665f1e2b9d1a2c3b4d5e0004",
+		ID: "665f1e2b9d1a2c3b4d5e0006",
+		Topic: json.RawMessage(
+			`"665f1e2b9d1a2c3b4d5e0004"`,
+		),
 		SetType:   "regular",
 		Level:     0,
 		Questions: seedQuestions,

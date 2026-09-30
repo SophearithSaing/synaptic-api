@@ -5,26 +5,21 @@ package catalog
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 )
 
-// Error is the catalog sentinel failure set.
-type Error string
-
-// Errors mapped to pinned HTTP bodies.
-const (
+// Errors mapped to pinned HTTP bodies by the handler lookup switch.
+var (
+	// ErrInvalidObjectID marks a route id that is not a hex ObjectId.
+	ErrInvalidObjectID = errors.New("Invalid MongoDB ObjectId")
 	// ErrCategoryNotFound marks a missing category document.
-	ErrCategoryNotFound Error = "Category not found"
+	ErrCategoryNotFound = errors.New("Category not found")
 	// ErrTopicNotFound marks a missing topic document.
-	ErrTopicNotFound Error = "Topic not found"
+	ErrTopicNotFound = errors.New("Topic not found")
 	// ErrQuestionSetNotFound marks a missing question set document.
-	ErrQuestionSetNotFound Error = "Question set not found"
+	ErrQuestionSetNotFound = errors.New("Question set not found")
 )
-
-// Error renders the sentinel message.
-func (e Error) Error() string {
-	return string(e)
-}
 
 // Category is the pinned category response shape.
 type Category struct {
@@ -64,9 +59,11 @@ type Topic struct {
 type QuestionSet struct {
 	// ID is the hex ObjectId.
 	ID string `json:"id"`
-	// Topic is the stored topic reference: a hex ObjectId string, or the
-	// raw populated topic document when populated.
-	Topic any `json:"topic"`
+	// Topic is the stored topic reference. The serialized JSON value is
+	// carried raw to preserve the union shape without type round trips:
+	// a hex ObjectId string when unpopulated, the raw populated topic
+	// document when populated, or any other stored legacy shape.
+	Topic json.RawMessage `json:"topic"`
 	// SetType is the stored set type, including legacy values outside
 	// the regular/live enum.
 	SetType string `json:"setType"`

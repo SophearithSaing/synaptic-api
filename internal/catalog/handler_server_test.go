@@ -12,20 +12,14 @@ import (
 )
 
 // authRepo is the minimal identity backend for catalog handler tests.
-// Unimplemented identity.Repository methods panic: catalog routes only
-// re-resolve users by id.
+// It implements only identity.UserResolver, the smallest interface the
+// authenticator depends on: catalog routes only re-resolve users
+// by id.
 type authRepo struct {
 	user *identity.User
 }
 
-// CreateUser implements identity.Repository.
-func (r *authRepo) CreateUser(
-	_ context.Context, _ identity.Credentials,
-) (string, error) {
-	panic("not used")
-}
-
-// FindUserByID implements identity.Repository.
+// FindUserByID implements identity.UserResolver.
 func (r *authRepo) FindUserByID(
 	_ context.Context, _ string,
 ) (*identity.User, error) {
@@ -36,49 +30,6 @@ func (r *authRepo) FindUserByID(
 	}
 
 	return nil, nil
-}
-
-// FindUserByUsername implements identity.Repository.
-func (r *authRepo) FindUserByUsername(
-	_ context.Context, _ string,
-) (*identity.User, error) {
-	panic("not used")
-}
-
-// FindUserByEmail implements identity.Repository.
-func (r *authRepo) FindUserByEmail(
-	_ context.Context, _ string,
-) (*identity.User, error) {
-	panic("not used")
-}
-
-// PasswordHash implements identity.Repository.
-func (r *authRepo) PasswordHash(_ context.Context, _ string) (string, error) {
-	panic("not used")
-}
-
-// CreateSession implements identity.Repository.
-func (r *authRepo) CreateSession(
-	_ context.Context, _ identity.Session,
-) (string, error) {
-	panic("not used")
-}
-
-// LoadSession implements identity.Repository.
-func (r *authRepo) LoadSession(_ context.Context, _ string) (*identity.Session, error) {
-	panic("not used")
-}
-
-// RotateSession implements identity.Repository.
-func (r *authRepo) RotateSession(
-	_ context.Context, _, _, _ string, _ time.Time,
-) (bool, error) {
-	panic("not used")
-}
-
-// RevokeSession implements identity.Repository.
-func (r *authRepo) RevokeSession(_ context.Context, _ string) (bool, error) {
-	panic("not used")
 }
 
 // buildCatalog wires the catalog routes over a stub repository with a
