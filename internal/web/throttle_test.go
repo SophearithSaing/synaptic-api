@@ -17,6 +17,8 @@ func TestThrottlerAllowsWithinGlobalLimit(t *testing.T) {
 	throttler := web.NewThrottler(
 		web.ThrottleConfig{Limit: 2, TTL: time.Minute, Block: time.Minute},
 		map[string]web.ThrottleConfig{},
+		nil,
+		nil,
 	)
 	handler := throttler.Middleware(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -39,6 +41,8 @@ func TestThrottlerBlocksWithRetryAfter(t *testing.T) {
 	throttler := web.NewThrottler(
 		web.ThrottleConfig{Limit: 1, TTL: time.Minute, Block: 5 * time.Minute},
 		map[string]web.ThrottleConfig{},
+		nil,
+		nil,
 	)
 	handler := throttler.Middleware(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -75,6 +79,8 @@ func TestThrottlerRouteOverride(t *testing.T) {
 				Limit: 3, TTL: time.Minute, Block: 5 * time.Minute,
 			},
 		},
+		nil,
+		nil,
 	)
 	handler := throttler.Middleware(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

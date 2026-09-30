@@ -12,24 +12,16 @@ import (
 // requestIDKey is the context key holding the request ID.
 type requestIDKey struct{}
 
-// chain wraps the handler with middleware in registration order.
-func chain(
+// Chain wraps the handler with middleware in registration order.
+func Chain(
 	handler http.Handler,
-	middleware ...func(http.Handler) http.Handler,
+	middleware ...Middleware,
 ) http.Handler {
 	for i := len(middleware) - 1; i >= 0; i-- {
 		handler = middleware[i](handler)
 	}
 
 	return handler
-}
-
-// Chain wraps the handler with middleware in registration order.
-func Chain(
-	handler http.Handler,
-	middleware ...func(http.Handler) http.Handler,
-) http.Handler {
-	return chain(handler, middleware...)
 }
 
 // requestID assigns a unique ID to each request, honoring an incoming

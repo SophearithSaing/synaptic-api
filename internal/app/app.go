@@ -4,6 +4,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -65,10 +66,16 @@ func New(cfg config.Config) (*App, error) {
 	throttler := web.NewThrottler(globalThrottle, map[string]web.ThrottleConfig{
 		"POST /auth/register": registerThrottle,
 		"POST /auth/login":    loginThrottle,
-	})
+	}, web.DirectClientIP, nil)
 	authStore := mongostore.NewIdentityStore(
 		mongoClient.Database(cfg.MongoDatabase),
 	)
+	if err := mongostore.EnsureIdentityIndexes(
+		ctx, mongoClient.Database(cfg.MongoDatabase),
+	); err != nil {
+		_ = mongoClient.Disconnect(context.Background())
+		return nil, fmt.Errorf("ensure identity indexes: %w", err)
+	}
 	issuer := identity.NewTokenIssuer(
 		cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL,
 	)

@@ -9,10 +9,10 @@ import (
 type ReadyProbe func(ctx context.Context) error
 
 // Middleware wraps a handler with additional request processing.
-type Middleware = func(http.Handler) http.Handler
+type Middleware func(http.Handler) http.Handler
 
 // Mounter registers one feature's routes on the request mux.
-type Mounter = func(mux *http.ServeMux)
+type Mounter func(*http.ServeMux)
 
 // NewRouter builds the root router with global middleware, extra
 // application middleware (e.g. rate limiting), and the infrastructure
@@ -64,7 +64,7 @@ func NewRouter(
 	extra := append([]Middleware{}, middleware...)
 	extra = append(extra, recoverer)
 
-	return chain(mux, append([]Middleware{
+	return Chain(mux, append([]Middleware{
 		requestID, cors(clientURL), requestLogger,
 	}, extra...)...)
 }
