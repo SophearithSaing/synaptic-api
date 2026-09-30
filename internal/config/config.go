@@ -86,7 +86,7 @@ func Load() (Config, error) {
 	cfg.JWTRefreshTTL = durationEnv("JWT_REFRESH_EXPIRES_IN", &errs)
 	trustedProxies, err := trustedProxies()
 	if err != nil {
-		errs = append(errs, err)
+		errs = append(errs, fmt.Errorf("THROTTLE_TRUSTED_PROXIES: %w", err))
 	}
 	cfg.ThrottleTrustedProxies = trustedProxies
 
@@ -121,7 +121,9 @@ func validateTrustedProxies(proxies []string) error {
 	for _, proxy := range proxies {
 		if strings.Contains(proxy, "/") {
 			if _, _, err := net.ParseCIDR(proxy); err != nil {
-				errs = append(errs, fmt.Errorf("trusted proxy %q: %w", proxy, err))
+				errs = append(errs, fmt.Errorf(
+					"trusted proxy %q: %w", proxy, err,
+				))
 			}
 
 			continue
