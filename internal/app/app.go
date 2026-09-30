@@ -38,6 +38,10 @@ var (
 	loginThrottle = web.ThrottleConfig{
 		Limit: 5, TTL: time.Minute, Block: 5 * time.Minute,
 	}
+	throttleOverrides = map[string]web.ThrottleConfig{
+		"POST /auth/register": registerThrottle,
+		"POST /auth/login":    loginThrottle,
+	}
 )
 
 // App is the wired application.
@@ -63,10 +67,20 @@ func New(cfg config.Config) (*App, error) {
 		return mongoClient.Ping(pingCtx, readpref.Primary())
 	}
 
-	throttler := web.NewThrottler(globalThrottle, map[string]web.ThrottleConfig{
-		"POST /auth/register": registerThrottle,
-		"POST /auth/login":    loginThrottle,
-	}, web.DirectClientIP, nil)
+	resolve, err := web.ForwardedForClientIP(cfg.ThrottleTrustedProxies)
+	if err != nil {
+		_ = mongoClient.Disconnect(context.Background())
+
+		return nil, fmt.Errorf("resolve trusted proxies: %w", err)
+	}
+
+	throttleStore := mongostore.NewThrottleStore(
+		mongoClient.Database(cfg.MongoDatabase),
+	)
+	throttler := web.NewThrottler(
+		globalThrottle, throttleOverrides, resolve, throttleStore,
+	)
+
 	authStore := mongostore.NewIdentityStore(
 		mongoClient.Database(cfg.MongoDatabase),
 	)
@@ -75,6 +89,12 @@ func New(cfg config.Config) (*App, error) {
 	); err != nil {
 		_ = mongoClient.Disconnect(context.Background())
 		return nil, fmt.Errorf("ensure identity indexes: %w", err)
+	}
+	if err := mongostore.EnsureThrottleIndexes(
+		ctx, mongoClient.Database(cfg.MongoDatabase),
+	); err != nil {
+		_ = mongoClient.Disconnect(context.Background())
+		return nil, fmt.Errorf("ensure throttle indexes: %w", err)
 	}
 	issuer := identity.NewTokenIssuer(
 		cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL,

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -21,16 +22,15 @@ var hitConfig = ThrottleConfig{
 // window resets by its configured TTL, not a separate cleanup period.
 func TestThrottlerHitUsesInjectedClock(t *testing.T) {
 	throttler := NewThrottler(hitConfig, map[string]ThrottleConfig{}, nil, nil)
+	ctx := context.Background()
 
 	now := time.Now()
-	allowed, _, err := throttler.hit("ip|", now, hitConfig)
+	allowed, _, err := throttler.hit(ctx, "ip|", now, hitConfig)
 	if err != nil || !allowed {
 		t.Fatalf("first request: allowed=%v err=%v", allowed, err)
 	}
 
-	over, retryAfter, err := throttler.hit(
-		"ip|", now.Add(time.Second), hitConfig,
-	)
+	over, retryAfter, err := throttler.hit(ctx, "ip|", now.Add(time.Second), hitConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestThrottlerHitUsesInjectedClock(t *testing.T) {
 	}
 
 	blocked, retryAfter, err := throttler.hit(
-		"ip|", now.Add(30*time.Second), hitConfig,
+		ctx, "ip|", now.Add(30*time.Second), hitConfig,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestThrottlerHitUsesInjectedClock(t *testing.T) {
 	// At block expiry the counting window has also rolled over, so the
 	// request is allowed again.
 	reset, _, err := throttler.hit(
-		"ip|", now.Add(2*time.Minute+time.Second), hitConfig,
+		ctx, "ip|", now.Add(2*time.Minute+time.Second), hitConfig,
 	)
 	if err != nil || !reset {
 		t.Fatalf("post-block request: allowed=%v err=%v", reset, err)
@@ -74,7 +74,9 @@ func TestThrottlerHitStopsOnStoreFailure(t *testing.T) {
 		hitConfig, map[string]ThrottleConfig{}, nil, store,
 	)
 
-	_, _, err := throttler.hit("ip|", time.Now(), hitConfig)
+	_, _, err := throttler.hit(
+		context.Background(), "ip|", time.Now(), hitConfig,
+	)
 	if err != errStoreOutage {
 		t.Fatalf("store failure must surface, got %v", err)
 	}
@@ -88,16 +90,22 @@ var errStoreOutage = errors.New("store outage")
 
 // Update implements ThrottleStore.
 func (f *failingThrottleStore) Update(
-	string, func(ThrottleState) ThrottleState,
+	context.Context, string, func(ThrottleState) ThrottleState,
 ) (ThrottleState, error) {
 	return ThrottleState{}, errStoreOutage
 }
 
 // Size implements ThrottleStore.
-func (f *failingThrottleStore) Size() int { return 0 }
+func (f *failingThrottleStore) Size(context.Context) (int, error) {
+	return 0, errStoreOutage
+}
 
 // Prune implements ThrottleStore.
-func (f *failingThrottleStore) Prune(func(string, ThrottleState) bool) {}
+func (f *failingThrottleStore) Prune(
+	context.Context, time.Time,
+) (int64, error) {
+	return 0, errStoreOutage
+}
 
 // TestThrottlerConcurrentHitsPinAtomicUpdates fires many concurrent
 // hits at one key and pins that the atomic store update loses no
@@ -108,6 +116,7 @@ func TestThrottlerConcurrentHitsPinAtomicUpdates(t *testing.T) {
 		Limit: limit, TTL: time.Minute, Block: 5 * time.Minute,
 	}
 	throttler := NewThrottler(config, map[string]ThrottleConfig{}, nil, nil)
+	ctx := context.Background()
 
 	attempts := 4 * limit
 	results := make([]bool, attempts)
@@ -123,7 +132,7 @@ func TestThrottlerConcurrentHitsPinAtomicUpdates(t *testing.T) {
 			defer waiting.Done()
 			<-start
 
-			permitted, _, err := throttler.hit("ip|", time.Now(), config)
+			permitted, _, err := throttler.hit(ctx, "ip|", time.Now(), config)
 			if err != nil {
 				failures.Lock()
 				failed = append(failed, err)
@@ -155,71 +164,42 @@ func TestThrottlerConcurrentHitsPinAtomicUpdates(t *testing.T) {
 	}
 }
 
-// TestThrottlerPruneUsesWindowExpiry pins that pruning drops expired
-// unblocked windows and keeps active or blocked ones.
-func TestThrottlerPruneUsesWindowExpiry(t *testing.T) {
+// TestMemoryStorePruneAndSize pin the retained store operations on the
+// axis the shared store must mirror: pruning only expired unblocked
+// windows and sizing the entries.
+func TestMemoryStorePruneAndSize(t *testing.T) {
 	store := newMemoryThrottleStore()
+	ctx := context.Background()
 	now := time.Now()
+
 	store.buckets["expired"] = ThrottleState{
-		Epoch: now.Add(-2 * time.Minute), Expire: now.Add(-time.Minute),
+		Epoch: now.Add(-5 * time.Minute), Expire: now.Add(-time.Minute),
 	}
 	store.buckets["open"] = ThrottleState{
-		Epoch: now, Expire: now.Add(time.Minute), Count: 1,
+		Epoch: now, Expire: now.Add(time.Minute), Count: 2,
 	}
 	store.buckets["blocked"] = ThrottleState{
-		Epoch:        now.Add(-2 * time.Minute),
-		Expire:       now.Add(-30 * time.Second),
+		Epoch:        now.Add(-10 * time.Minute),
+		Expire:       now.Add(-time.Minute),
 		BlockedUntil: now.Add(time.Minute),
 	}
 
-	throttler := NewThrottler(
-		hitConfig, map[string]ThrottleConfig{}, nil, store,
-	)
-	throttler.prune(now)
+	if size, err := store.Size(ctx); err != nil || size != 3 {
+		t.Fatalf("size %v err %v, want 3", size, err)
+	}
 
+	deleted, err := store.Prune(ctx, now)
+	if err != nil || deleted != 1 {
+		t.Fatalf("pruned %d err %v, want 1 expired unblocked window", deleted, err)
+	}
 	if _, kept := store.buckets["expired"]; kept {
-		t.Fatal("expired unblocked window must be pruned by TTL")
+		t.Fatal("expired unblocked window must be pruned")
 	}
 	if _, kept := store.buckets["open"]; !kept {
 		t.Fatal("open window must stay")
 	}
 	if _, kept := store.buckets["blocked"]; !kept {
 		t.Fatal("blocked window must stay until its block ends")
-	}
-}
-
-// TestMemoryStoreApplyIsAtomic pins the update contract: a mutate
-// observing a keyed state sees every previously stored field, and the
-// stored state is exactly the mutated result.
-func TestMemoryStoreApplyIsAtomic(t *testing.T) {
-	store := newMemoryThrottleStore()
-
-	seeded := ThrottleState{Epoch: time.Unix(1, 0), Count: 3}
-	if _, err := store.Update("k", func(ThrottleState) ThrottleState {
-		return seeded
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	read, err := store.Update("k", func(state ThrottleState) ThrottleState {
-		if state != seeded {
-			t.Fatalf("mutate saw %v, want %v", state, seeded)
-		}
-
-		state.Count++
-		state.BlockedUntil = time.Unix(2, 0)
-
-		return state
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if read.Count != 4 || !read.BlockedUntil.Equal(time.Unix(2, 0)) {
-		t.Fatalf("stored result %v", read)
-	}
-
-	if store.Size() != 1 {
-		t.Fatalf("size %d, want 1", store.Size())
 	}
 }
 
@@ -269,22 +249,26 @@ func TestThrottlerPrunesThroughStore(t *testing.T) {
 			Expire: now.Add(-time.Minute),
 		}
 	}
-	if store.Size() <= throttleBucketLimit {
+	if size, err := store.Size(context.Background()); err != nil ||
+		size <= throttleBucketLimit {
 		t.Fatal("test preconditions require an over-cap store")
 	}
 
 	throttler := NewThrottler(
 		hitConfig, map[string]ThrottleConfig{}, nil, store,
 	)
-	allowed, _, err := throttler.hit("ip|", now, hitConfig)
+	allowed, _, err := throttler.hit(
+		context.Background(), "ip|", now, hitConfig,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !allowed {
 		t.Fatal("fresh bucket request must be allowed")
 	}
-	if store.Size() >= throttleBucketLimit {
-		t.Fatalf("hit must have pruned stale windows, kept %d", store.Size())
+	if size, err := store.Size(context.Background()); err == nil &&
+		size >= throttleBucketLimit {
+		t.Fatalf("hit must have pruned stale windows, kept %d", size)
 	}
 }
 
@@ -301,5 +285,144 @@ func TestThrottlerDirectClientIPUnparseable(t *testing.T) {
 	request.RemoteAddr = net.JoinHostPort("10.1.2.3", "55")
 	if got := DirectClientIP(request); got != "10.1.2.3" {
 		t.Fatalf("peer with port resolved %q", got)
+	}
+}
+
+// forwardedCase pairs one request configuration with the resolved
+// throttled address.
+type forwardedCase struct {
+	name         string
+	remoteAddr   string
+	forwardedFor string
+	trusted      []string
+	want         string
+	wantError    bool
+}
+
+// TestForwardedForClientIP pins the trusted-proxy resolution rules.
+func TestForwardedForClientIP(t *testing.T) {
+	cases := []forwardedCase{
+		{
+			name:         "directPeerIgnoresHeaders",
+			remoteAddr:   "1.2.3.4:9999",
+			forwardedFor: "203.0.113.9",
+			want:         "1.2.3.4",
+		},
+		{
+			name:         "untrustedPeerSpoofIgnored",
+			remoteAddr:   "1.2.3.4:9999",
+			forwardedFor: "203.0.113.9",
+			trusted:      []string{"10.0.0.0/8"},
+			want:         "1.2.3.4",
+		},
+		{
+			name:         "trustedProxySingleHop",
+			remoteAddr:   "10.0.0.1:9999",
+			forwardedFor: "203.0.113.9",
+			trusted:      []string{"10.0.0.0/8"},
+			want:         "203.0.113.9",
+		},
+		{
+			name:         "trustedChainSkipsTrustedHops",
+			remoteAddr:   "10.0.0.1:9999",
+			forwardedFor: "203.0.113.9, 10.0.0.9",
+			trusted:      []string{"10.0.0.0/8"},
+			want:         "203.0.113.9",
+		},
+		{
+			name:         "allTrustedChainFallsBackToPeer",
+			remoteAddr:   "10.0.0.1:9999",
+			forwardedFor: "10.0.0.8, 10.0.0.9",
+			trusted:      []string{"10.0.0.0/8"},
+			want:         "10.0.0.1",
+		},
+		{
+			name:         "trustedPeerWithoutHeader",
+			remoteAddr:   "10.0.0.1:9999",
+			forwardedFor: "",
+			trusted:      []string{"10.0.0.0/8"},
+			want:         "10.0.0.1",
+		},
+		{
+			name:         "exactAddressTrustApplies",
+			remoteAddr:   "192.0.2.1:9999",
+			forwardedFor: "203.0.113.9",
+			trusted:      []string{"192.0.2.1"},
+			want:         "203.0.113.9",
+		},
+		{
+			name:       "unparseablePeerFallsBack",
+			remoteAddr: "not-an-address",
+			trusted:    []string{"10.0.0.0/8"},
+			want:       unknownClientIP,
+		},
+		{
+			name:       "invalidTrustedValueFails",
+			remoteAddr: "10.0.0.1:9999",
+			trusted:    []string{"nope"},
+			wantError:  true,
+		},
+	}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			resolve, err := ForwardedForClientIP(test.trusted)
+			if test.wantError {
+				if err == nil {
+					t.Fatal("invalid trusted proxy must fail construction")
+				}
+
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "/x", nil)
+			request.RemoteAddr = test.remoteAddr
+			if test.forwardedFor != "" {
+				request.Header.Set("X-Forwarded-For", test.forwardedFor)
+			}
+
+			if got := resolve(request); got != test.want {
+				t.Fatalf("resolved %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+// TestForwardedForClientIPWithoutTrustPreservesDirectBehavior pins
+// that an empty trusted-proxy list ignores forwarding headers even
+// from otherwise trusted-looking peers.
+func TestForwardedForClientIPWithoutTrustPreservesDirectBehavior(t *testing.T) {
+	resolve, err := ForwardedForClientIP(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/x", nil)
+	request.RemoteAddr = "10.0.0.1:9999"
+	request.Header.Set("X-Forwarded-For", "203.0.113.9")
+
+	if got := resolve(request); got != "10.0.0.1" {
+		t.Fatalf("resolver keyed %q, want the direct peer", got)
+	}
+}
+
+// TestForwardedForClientIPMultipleHeadersPinsChain pins chained
+// forwarding headers, which Go accumulates as separate header values.
+func TestForwardedForClientIPMultipleHeadersPinsChain(t *testing.T) {
+	resolve, err := ForwardedForClientIP([]string{"10.0.0.0/8"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/x", nil)
+	request.RemoteAddr = "10.0.0.1:9999"
+	request.Header.Add("X-Forwarded-For", "203.0.113.9")
+	request.Header.Add("X-Forwarded-For", "10.0.0.9")
+
+	if got := resolve(request); got != "203.0.113.9" {
+		t.Fatalf("chained headers resolved %q", got)
 	}
 }

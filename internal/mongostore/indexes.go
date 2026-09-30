@@ -50,3 +50,18 @@ func EnsureIdentityIndexes(ctx context.Context, database *mongo.Database) error 
 
 	return nil
 }
+
+// EnsureThrottleIndexes creates the throttle TTL index, reclaiming
+// rate-limit windows once their purge marker — the later of the
+// counting horizon and an active block — passes. The application runs
+// it as an explicit startup bootstrap alongside the identity indexes.
+func EnsureThrottleIndexes(ctx context.Context, database *mongo.Database) error {
+	_, err := database.Collection("throttles").Indexes().CreateOne(ctx,
+		mongo.IndexModel{
+			Keys:    bson.M{"purgeAt": 1},
+			Options: options.Index().SetExpireAfterSeconds(0),
+		},
+	)
+
+	return err
+}

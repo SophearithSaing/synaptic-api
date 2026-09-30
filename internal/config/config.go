@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"strconv"
@@ -38,6 +39,10 @@ type Config struct {
 	JWTRefreshTTL time.Duration
 	// TogetherAPIKey authenticates with the Together AI API.
 	TogetherAPIKey string
+	// ThrottleTrustedProxies lists the reverse-proxy addresses or
+	// CIDRs whose X-Forwarded-For values the rate limiter trusts.
+	// Empty keeps direct transport-peer throttling.
+	ThrottleTrustedProxies []string
 }
 
 // Production reports whether the process runs in production mode.
@@ -79,8 +84,57 @@ func Load() (Config, error) {
 	cfg.TogetherAPIKey = required("TOGETHER_API_KEY", &errs)
 	cfg.JWTAccessTTL = durationEnv("JWT_ACCESS_EXPIRES_IN", &errs)
 	cfg.JWTRefreshTTL = durationEnv("JWT_REFRESH_EXPIRES_IN", &errs)
+	trustedProxies, err := trustedProxies()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	cfg.ThrottleTrustedProxies = trustedProxies
 
 	return cfg, errors.Join(errs...)
+}
+
+// trustedProxies parses the optional comma-separated
+// THROTTLE_TRUSTED_PROXIES list of exact addresses or CIDR ranges,
+// rejecting unparseable entries.
+func trustedProxies() ([]string, error) {
+	raw := os.Getenv("THROTTLE_TRUSTED_PROXIES")
+	if raw == "" {
+		return nil, nil
+	}
+
+	var proxies []string
+	for _, entry := range strings.Split(raw, ",") {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" {
+			continue
+		}
+		proxies = append(proxies, trimmed)
+	}
+
+	return proxies, validateTrustedProxies(proxies)
+}
+
+// validateTrustedProxies reports whether every trusted proxy entry is
+// an exact IP address or a CIDR range.
+func validateTrustedProxies(proxies []string) error {
+	var errs []error
+	for _, proxy := range proxies {
+		if strings.Contains(proxy, "/") {
+			if _, _, err := net.ParseCIDR(proxy); err != nil {
+				errs = append(errs, fmt.Errorf("trusted proxy %q: %w", proxy, err))
+			}
+
+			continue
+		}
+		if net.ParseIP(proxy) == nil {
+			errs = append(errs, fmt.Errorf(
+				"trusted proxy %q: want an exact IP address or CIDR range",
+				proxy,
+			))
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 var durationPattern = regexp.MustCompile(`^(\d+)(ms|s|m|h|d)$`)
