@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // Message templates follow the fixture-pinned class-validator formats.
@@ -28,12 +31,65 @@ const (
 var (
 	usernamePattern   = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
 	identifierPattern = regexp.MustCompile(`^\S+$`)
-	emailPattern      = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+	authValidator     = newAuthValidator()
 )
 
-// passwordComplex reports whether the password contains a lowercase
-// letter, an uppercase letter, and a digit, matching the pinned
-// password pattern.
+// registerRequest is the validated registration input.
+type registerRequest struct {
+	Username string
+	Email    string
+	Password string
+}
+
+// loginRequest is the validated login input.
+type loginRequest struct {
+	Identifier string
+	Password   string
+}
+
+// newAuthValidator configures reusable application-specific rules on
+// go-playground/validator. A registration failure is a programming
+// error and therefore fails during package initialization.
+func newAuthValidator() *validator.Validate {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	mustRegisterValidation(validate, "username", func(fl validator.FieldLevel) bool {
+		return usernamePattern.MatchString(fl.Field().String())
+	})
+	mustRegisterValidation(
+		validate,
+		"password_complex",
+		func(fl validator.FieldLevel) bool {
+			return passwordComplex(fl.Field().String())
+		},
+	)
+	mustRegisterValidation(
+		validate,
+		"bcrypt_password",
+		func(fl validator.FieldLevel) bool {
+			return len([]byte(fl.Field().String())) <= 72
+		},
+	)
+	mustRegisterValidation(validate, "no_space", func(fl validator.FieldLevel) bool {
+		return identifierPattern.MatchString(fl.Field().String())
+	})
+
+	return validate
+}
+
+// mustRegisterValidation registers one custom validator or panics when
+// its static configuration is invalid.
+func mustRegisterValidation(
+	validate *validator.Validate,
+	tag string,
+	rule validator.Func,
+) {
+	if err := validate.RegisterValidation(tag, rule); err != nil {
+		panic(fmt.Sprintf("register %s validation: %v", tag, err))
+	}
+}
+
+// passwordComplex reports whether the password contains an ASCII
+// lowercase letter, uppercase letter, and digit.
 func passwordComplex(value string) bool {
 	var lower, upper, digit bool
 	for _, char := range value {
@@ -50,180 +106,214 @@ func passwordComplex(value string) bool {
 	return lower && upper && digit
 }
 
-// violation appends the formatted message when the check fails.
-func violation(
-	messages []string,
-	failed bool,
-	format string,
-	args ...any,
-) []string {
-	if failed {
-		return append(messages, fmt.Sprintf(format, args...))
-	}
-
-	return messages
-}
-
-// fieldRules bundles the class-validator rules of one property in
-// decorator order.
-type fieldRules struct {
-	// prop is the property name used in messages.
-	prop string
-	// isString marks the IsString decorator: non-string values report
-	// the type message instead of the empty-value failures.
-	isString bool
-	min      int
-	max      int
-	// check has the pin-equating predicate behind the Matches rule;
-	// nil means the property has no Matches decorator.
-	check func(string) bool
-	// patternSrc is the pinned source text in the Matches message.
-	patternSrc string
-	// email marks the IsEmail decorator.
-	email bool
-}
-
-// validate reports every violation for an optional string value. A nil
-// value is an undefined property; non-string values fail like empty
-// strings except for the IsString type message.
-func (rules fieldRules) validate(value *string) []string {
-	if value == nil {
-		if rules.isString {
-			return []string{fmt.Sprintf(msgString, rules.prop)}
-		}
-		return rules.checkFailures("")
-	}
-
-	return rules.checkFailures(*value)
-}
-
-// checkFailures validates the string value in decorator order.
-func (rules fieldRules) checkFailures(value string) []string {
-	var messages []string
-
-	messages = violation(messages, value == "", msgNotEmpty, rules.prop)
-	if rules.min > 0 {
-		messages = violation(
-			messages,
-			len(value) < rules.min,
-			msgMin, rules.prop, rules.min,
-		)
-	}
-	if rules.max > 0 {
-		messages = violation(
-			messages,
-			len(value) > rules.max,
-			msgMax, rules.prop, rules.max,
-		)
-	}
-	if rules.email {
-		messages = violation(
-			messages,
-			!emailPattern.MatchString(value),
-			msgEmail, rules.prop,
-		)
-	}
-	if rules.check != nil {
-		messages = violation(
-			messages,
-			!rules.check(value),
-			msgMatches, rules.prop, rules.patternSrc,
-		)
-	}
-
-	return messages
-}
-
-// registerSchema mirrors the RegisterDto decorators.
-var registerSchema = map[string]fieldRules{
-	"username": {
-		prop:       "username",
-		isString:   true,
-		min:        3,
-		max:        32,
-		check:      usernamePattern.MatchString,
-		patternSrc: usernamePatternSrc,
-	},
-	"email": {
-		prop:     "email",
-		isString: true,
-		max:      254,
-		email:    true,
-	},
-	"password": {
-		prop:       "password",
-		min:        8,
-		max:        72,
-		check:      passwordComplex,
-		patternSrc: passwordPatternSrc,
-	},
-}
-
-// loginSchema mirrors the LoginDto decorators.
-var loginSchema = map[string]fieldRules{
-	"identifier": {
-		prop:       "identifier",
-		max:        254,
-		check:      identifierPattern.MatchString,
-		patternSrc: identifierPatternS,
-	},
-	"password": {
-		prop: "password",
-		min:  8,
-		max:  72,
-	},
-}
-
-// validateFields validates one decoded body against a schema. Unknown
-// properties are reported first (sorted for stable bodies), then
-// per-property violations in declaration order. Returns nil when the
-// values are valid.
-func validateFields(
+// decodeRegisterRequest transforms and validates registration fields.
+// Unknown properties are reported first, followed by field violations
+// in request declaration order.
+func decodeRegisterRequest(
 	fields map[string]json.RawMessage,
-	schema map[string]fieldRules,
-	order []string,
-	transforms map[string]func(string) string,
-) []string {
-	var disallowed []string
-	for name := range fields {
-		if _, ok := schema[name]; !ok {
-			disallowed = append(disallowed, fmt.Sprintf(msgUnknown, name))
-		}
+) (registerRequest, []string) {
+	messages := unknownFieldMessages(
+		fields, "username", "email", "password",
+	)
+
+	username, usernameIsString := decodeStringField(
+		fields["username"], strings.TrimSpace,
+	)
+	email, emailIsString := decodeStringField(
+		fields["email"], trimLower,
+	)
+	password, _ := decodeStringField(fields["password"], nil)
+
+	if !usernameIsString {
+		messages = append(messages, fmt.Sprintf(msgString, "username"))
+	} else {
+		messages = appendUsernameMessages(messages, username)
 	}
-	sort.Strings(disallowed)
+
+	if !emailIsString {
+		messages = append(messages, fmt.Sprintf(msgString, "email"))
+	} else {
+		messages = appendEmailMessages(messages, email)
+	}
+
+	messages = appendPasswordMessages(messages, password, true)
+
+	return registerRequest{
+		Username: username,
+		Email:    email,
+		Password: password,
+	}, messages
+}
+
+// decodeLoginRequest transforms and validates login fields. Unknown
+// properties are reported before field violations.
+func decodeLoginRequest(
+	fields map[string]json.RawMessage,
+) (loginRequest, []string) {
+	messages := unknownFieldMessages(fields, "identifier", "password")
+
+	identifier, _ := decodeStringField(
+		fields["identifier"], strings.TrimSpace,
+	)
+	password, _ := decodeStringField(fields["password"], nil)
+
+	messages = appendIdentifierMessages(messages, identifier)
+	messages = appendPasswordMessages(messages, password, false)
+
+	return loginRequest{
+		Identifier: identifier,
+		Password:   password,
+	}, messages
+}
+
+// unknownFieldMessages returns stable forbid-non-whitelisted messages.
+func unknownFieldMessages(
+	fields map[string]json.RawMessage,
+	allowed ...string,
+) []string {
+	allowedFields := make(map[string]struct{}, len(allowed))
+	for _, name := range allowed {
+		allowedFields[name] = struct{}{}
+	}
 
 	var messages []string
-	messages = append(messages, disallowed...)
-
-	for _, name := range order {
-		rules, ok := schema[name]
-		if !ok {
-			continue
+	for name := range fields {
+		if _, ok := allowedFields[name]; !ok {
+			messages = append(messages, fmt.Sprintf(msgUnknown, name))
 		}
-
-		messages = append(
-			messages,
-			rules.validate(decodeField(fields[name], transforms[name]))...,
-		)
 	}
+	sort.Strings(messages)
 
 	return messages
 }
 
-// decodeField reads a JSON string value and applies the input
-// transformer. Returns nil when the value is missing or not a string.
-func decodeField(raw json.RawMessage, transform func(string) string) *string {
+// decodeStringField decodes one optional JSON string and transforms it.
+// The boolean distinguishes valid strings from missing and non-string
+// values where the legacy contract needs an IsString message.
+func decodeStringField(
+	raw json.RawMessage,
+	transform func(string) string,
+) (string, bool) {
 	if raw == nil {
-		return nil
+		return "", false
 	}
 
 	var value string
-	if json.Unmarshal(raw, &value) != nil {
-		return nil
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", false
 	}
 	if transform != nil {
 		value = transform(value)
 	}
 
-	return &value
+	return value, true
+}
+
+// appendUsernameMessages validates all username rules independently so
+// the response retains the legacy all-errors contract.
+func appendUsernameMessages(messages []string, value string) []string {
+	messages = appendRuleMessage(
+		messages, value, "required",
+		fmt.Sprintf(msgNotEmpty, "username"),
+	)
+	messages = appendRuleMessage(
+		messages, value, "min=3",
+		fmt.Sprintf(msgMin, "username", 3),
+	)
+	messages = appendRuleMessage(
+		messages, value, "max=32",
+		fmt.Sprintf(msgMax, "username", 32),
+	)
+
+	return appendRuleMessage(
+		messages, value, "username",
+		fmt.Sprintf(msgMatches, "username", usernamePatternSrc),
+	)
+}
+
+// appendEmailMessages validates all email rules independently.
+func appendEmailMessages(messages []string, value string) []string {
+	messages = appendRuleMessage(
+		messages, value, "required",
+		fmt.Sprintf(msgNotEmpty, "email"),
+	)
+	messages = appendRuleMessage(
+		messages, value, "max=254",
+		fmt.Sprintf(msgMax, "email", 254),
+	)
+
+	return appendRuleMessage(
+		messages, value, "email",
+		fmt.Sprintf(msgEmail, "email"),
+	)
+}
+
+// appendIdentifierMessages validates all login identifier rules.
+func appendIdentifierMessages(messages []string, value string) []string {
+	messages = appendRuleMessage(
+		messages, value, "required",
+		fmt.Sprintf(msgNotEmpty, "identifier"),
+	)
+	messages = appendRuleMessage(
+		messages, value, "max=254",
+		fmt.Sprintf(msgMax, "identifier", 254),
+	)
+
+	return appendRuleMessage(
+		messages, value, "no_space",
+		fmt.Sprintf(msgMatches, "identifier", identifierPatternS),
+	)
+}
+
+// appendPasswordMessages validates common password rules and optionally
+// applies registration complexity.
+func appendPasswordMessages(
+	messages []string,
+	value string,
+	complex bool,
+) []string {
+	messages = appendRuleMessage(
+		messages, value, "required",
+		fmt.Sprintf(msgNotEmpty, "password"),
+	)
+	messages = appendRuleMessage(
+		messages, value, "min=8",
+		fmt.Sprintf(msgMin, "password", 8),
+	)
+	if ruleFails(value, "max=72") || ruleFails(value, "bcrypt_password") {
+		messages = append(messages, fmt.Sprintf(msgMax, "password", 72))
+	}
+	if !complex {
+		return messages
+	}
+
+	return appendRuleMessage(
+		messages, value, "password_complex",
+		fmt.Sprintf(msgMatches, "password", passwordPatternSrc),
+	)
+}
+
+// appendRuleMessage appends a pinned message when validator rejects a
+// value for one rule.
+func appendRuleMessage(
+	messages []string,
+	value string,
+	rule string,
+	message string,
+) []string {
+	if ruleFails(value, rule) {
+		return append(messages, message)
+	}
+
+	return messages
+}
+
+// ruleFails reports whether validator rejects one value and rule.
+func ruleFails(value string, rule string) bool {
+	return authValidator.Var(value, rule) != nil
+}
+
+// trimLower is the email input transformer.
+func trimLower(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }

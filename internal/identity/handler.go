@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/SophearithSaing/synaptic-api/internal/web"
@@ -21,32 +20,8 @@ type Handler struct {
 // auth cookies, matching Express clearCookie (new Date(1)).
 var clearedCookieInstant = time.Unix(1, 0)
 
-// registerOrder and loginOrder are the schema declaration orders used
-// for validation message ordering.
-var (
-	registerOrder = []string{"username", "email", "password"}
-	loginOrder    = []string{"identifier", "password"}
-)
-
 // authenticatedTrue is the pinned auth status body.
 var authenticatedTrue = map[string]bool{"authenticated": true}
-
-// trimLower is the email input transformer.
-func trimLower(value string) string {
-	return strings.ToLower(strings.TrimSpace(value))
-}
-
-// trim is the username and identifier input transformer.
-func trim(value string) string {
-	return strings.TrimSpace(value)
-}
-
-// authTransforms maps each property to its input transformer.
-var authTransforms = map[string]func(string) string{
-	"username":   trim,
-	"email":      trimLower,
-	"identifier": trim,
-}
 
 // NewHandler builds the authentication routes handler.
 func NewHandler(
@@ -84,20 +59,27 @@ func (h *Handler) Mount(mux *http.ServeMux) {
 // register validates the body, creates the account, and sets auth
 // cookies.
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	fields, ok := h.decodeBody(w, r, registerSchema, registerOrder)
-	if !ok {
+	var fields map[string]json.RawMessage
+	if err := web.DecodeJSON(w, r, &fields); err != nil {
+		web.WriteError(w, r, err)
 		return
 	}
 
-	passwordHash, err := HashPassword(fields["password"])
+	input, messages := decodeRegisterRequest(fields)
+	if len(messages) > 0 {
+		writeValidationMessages(w, messages)
+		return
+	}
+
+	passwordHash, err := HashPassword(input.Password)
 	if err != nil {
 		web.WriteError(w, r, err)
 		return
 	}
 
 	tokens, err := h.service.Register(r.Context(), Credentials{
-		Username:     fields["username"],
-		Email:        fields["email"],
+		Username:     input.Username,
+		Email:        input.Email,
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
@@ -111,13 +93,20 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 
 // login validates the body and authenticates the identifier.
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-	fields, ok := h.decodeBody(w, r, loginSchema, loginOrder)
-	if !ok {
+	var fields map[string]json.RawMessage
+	if err := web.DecodeJSON(w, r, &fields); err != nil {
+		web.WriteError(w, r, err)
+		return
+	}
+
+	input, messages := decodeLoginRequest(fields)
+	if len(messages) > 0 {
+		writeValidationMessages(w, messages)
 		return
 	}
 
 	tokens, err := h.service.Login(
-		r.Context(), fields["identifier"], fields["password"],
+		r.Context(), input.Identifier, input.Password,
 	)
 	if err != nil {
 		h.writeServiceError(w, r, err)
@@ -264,40 +253,13 @@ func (h *Handler) setAuthCookies(
 	))
 }
 
-// decodeBody reads the JSON object body, validates it against the
-// schema, and returns the transformed string values. It writes the
-// pinned 400 responses when the body is unusable.
-func (h *Handler) decodeBody(
-	w http.ResponseWriter,
-	r *http.Request,
-	schema map[string]fieldRules,
-	order []string,
-) (map[string]string, bool) {
-	var fields map[string]json.RawMessage
-	if err := web.DecodeJSON(w, r, &fields); err != nil {
-		web.WriteError(w, r, err)
-		return nil, false
-	}
-
-	if messages := validateFields(fields, schema, order, authTransforms); len(messages) > 0 {
-		web.WriteJSON(w, http.StatusBadRequest, &web.Error{
-			StatusCode: http.StatusBadRequest,
-			Message:    messages,
-			ErrorName:  http.StatusText(http.StatusBadRequest),
-		})
-		return nil, false
-	}
-
-	values := make(map[string]string)
-	for _, name := range order {
-		value := decodeField(fields[name], authTransforms[name])
-		if value == nil {
-			continue
-		}
-		values[name] = *value
-	}
-
-	return values, true
+// writeValidationMessages writes the pinned validation-error body.
+func writeValidationMessages(w http.ResponseWriter, messages []string) {
+	web.WriteJSON(w, http.StatusBadRequest, &web.Error{
+		StatusCode: http.StatusBadRequest,
+		Message:    messages,
+		ErrorName:  http.StatusText(http.StatusBadRequest),
+	})
 }
 
 // writeServiceError maps identity errors to pinned HTTP bodies.
