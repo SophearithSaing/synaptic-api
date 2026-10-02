@@ -154,6 +154,55 @@ func TestLoadRejectsInvalidDuration(t *testing.T) {
 	}
 }
 
+func TestLoadDefaultsToNoTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ThrottleTrustedProxies != nil {
+		t.Errorf("default trusted proxies %+v, want nil", cfg.ThrottleTrustedProxies)
+	}
+}
+
+func TestLoadParsesTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+	t.Setenv("THROTTLE_TRUSTED_PROXIES",
+		" 192.0.2.1 , 10.0.0.0/8 ,\t172.16.0.1\t")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"192.0.2.1", "10.0.0.0/8", "172.16.0.1"}
+	if len(cfg.ThrottleTrustedProxies) != len(want) {
+		t.Fatalf("parsed %+v, want %+v", cfg.ThrottleTrustedProxies, want)
+	}
+	for index, proxy := range want {
+		if cfg.ThrottleTrustedProxies[index] != proxy {
+			t.Errorf("entry %d %q, want %q",
+				index, cfg.ThrottleTrustedProxies[index], proxy)
+		}
+	}
+}
+
+func TestLoadRejectsInvalidTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+	t.Setenv("THROTTLE_TRUSTED_PROXIES", "10.0.0.1,not-a-proxy")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected an error for an invalid trusted proxy")
+	}
+	if !strings.Contains(err.Error(), "THROTTLE_TRUSTED_PROXIES") {
+		t.Errorf("error %q does not name THROTTLE_TRUSTED_PROXIES", err)
+	}
+}
+
 func TestLoadReadsDotEnvWithoutOverriding(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
