@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -150,7 +151,6 @@ func (s *CatalogStore) TopicByID(
 func (s *CatalogStore) QuestionSetByID(
 	ctx context.Context,
 	id string,
-	populate bool,
 ) (*catalog.QuestionSet, error) {
 	objectID, err := parseObjectID(id)
 	if err != nil {
@@ -165,22 +165,24 @@ func (s *CatalogStore) QuestionSetByID(
 		return nil, catalog.ErrQuestionSetNotFound
 	}
 
-	return s.decodeQuestionSet(ctx, raw, populate, nil)
+	return s.decodeQuestionSet(ctx, raw, nil)
 }
 
-// QuestionSetsByTopicSlug lists the question sets for a topic slug by
-// stored (natural) order. The populated topic reuses the document
-// already loaded by slug instead of loading it once per set.
+// QuestionSetsByTopicSlug lists the question sets for a topic slug in
+// stored order and reuses the joined topic for every result.
 func (s *CatalogStore) QuestionSetsByTopicSlug(
 	ctx context.Context,
 	slug string,
-	populate bool,
 ) ([]catalog.QuestionSet, error) {
 	topicRaw, err := s.topics.FindOne(ctx, bson.M{"slug": slug}).Raw()
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, catalog.ErrTopicNotFound
 		}
+		return nil, err
+	}
+	topic, err := s.decodeTopic(ctx, topicRaw, s.categoryByObjectID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -195,7 +197,7 @@ func (s *CatalogStore) QuestionSetsByTopicSlug(
 	results := make([]catalog.QuestionSet, 0)
 	for cursor.Next(ctx) {
 		questionSet, err := s.decodeQuestionSet(
-			ctx, cursor.Current, populate, copyRaw(topicRaw),
+			ctx, cursor.Current, topic,
 		)
 		if err != nil {
 			return nil, err
@@ -357,22 +359,19 @@ func (s *CatalogStore) categoryByObjectID(
 	return decodeCategory(raw)
 }
 
-// decodeQuestionSet maps the stored question set, optionally embedding
-// the raw stored topic document. A non-nil preloaded topic for the
-// sets' shared reference renders without a reload.
+// decodeQuestionSet maps a stored question set and joins its topic.
 func (s *CatalogStore) decodeQuestionSet(
 	ctx context.Context,
 	raw bson.Raw,
-	populate bool,
-	preloadedTopic bson.Raw,
+	preloadedTopic *catalog.Topic,
 ) (*catalog.QuestionSet, error) {
 	var document QuestionSetDocument
 	if err := bson.Unmarshal(raw, &document); err != nil {
 		return nil, err
 	}
 
-	topic, err := s.questionSetTopic(
-		ctx, raw.Lookup("topic"), populate, preloadedTopic,
+	topicID, topic, err := s.questionSetTopic(
+		ctx, raw.Lookup("topic"), preloadedTopic,
 	)
 	if err != nil {
 		return nil, err
@@ -385,6 +384,7 @@ func (s *CatalogStore) decodeQuestionSet(
 
 	return &catalog.QuestionSet{
 		ID:        document.ID.Hex(),
+		TopicID:   topicID,
 		Topic:     topic,
 		SetType:   document.SetType,
 		Level:     document.Level,
@@ -394,57 +394,52 @@ func (s *CatalogStore) decodeQuestionSet(
 	}, nil
 }
 
-// questionSetTopic resolves the response topic value. Populated shapes
-// carry the stored topic document as raw JSON; otherwise the stored
-// reference passes through with ObjectIds rendered as hex strings.
+// questionSetTopic builds the stored identifier and its left-joined topic.
 func (s *CatalogStore) questionSetTopic(
 	ctx context.Context,
 	reference bson.RawValue,
-	populate bool,
-	preloadedTopic bson.Raw,
-) (json.RawMessage, error) {
-	if populate &&
-		reference.Type == bson.TypeObjectID &&
-		preloadedTopic != nil &&
-		preloadedTopic.Lookup("_id").ObjectID() == reference.ObjectID() {
-		return rawValueJSON(bson.RawValue{
-			Type:  bson.TypeEmbeddedDocument,
-			Value: preloadedTopic,
-		})
-	}
-	if populate {
-		// Dangling references render unchanged inside topicReference;
-		// conversion errors surface so broken stored shapes stay
-		// visible instead of silently becoming null.
-		return s.topicReference(ctx, reference)
+	preloadedTopic *catalog.Topic,
+) (string, *catalog.Topic, error) {
+	topicID, err := questionSetTopicID(reference)
+	if err != nil {
+		return "", nil, err
 	}
 
-	return rawValueJSON(reference)
-}
-
-// topicReference loads the stored topic document as raw JSON for the
-// populated question-set shape. A dangling reference renders the
-// stored reference value unchanged.
-func (s *CatalogStore) topicReference(
-	ctx context.Context,
-	reference bson.RawValue,
-) (json.RawMessage, error) {
+	if preloadedTopic != nil && preloadedTopic.ID == topicID {
+		return topicID, preloadedTopic, nil
+	}
 	if reference.Type != bson.TypeObjectID {
-		return rawValueJSON(reference)
+		return topicID, nil, nil
 	}
 
 	raw, err := s.findRaw(ctx, s.topics, reference.ObjectID())
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	if raw == nil {
-		return rawValueJSON(reference)
+		return topicID, nil, nil
 	}
 
-	return rawValueJSON(bson.RawValue{
-		Type:  bson.TypeEmbeddedDocument,
-		Value: raw,
-	})
+	topic, err := s.decodeTopic(ctx, raw, s.categoryByObjectID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return topicID, topic, nil
+}
+
+// questionSetTopicID returns the string form of a stored topic reference.
+func questionSetTopicID(reference bson.RawValue) (string, error) {
+	switch reference.Type {
+	case bson.TypeObjectID:
+		return reference.ObjectID().Hex(), nil
+	case bson.TypeString:
+		return reference.StringValue(), nil
+	default:
+		return "", fmt.Errorf(
+			"unsupported question set topic type %s", reference.Type,
+		)
+	}
 }
 
 // questionPassthrough encodes the stored questions array untouched, in

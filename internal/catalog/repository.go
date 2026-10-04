@@ -13,19 +13,18 @@ type Repository interface {
 	CategoryByID(ctx context.Context, id string) (*Category, error)
 	// Topics lists every topic sorted by title with the nested category.
 	// Legacy string-typed category references stay unresolved: their
-	// nested category is nil and the raw reference is preserved in the
-	// populated question-set shape.
+	// nested category is nil.
 	Topics(ctx context.Context) ([]Topic, error)
 	// TopicByID resolves one topic by hex ObjectId with the nested
 	// category.
 	TopicByID(ctx context.Context, id string) (*Topic, error)
 	// QuestionSetByID resolves one question set by hex ObjectId.
 	QuestionSetByID(
-		ctx context.Context, id string, populate bool,
+		ctx context.Context, id string,
 	) (*QuestionSet, error)
 	// QuestionSetsByTopicSlug lists the question sets for a topic slug
 	// in stored order.
 	QuestionSetsByTopicSlug(
-		ctx context.Context, slug string, populate bool,
+		ctx context.Context, slug string,
 	) ([]QuestionSet, error)
 }

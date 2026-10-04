@@ -144,17 +144,16 @@ func newLegacyWiring(t *testing.T) *catalogWiring {
 func TestCatalogLegacyTolerances(t *testing.T) {
 	wiring := newLegacyWiring(t)
 
-	// A populated topic with a legacy string category passes the
-	// stored reference through unrepaired.
+	// A joined topic with a legacy string category leaves the category
+	// item unresolved.
 	assertCatalogBody(t,
 		catalogGet(t, wiring, "/questions/5eed00000000000000000035"),
-		"200", `{"id":"5eed00000000000000000035","topic":{`+
-			`"_id":"5eed00000000000000000025","title":"Legacy Topic",`+
+		"200", `{"id":"5eed00000000000000000035",`+
+			`"topicId":"5eed00000000000000000025","topic":{`+
+			`"id":"5eed00000000000000000025","title":"Legacy Topic",`+
 			`"slug":"legacy-topic","description":`+
 			`"Stored with a string reference.","icon":"archive",`+
-			`"tags":["legacy"],"category":"5eed00000000000000000011",`+
-			`"createdAt":"2026-01-01T00:00:00.000Z",`+
-			`"updatedAt":"2026-01-01T00:00:00.000Z","__v":0},`+
+			`"tags":["legacy"],"category":null},`+
 			`"setType":"primary","level":0,"questions":[`+
 			`{"id":"legacy-q1","type":"written","prompt":"Legacy prompt.",`+
 			`"options":null,"correctOptionId":null,`+

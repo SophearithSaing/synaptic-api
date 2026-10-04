@@ -24,7 +24,7 @@ func seededCatalog() (http.Handler, string) {
 		Description: "Networks and protocols.",
 		Icon:        "wifi",
 	})
-	repo.seedTopic(catalog.Topic{
+	topic := catalog.Topic{
 		ID:          "665f1e2b9d1a2c3b4d5e0004",
 		Title:       "Binary Basics",
 		Slug:        "binary-basics",
@@ -38,7 +38,8 @@ func seededCatalog() (http.Handler, string) {
 			Description: "Foundational computing theory.",
 			Icon:        "cpu",
 		},
-	})
+	}
+	repo.seedTopic(topic)
 
 	seedQuestions := json.RawMessage(`[` +
 		`{"id":"seed-l0-q1","type":"mcq","prompt":"What is 1 + 1 in binary?",` +
@@ -50,10 +51,9 @@ func seededCatalog() (http.Handler, string) {
 		`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],` +
 		`"misconceptions":["Misconception."]}}]`)
 	questionSet := catalog.QuestionSet{
-		ID: "665f1e2b9d1a2c3b4d5e0006",
-		Topic: json.RawMessage(
-			`"665f1e2b9d1a2c3b4d5e0004"`,
-		),
+		ID:        "665f1e2b9d1a2c3b4d5e0006",
+		TopicID:   topic.ID,
+		Topic:     &topic,
 		SetType:   "regular",
 		Level:     0,
 		Questions: seedQuestions,

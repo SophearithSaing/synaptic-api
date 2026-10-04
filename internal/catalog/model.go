@@ -49,21 +49,20 @@ type Topic struct {
 	Icon string `json:"icon"`
 	// Tags are the topic labels.
 	Tags []string `json:"tags"`
-	// Category embeds the populated category. A nil value serializes to
+	// Category embeds the joined category. A nil value serializes to
 	// null only for unresolved legacy references.
 	Category *Category `json:"category"`
 }
 
-// QuestionSet is the pinned question-set response shape. Questions are
-// the stored embedded documents passed through raw.
+// QuestionSet is the question-set response shape. Questions are the
+// stored embedded documents passed through raw.
 type QuestionSet struct {
 	// ID is the hex ObjectId.
 	ID string `json:"id"`
-	// Topic is the stored topic reference. The serialized JSON value is
-	// carried raw to preserve the union shape without type round trips:
-	// a hex ObjectId string when unpopulated, the raw populated topic
-	// document when populated, or any other stored legacy shape.
-	Topic json.RawMessage `json:"topic"`
+	// TopicID is the stored topic identifier.
+	TopicID string `json:"topicId"`
+	// Topic is the joined topic, or nil when the topic no longer exists.
+	Topic *Topic `json:"topic"`
 	// SetType is the stored set type, including legacy values outside
 	// the regular/live enum.
 	SetType string `json:"setType"`

@@ -114,6 +114,13 @@ func seedFixturesCatalog(
 		regularSet(t, "5eed00000000000000000033", binaryID, 4, []any{
 			createdQuestionQ4(),
 		}),
+		regularSet(
+			t,
+			"5eed00000000000000000034",
+			objectIDOf(t, "5eed00000000000000000029"),
+			0,
+			[]any{},
+		),
 	} {
 		if _, err := questionSets.InsertOne(ctx, questionSet); err != nil {
 			t.Fatalf("seed question set: %v", err)

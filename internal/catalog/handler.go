@@ -87,13 +87,10 @@ func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
 	web.WriteJSON(w, http.StatusOK, topic)
 }
 
-// getQuestionSet returns one question set, populating the topic unless
-// the populateTopic query value is exactly "false".
+// getQuestionSet returns one question set with its joined topic.
 func (h *Handler) getQuestionSet(w http.ResponseWriter, r *http.Request) {
-	populate := r.URL.Query().Get("populateTopic") != "false"
-
 	questionSet, err := h.repo.QuestionSetByID(
-		r.Context(), r.PathValue("id"), populate,
+		r.Context(), r.PathValue("id"),
 	)
 	if err != nil {
 		writeLookupError(w, r, err)
@@ -103,16 +100,13 @@ func (h *Handler) getQuestionSet(w http.ResponseWriter, r *http.Request) {
 	web.WriteJSON(w, http.StatusOK, questionSet)
 }
 
-// listQuestionSetsByTopic returns the topic's question sets, embedding
-// the topic only when the populateTopic query value is exactly "true".
+// listQuestionSetsByTopic returns a topic's question sets.
 func (h *Handler) listQuestionSetsByTopic(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	populate := r.URL.Query().Get("populateTopic") == "true"
-
 	questionSets, err := h.repo.QuestionSetsByTopicSlug(
-		r.Context(), r.PathValue("slug"), populate,
+		r.Context(), r.PathValue("slug"),
 	)
 	if err != nil {
 		writeLookupError(w, r, err)

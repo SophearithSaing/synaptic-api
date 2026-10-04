@@ -67,31 +67,29 @@ func TestCatalogRoutesFixtureShapes(t *testing.T) {
 // TestCatalogQuestionRoutes pins the question shapes end to end.
 func TestCatalogQuestionRoutes(t *testing.T) {
 	wiring := newCatalogWiring(t)
-	// Default on GET /questions/{id} is populated.
+	// GET /questions/{id} returns the topic relation.
 	assertCatalogBody(t,
 		catalogGet(t, wiring, "/questions/5eed00000000000000000031"),
 		"200", setBody(
 			"5eed00000000000000000031",
-			testTopicRawDoc,
+			"5eed00000000000000000021",
+			joinedTopic,
 			"0",
 			"["+questionQ1+","+questionQ2+"]",
 		))
 
-	// populateTopic exactly "false" returns the raw hex reference.
+	// A dangling topic reference preserves its id and has no joined topic.
 	assertCatalogBody(t,
-		catalogGet(
-			t, wiring,
-			"/questions/5eed00000000000000000031?populateTopic=false",
-		),
+		catalogGet(t, wiring, "/questions/5eed00000000000000000034"),
 		"200", setBody(
-			"5eed00000000000000000031",
-			hexTopic,
+			"5eed00000000000000000034",
+			"5eed00000000000000000029",
+			"null",
 			"0",
-			"["+questionQ1+","+questionQ2+"]",
+			"[]",
 		))
 
-	// GET /questions/topic/{slug} stays unpopulated by default and
-	// returns the natural storage order of the seeded sets.
+	// GET /questions/topic/{slug} returns the natural storage order.
 	written := `{"id":"seed-l1-q1","type":"written",` +
 		`"prompt":"Explain two's complement.",` +
 		`"targetConcepts":["twos-complement"],` +
@@ -111,41 +109,21 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 	topicSetList := "[" +
 		setBody(
 			"5eed00000000000000000031",
-			hexTopic, "0", "["+questionQ1+","+questionQ2+"]",
+			"5eed00000000000000000021",
+			joinedTopic, "0", "["+questionQ1+","+questionQ2+"]",
 		) + "," +
-		setBody("5eed00000000000000000032", hexTopic, "1",
+		setBody("5eed00000000000000000032",
+			"5eed00000000000000000021", joinedTopic, "1",
 			"["+written+"]",
 		) + "," +
-		setBody("5eed00000000000000000033", hexTopic, "4",
+		setBody("5eed00000000000000000033",
+			"5eed00000000000000000021", joinedTopic, "4",
 			"["+created+"]",
 		) + "]"
 
 	assertCatalogBody(t,
 		catalogGet(t, wiring, "/questions/topic/binary-basics"),
 		"200", topicSetList)
-
-	// populateTopic exactly "true" populates the raw topic document.
-	assertCatalogBody(t,
-		catalogGet(
-			t,
-			wiring,
-			"/questions/topic/binary-basics?populateTopic=true",
-		),
-		"200",
-		"["+
-			setBody(
-				"5eed00000000000000000031",
-				testTopicRawDoc, "0",
-				"["+questionQ1+","+questionQ2+"]",
-			)+","+
-			setBody(
-				"5eed00000000000000000032",
-				testTopicRawDoc, "1", "["+written+"]",
-			)+","+
-			setBody(
-				"5eed00000000000000000033",
-				testTopicRawDoc, "4", "["+created+"]",
-			)+"]")
 
 	// Unknown topic slug is the pinned 404.
 	assertCatalogBody(t,
