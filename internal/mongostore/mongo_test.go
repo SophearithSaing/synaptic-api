@@ -1,5 +1,4 @@
-// Package testutil provides shared helpers for integration tests.
-package testutil
+package mongostore_test
 
 import (
 	"context"
@@ -12,17 +11,11 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// mongoImage is the MongoDB version used by integration tests. Version 8.2
-// is the minimum that supports Linux kernels 6.19+ (SERVER-121912).
 const mongoImage = "mongo:8.2"
 
-// replicaSetTimeout bounds replica set initiation and primary election.
 const replicaSetTimeout = 60 * time.Second
 
-// StartMongo starts a single-node replica set MongoDB container and returns
-// its connection URI. The test is skipped when running with -short. The
-// replica set is required because transactions are under test.
-func StartMongo(t *testing.T, ctx context.Context) string {
+func startMongo(t *testing.T, ctx context.Context) string {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -62,7 +55,6 @@ func StartMongo(t *testing.T, ctx context.Context) string {
 	return "mongodb://" + endpoint + "/?directConnection=true"
 }
 
-// initiateReplicaSet runs rs.initiate and waits for a writable primary.
 func initiateReplicaSet(
 	t *testing.T,
 	ctx context.Context,

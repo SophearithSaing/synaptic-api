@@ -64,7 +64,6 @@ internal/app/       composition root (wiring)
 internal/config/    environment loading and validation
 internal/web/       HTTP server, router, middleware, request/response
 internal/mongostore/ MongoDB client and BSON persistence
-internal/testutil/  integration test helpers (testcontainers)
 ```
 
 ## Configuration

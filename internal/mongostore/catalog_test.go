@@ -9,7 +9,6 @@ import (
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
-	"github.com/SophearithSaing/synaptic-api/internal/testutil"
 )
 
 // catalogWiring is the catalog routes over one seeded database.
@@ -24,7 +23,7 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 	t.Helper()
 
 	ctx := context.Background()
-	uri := testutil.StartMongo(t, ctx)
+	uri := startMongo(t, ctx)
 
 	client, err := mongostore.Connect(ctx, uri)
 	if err != nil {
@@ -37,7 +36,7 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 	})
 
 	database := client.Database("catalogtest")
-	if err := testutil.EnsureIdentityIndexes(ctx, database); err != nil {
+	if err := mongostore.EnsureIdentityIndexes(ctx, database); err != nil {
 		t.Fatalf("ensure indexes: %v", err)
 	}
 	users := database.Collection("users")

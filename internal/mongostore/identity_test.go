@@ -16,7 +16,6 @@ import (
 
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
-	"github.com/SophearithSaing/synaptic-api/internal/testutil"
 )
 
 // wiring is the identity stack over a real replica-set database.
@@ -31,7 +30,7 @@ func newWiring(t *testing.T) *wiring {
 	t.Helper()
 
 	ctx := context.Background()
-	uri := testutil.StartMongo(t, ctx)
+	uri := startMongo(t, ctx)
 
 	client, err := mongostore.Connect(ctx, uri)
 	if err != nil {
@@ -44,7 +43,7 @@ func newWiring(t *testing.T) *wiring {
 	})
 
 	database := client.Database("identitytest")
-	if err := testutil.EnsureIdentityIndexes(ctx, database); err != nil {
+	if err := mongostore.EnsureIdentityIndexes(ctx, database); err != nil {
 		t.Fatalf("ensure indexes: %v", err)
 	}
 	store := mongostore.NewIdentityStore(database)

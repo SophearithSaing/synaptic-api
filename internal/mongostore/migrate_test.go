@@ -8,14 +8,13 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
-	"github.com/SophearithSaing/synaptic-api/internal/testutil"
 )
 
 // TestRunMigrations verifies reference renames, ObjectID normalization,
 // idempotency, and rollback on invalid identifiers.
 func TestRunMigrations(t *testing.T) {
 	ctx := context.Background()
-	client, err := mongostore.Connect(ctx, testutil.StartMongo(t, ctx))
+	client, err := mongostore.Connect(ctx, startMongo(t, ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
