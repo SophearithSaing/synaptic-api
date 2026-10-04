@@ -45,7 +45,7 @@ func (h *Handler) Mount(mux *http.ServeMux) {
 
 // listCategories responds with all categories sorted by title.
 func (h *Handler) listCategories(w http.ResponseWriter, r *http.Request) {
-	categories, err := h.repo.Categories(r.Context())
+	categories, err := h.repo.ListCategories(r.Context())
 	if err != nil {
 		web.WriteError(w, r, err)
 		return
@@ -56,7 +56,7 @@ func (h *Handler) listCategories(w http.ResponseWriter, r *http.Request) {
 
 // getCategory validates the id and returns one category.
 func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
-	category, err := h.repo.CategoryByID(r.Context(), r.PathValue("id"))
+	category, err := h.repo.GetCategoryByID(r.Context(), r.PathValue("id"))
 	if err != nil {
 		writeLookupError(w, r, err)
 		return
@@ -67,7 +67,7 @@ func (h *Handler) getCategory(w http.ResponseWriter, r *http.Request) {
 
 // listTopics responds with all topics sorted by title.
 func (h *Handler) listTopics(w http.ResponseWriter, r *http.Request) {
-	topics, err := h.repo.Topics(r.Context())
+	topics, err := h.repo.ListTopics(r.Context())
 	if err != nil {
 		web.WriteError(w, r, err)
 		return
@@ -78,7 +78,7 @@ func (h *Handler) listTopics(w http.ResponseWriter, r *http.Request) {
 
 // getTopic validates the id and returns one topic.
 func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
-	topic, err := h.repo.TopicByID(r.Context(), r.PathValue("id"))
+	topic, err := h.repo.GetTopicByID(r.Context(), r.PathValue("id"))
 	if err != nil {
 		writeLookupError(w, r, err)
 		return
@@ -89,7 +89,7 @@ func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
 
 // getQuestionSet returns one question set with its joined topic.
 func (h *Handler) getQuestionSet(w http.ResponseWriter, r *http.Request) {
-	questionSet, err := h.repo.QuestionSetByID(
+	questionSet, err := h.repo.GetQuestionSetByID(
 		r.Context(), r.PathValue("id"),
 	)
 	if err != nil {
@@ -105,7 +105,7 @@ func (h *Handler) listQuestionSetsByTopic(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	questionSets, err := h.repo.QuestionSetsByTopicSlug(
+	questionSets, err := h.repo.ListQuestionSetsByTopicSlug(
 		r.Context(), r.PathValue("slug"),
 	)
 	if err != nil {

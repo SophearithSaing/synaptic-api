@@ -40,8 +40,8 @@ func parseObjectID(id string) (bson.ObjectID, error) {
 	return objectID, nil
 }
 
-// Categories lists every category sorted by title.
-func (s *CatalogStore) Categories(
+// ListCategories lists every category sorted by title.
+func (s *CatalogStore) ListCategories(
 	ctx context.Context,
 ) ([]catalog.Category, error) {
 	cursor, err := s.categories.Find(ctx, bson.M{},
@@ -66,8 +66,8 @@ func (s *CatalogStore) Categories(
 	return results, nil
 }
 
-// CategoryByID resolves one category by hex ObjectId.
-func (s *CatalogStore) CategoryByID(
+// GetCategoryByID resolves one category by hex ObjectId.
+func (s *CatalogStore) GetCategoryByID(
 	ctx context.Context,
 	id string,
 ) (*catalog.Category, error) {
@@ -87,10 +87,10 @@ func (s *CatalogStore) CategoryByID(
 	return decodeCategory(raw)
 }
 
-// Topics lists every topic sorted by title with the nested category.
+// ListTopics lists every topic sorted by title with the nested category.
 // All referenced categories load in one batched query instead of one
 // lookup per topic.
-func (s *CatalogStore) Topics(ctx context.Context) ([]catalog.Topic, error) {
+func (s *CatalogStore) ListTopics(ctx context.Context) ([]catalog.Topic, error) {
 	cursor, err := s.topics.Find(ctx, bson.M{},
 		options.Find().SetSort(bson.D{{Key: "title", Value: 1}}))
 	if err != nil {
@@ -123,9 +123,9 @@ func (s *CatalogStore) Topics(ctx context.Context) ([]catalog.Topic, error) {
 	return results, nil
 }
 
-// TopicByID resolves one topic by hex ObjectId with the nested
+// GetTopicByID resolves one topic by hex ObjectId with the nested
 // category.
-func (s *CatalogStore) TopicByID(
+func (s *CatalogStore) GetTopicByID(
 	ctx context.Context,
 	id string,
 ) (*catalog.Topic, error) {
@@ -145,8 +145,8 @@ func (s *CatalogStore) TopicByID(
 	return s.decodeTopic(ctx, raw, s.categoryByObjectID)
 }
 
-// QuestionSetByID resolves one question set by hex ObjectId.
-func (s *CatalogStore) QuestionSetByID(
+// GetQuestionSetByID resolves one question set by hex ObjectId.
+func (s *CatalogStore) GetQuestionSetByID(
 	ctx context.Context,
 	id string,
 ) (*catalog.QuestionSet, error) {
@@ -166,9 +166,9 @@ func (s *CatalogStore) QuestionSetByID(
 	return s.decodeQuestionSet(ctx, raw, nil)
 }
 
-// QuestionSetsByTopicSlug lists the question sets for a topic slug in
+// ListQuestionSetsByTopicSlug lists question sets for a topic slug in
 // stored order and reuses the joined topic for every result.
-func (s *CatalogStore) QuestionSetsByTopicSlug(
+func (s *CatalogStore) ListQuestionSetsByTopicSlug(
 	ctx context.Context,
 	slug string,
 ) ([]catalog.QuestionSet, error) {

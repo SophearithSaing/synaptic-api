@@ -54,9 +54,9 @@ func (r *repoState) seedQuestionSetsForSlug(
 	r.setsBySlug[slug] = sets
 }
 
-// Categories implements catalog.Repository sorted by title. Results
+// ListCategories implements catalog.Repository sorted by title. Results
 // stay non-nil so empty stores still render [] instead of null.
-func (r *repoState) Categories(
+func (r *repoState) ListCategories(
 	_ context.Context,
 ) ([]catalog.Category, error) {
 	sorted := make([]catalog.Category, 0, len(r.categories))
@@ -78,8 +78,8 @@ func objectID(id string) bool {
 	return err == nil
 }
 
-// CategoryByID implements catalog.Repository.
-func (r *repoState) CategoryByID(
+// GetCategoryByID implements catalog.Repository.
+func (r *repoState) GetCategoryByID(
 	_ context.Context, id string,
 ) (*catalog.Category, error) {
 	if !objectID(id) {
@@ -92,9 +92,9 @@ func (r *repoState) CategoryByID(
 	return nil, catalog.ErrCategoryNotFound
 }
 
-// Topics implements catalog.Repository sorted by title. Results stay
+// ListTopics implements catalog.Repository sorted by title. Results stay
 // non-nil so empty stores render [] instead of null.
-func (r *repoState) Topics(_ context.Context) ([]catalog.Topic, error) {
+func (r *repoState) ListTopics(_ context.Context) ([]catalog.Topic, error) {
 	sorted := make([]catalog.Topic, 0, len(r.topics))
 	sorted = append(sorted, r.topics...)
 
@@ -105,8 +105,8 @@ func (r *repoState) Topics(_ context.Context) ([]catalog.Topic, error) {
 	return sorted, nil
 }
 
-// TopicByID implements catalog.Repository.
-func (r *repoState) TopicByID(
+// GetTopicByID implements catalog.Repository.
+func (r *repoState) GetTopicByID(
 	_ context.Context, id string,
 ) (*catalog.Topic, error) {
 	if !objectID(id) {
@@ -119,8 +119,8 @@ func (r *repoState) TopicByID(
 	return nil, catalog.ErrTopicNotFound
 }
 
-// QuestionSetByID implements catalog.Repository.
-func (r *repoState) QuestionSetByID(
+// GetQuestionSetByID implements catalog.Repository.
+func (r *repoState) GetQuestionSetByID(
 	_ context.Context, id string,
 ) (*catalog.QuestionSet, error) {
 	if !objectID(id) {
@@ -133,8 +133,8 @@ func (r *repoState) QuestionSetByID(
 	return nil, catalog.ErrQuestionSetNotFound
 }
 
-// QuestionSetsByTopicSlug implements catalog.Repository.
-func (r *repoState) QuestionSetsByTopicSlug(
+// ListQuestionSetsByTopicSlug implements catalog.Repository.
+func (r *repoState) ListQuestionSetsByTopicSlug(
 	_ context.Context, slug string,
 ) ([]catalog.QuestionSet, error) {
 	if sets, ok := r.setsBySlug[slug]; ok {
