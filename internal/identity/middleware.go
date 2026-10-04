@@ -26,9 +26,7 @@ const (
 // userContextKey is the context key for the authenticated user.
 type userContextKey struct{}
 
-// RequireCSRF enforces the double-submit token pair on every unsafe
-// method: the csrf_token cookie value must equal the X-CSRF-Token
-// header value.
+// RequireCSRF validates double-submit tokens on unsafe methods.
 func RequireCSRF(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isSafeMethod(r.Method) {
@@ -59,22 +57,18 @@ func isSafeMethod(method string) bool {
 	return false
 }
 
-// Authenticator resolves the bearer-or-cookie access token to the
-// current user, reloading the role from persistence on every request.
-// It depends only on the user lookup it actually performs.
+// Authenticator resolves access tokens to current users.
 type Authenticator struct {
 	issuer *TokenIssuer
 	users  UserResolver
 }
 
-// NewAuthenticator builds Authenticator middleware from the token
-// issuer and a user resolver.
+// NewAuthenticator builds authentication middleware.
 func NewAuthenticator(issuer *TokenIssuer, users UserResolver) *Authenticator {
 	return &Authenticator{issuer: issuer, users: users}
 }
 
-// Middleware authenticates the request or fails with 401. Repository
-// failures surface as 500s; only missing tokens or identities are 401s.
+// Middleware authenticates a request.
 func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, err := a.authenticate(r)
@@ -94,9 +88,7 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// authenticate extracts the token header-first, verifies it, and
-// re-resolves the user. Unauthenticated requests report ErrUnauthorized
-// while lookup failures keep their error.
+// authenticate verifies a request token and resolves its user.
 func (a *Authenticator) authenticate(r *http.Request) (*User, error) {
 	token := bearerToken(r)
 	if token == "" {
@@ -113,7 +105,7 @@ func (a *Authenticator) authenticate(r *http.Request) (*User, error) {
 		return nil, ErrUnauthorized
 	}
 
-	user, err := a.users.FindUserByID(r.Context(), verified.Sub)
+	user, err := a.users.GetUserByID(r.Context(), verified.Sub)
 	if err != nil {
 		return nil, err
 	}
@@ -136,16 +128,14 @@ func bearerToken(r *http.Request) string {
 	return strings.TrimSpace(value[len(scheme):])
 }
 
-// CurrentUser returns the authenticated user attached to the request.
-// It reports nil outside of authenticated handlers.
+// CurrentUser returns the request's authenticated user.
 func CurrentUser(r *http.Request) *User {
 	user, _ := r.Context().Value(userContextKey{}).(*User)
 
 	return user
 }
 
-// RequireRole fails with 403 when the authenticated user is missing an
-// allowed role. Use after the Authenticator middleware.
+// RequireRole restricts a handler to the allowed roles.
 func RequireRole(roles ...Role) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

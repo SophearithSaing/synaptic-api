@@ -81,8 +81,8 @@ func (r *repoState) CreateUserAndSession(
 	return id, sessionID, nil
 }
 
-// FindUserByID implements identity.Repository.
-func (r *repoState) FindUserByID(
+// GetUserByID implements identity.Repository.
+func (r *repoState) GetUserByID(
 	_ context.Context,
 	id string,
 ) (*identity.User, error) {
@@ -92,10 +92,10 @@ func (r *repoState) FindUserByID(
 	return copyUser(r.users[id]), nil
 }
 
-// FindAuthRecordByUsername implements identity.Repository with the
+// GetAuthRecordByUsername implements identity.Repository with the
 // legacy case-insensitive username match, carrying the stored password
 // hash.
-func (r *repoState) FindAuthRecordByUsername(
+func (r *repoState) GetAuthRecordByUsername(
 	_ context.Context,
 	username string,
 ) (*identity.AuthRecord, error) {
@@ -109,9 +109,9 @@ func (r *repoState) FindAuthRecordByUsername(
 	return record, nil
 }
 
-// FindAuthRecordByEmail implements identity.Repository, carrying the
+// GetAuthRecordByEmail implements identity.Repository, carrying the
 // stored password hash.
-func (r *repoState) FindAuthRecordByEmail(
+func (r *repoState) GetAuthRecordByEmail(
 	_ context.Context,
 	email string,
 ) (*identity.AuthRecord, error) {
@@ -160,8 +160,8 @@ func (r *repoState) CreateSession(
 	return id, nil
 }
 
-// LoadSession implements identity.Repository.
-func (r *repoState) LoadSession(
+// GetSessionByID implements identity.Repository.
+func (r *repoState) GetSessionByID(
 	_ context.Context,
 	id string,
 ) (*identity.Session, error) {

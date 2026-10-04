@@ -8,8 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Service implements registration, login, refresh rotation, logout, and
-// user lookup over a Repository.
+// Service implements authentication workflows.
 type Service struct {
 	repo    Repository
 	issuer  *TokenIssuer
@@ -25,9 +24,7 @@ func NewService(
 	return &Service{repo: repo, issuer: issuer, options: options}
 }
 
-// Register creates an account and its initial refresh session. The
-// repository transaction makes the pair all-or-nothing, so a failed
-// session cannot leave an account without credentials.
+// Register creates an account and its initial session.
 func (s *Service) Register(
 	ctx context.Context,
 	credentials Credentials,
@@ -64,12 +61,7 @@ func (s *Service) Register(
 	}, nil
 }
 
-// Login authenticates an identifier (username or email) and starts a
-// refresh session. The authentication record — user and stored
-// password hash — resolves in one repository query so the two reads
-// cannot observe different account states. Repository failures
-// propagate; only username/email resolution and credential checks
-// produce ErrUnauthorized.
+// Login authenticates an identifier and starts a session.
 func (s *Service) Login(
 	ctx context.Context,
 	identifier, password string,
@@ -88,23 +80,19 @@ func (s *Service) Login(
 	return s.startSession(ctx, record.User)
 }
 
-// authRecord resolves the authentication record of an identifier:
-// exact email lookups for "@"-containing identifiers, otherwise the
-// legacy case-insensitive username match.
+// authRecord gets login data by email or username.
 func (s *Service) authRecord(
 	ctx context.Context,
 	identifier string,
 ) (*AuthRecord, error) {
 	if strings.Contains(identifier, "@") {
-		return s.repo.FindAuthRecordByEmail(ctx, identifier)
+		return s.repo.GetAuthRecordByEmail(ctx, identifier)
 	}
 
-	return s.repo.FindAuthRecordByUsername(ctx, identifier)
+	return s.repo.GetAuthRecordByUsername(ctx, identifier)
 }
 
-// Refresh validates a refresh token and atomically rotates its secret.
-// Repository failures propagate; only missing or mismatched identity
-// data reports ErrUnauthorized.
+// Refresh validates and rotates a refresh token.
 func (s *Service) Refresh(
 	ctx context.Context,
 	refreshToken string,
@@ -114,7 +102,7 @@ func (s *Service) Refresh(
 		return SessionTokens{}, ErrUnauthorized
 	}
 
-	session, err := s.repo.LoadSession(ctx, sessionID)
+	session, err := s.repo.GetSessionByID(ctx, sessionID)
 	if err != nil {
 		return SessionTokens{}, err
 	}
@@ -126,7 +114,7 @@ func (s *Service) Refresh(
 		return SessionTokens{}, ErrUnauthorized
 	}
 
-	user, err := s.repo.FindUserByID(ctx, session.UserID)
+	user, err := s.repo.GetUserByID(ctx, session.UserID)
 	if err != nil {
 		return SessionTokens{}, err
 	}
@@ -171,16 +159,14 @@ func (s *Service) Refresh(
 	}, nil
 }
 
-// Logout revokes the session referenced by the refresh token. Missing,
-// malformed, unknown tokens, and secret mismatches are not failures:
-// revocation errors are.
+// Logout revokes the session referenced by a refresh token.
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	sessionID, secret, err := ParseRefreshToken(refreshToken)
 	if err != nil {
 		return nil
 	}
 
-	session, err := s.repo.LoadSession(ctx, sessionID)
+	session, err := s.repo.GetSessionByID(ctx, sessionID)
 	if err != nil {
 		return err
 	}
@@ -198,8 +184,7 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return err
 }
 
-// startSession issues the access token and creates the refresh session
-// for an authenticated user.
+// startSession creates access and refresh tokens for a user.
 func (s *Service) startSession(
 	ctx context.Context,
 	user *User,
@@ -219,8 +204,7 @@ func (s *Service) startSession(
 	return SessionTokens{AccessToken: access, RefreshToken: token}, nil
 }
 
-// createSessionToken persists a new refresh session and serializes its
-// token.
+// createSessionToken creates and serializes a refresh session.
 func (s *Service) createSessionToken(
 	ctx context.Context,
 	userID string,

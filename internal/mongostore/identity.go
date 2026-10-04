@@ -29,10 +29,7 @@ func NewIdentityStore(database *mongo.Database) *IdentityStore {
 	}
 }
 
-// CreateUserAndSession inserts the user and the initial refresh session
-// in one transaction so a failed session cannot leave an account
-// without credentials. The transaction reuses the caller's context
-// deadline and the driver's commit retry policy.
+// CreateUserAndSession creates a user and session transactionally.
 func (s *IdentityStore) CreateUserAndSession(
 	ctx context.Context,
 	user identity.Credentials,
@@ -155,9 +152,8 @@ func (s *IdentityStore) CreateSession(
 	return document.ID.Hex(), nil
 }
 
-// FindUserByID resolves a user by hex ObjectId. An unparsable id is a
-// lookup miss, not a lookup failure.
-func (s *IdentityStore) FindUserByID(
+// GetUserByID gets a user by identifier.
+func (s *IdentityStore) GetUserByID(
 	ctx context.Context,
 	id string,
 ) (*identity.User, error) {
@@ -171,10 +167,8 @@ func (s *IdentityStore) FindUserByID(
 	return decodeUser(document)
 }
 
-// FindAuthRecordByUsername resolves the login record with the legacy
-// case-insensitive English collation, carrying the user and the stored
-// bcrypt password hash from one query.
-func (s *IdentityStore) FindAuthRecordByUsername(
+// GetAuthRecordByUsername gets login data by username.
+func (s *IdentityStore) GetAuthRecordByUsername(
 	ctx context.Context,
 	username string,
 ) (*identity.AuthRecord, error) {
@@ -187,10 +181,8 @@ func (s *IdentityStore) FindAuthRecordByUsername(
 	return decodeAuthRecord(document)
 }
 
-// FindAuthRecordByEmail resolves the login record by exact normalized
-// email, carrying the user and the stored bcrypt password hash from
-// one query.
-func (s *IdentityStore) FindAuthRecordByEmail(
+// GetAuthRecordByEmail gets login data by email.
+func (s *IdentityStore) GetAuthRecordByEmail(
 	ctx context.Context,
 	email string,
 ) (*identity.AuthRecord, error) {
@@ -199,8 +191,8 @@ func (s *IdentityStore) FindAuthRecordByEmail(
 	return decodeAuthRecord(document)
 }
 
-// LoadSession resolves an auth session by hex ObjectId.
-func (s *IdentityStore) LoadSession(
+// GetSessionByID gets a refresh session by identifier.
+func (s *IdentityStore) GetSessionByID(
 	ctx context.Context,
 	id string,
 ) (*identity.Session, error) {
@@ -229,8 +221,7 @@ func (s *IdentityStore) LoadSession(
 	return service, nil
 }
 
-// RotateSession compares-and-set the refresh hash and expiry on an
-// unrevoked, unexpired session that still holds currentHash.
+// RotateSession replaces valid refresh credentials atomically.
 func (s *IdentityStore) RotateSession(
 	ctx context.Context,
 	id, currentHash, nextHash string,
@@ -259,8 +250,7 @@ func (s *IdentityStore) RotateSession(
 	return result.MatchedCount == 1, nil
 }
 
-// RevokeSession sets revokedAt when the session is not already
-// revoked.
+// RevokeSession revokes an active session.
 func (s *IdentityStore) RevokeSession(
 	ctx context.Context,
 	id string,

@@ -581,7 +581,7 @@ func TestLogoutWithoutCookieStill201(t *testing.T) {
 func TestLoginRepositoryFailurePropagates(t *testing.T) {
 	repo := &failingRepo{
 		repoState: newRepoState(),
-		fail:      "FindAuthRecordByUsername",
+		fail:      "GetAuthRecordByUsername",
 	}
 	handler, _ := buildServerOver(repo, "production")
 	handler.ServeHTTP(httptest.NewRecorder(),
@@ -600,7 +600,7 @@ func TestLoginRepositoryFailurePropagates(t *testing.T) {
 // 500s.
 func TestRefreshRepositoryFailurePropagates(t *testing.T) {
 	base := newRepoState()
-	repo := &failingRepo{repoState: base, fail: "LoadSession"}
+	repo := &failingRepo{repoState: base, fail: "GetSessionByID"}
 	handler, _ := buildServerOver(repo, "production")
 
 	registration := register(handler, "outage", "outage@example.com", "Password1")
@@ -619,7 +619,7 @@ func TestRefreshRepositoryFailurePropagates(t *testing.T) {
 // as 500s while unauthenticated requests stay 401s.
 func TestMeRepositoryFailurePropagates(t *testing.T) {
 	handler, issuer := buildServerOver(
-		&failingRepo{repoState: newRepoState(), fail: "FindUserByID"},
+		&failingRepo{repoState: newRepoState(), fail: "GetUserByID"},
 		"production",
 	)
 

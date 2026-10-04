@@ -1,7 +1,4 @@
-// Package identity implements the authentication core: user
-// registration, login, JWT issuing, refresh-session rotation, logout,
-// CSRF protection, and the authenticated-user middleware reused by
-// protected routes.
+// Package identity implements authentication and session management.
 package identity
 
 import (
@@ -49,8 +46,7 @@ type SessionTokens struct {
 	RefreshToken string
 }
 
-// AuthRecord is the login view of an account: the resolved user with
-// its stored password hash, produced by one authentication query.
+// AuthRecord contains the account data needed for login.
 type AuthRecord struct {
 	User         *User
 	PasswordHash string

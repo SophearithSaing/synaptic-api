@@ -66,37 +66,37 @@ func (r *failingRepo) failIf(operation string) error {
 	return nil
 }
 
-// FindAuthRecordByUsername implements identity.Repository.
-func (r *failingRepo) FindAuthRecordByUsername(
+// GetAuthRecordByUsername implements identity.Repository.
+func (r *failingRepo) GetAuthRecordByUsername(
 	ctx context.Context, username string,
 ) (*identity.AuthRecord, error) {
-	if err := r.failIf("FindAuthRecordByUsername"); err != nil {
+	if err := r.failIf("GetAuthRecordByUsername"); err != nil {
 		return nil, err
 	}
 
-	return r.repoState.FindAuthRecordByUsername(ctx, username)
+	return r.repoState.GetAuthRecordByUsername(ctx, username)
 }
 
-// FindUserByID implements identity.Repository.
-func (r *failingRepo) FindUserByID(
+// GetUserByID implements identity.Repository.
+func (r *failingRepo) GetUserByID(
 	ctx context.Context, id string,
 ) (*identity.User, error) {
-	if err := r.failIf("FindUserByID"); err != nil {
+	if err := r.failIf("GetUserByID"); err != nil {
 		return nil, err
 	}
 
-	return r.repoState.FindUserByID(ctx, id)
+	return r.repoState.GetUserByID(ctx, id)
 }
 
-// LoadSession implements identity.Repository.
-func (r *failingRepo) LoadSession(
+// GetSessionByID implements identity.Repository.
+func (r *failingRepo) GetSessionByID(
 	ctx context.Context, id string,
 ) (*identity.Session, error) {
-	if err := r.failIf("LoadSession"); err != nil {
+	if err := r.failIf("GetSessionByID"); err != nil {
 		return nil, err
 	}
 
-	return r.repoState.LoadSession(ctx, id)
+	return r.repoState.GetSessionByID(ctx, id)
 }
 
 // RevokeSession implements identity.Repository.
