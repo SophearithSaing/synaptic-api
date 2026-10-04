@@ -2,10 +2,7 @@
 // categories, topics, and question sets.
 package catalog
 
-import (
-	"encoding/json"
-	"time"
-)
+import "time"
 
 // Category is the pinned category response shape.
 type Category struct {
@@ -28,15 +25,44 @@ type Topic struct {
 	Category    *Category `json:"category"`
 }
 
-// QuestionSet is the question-set response shape. Questions are the
-// stored embedded documents passed through raw.
+// QuestionOption is one selectable answer for a question.
+type QuestionOption struct {
+	ID   string `bson:"id" json:"id"`
+	Text string `bson:"text" json:"text"`
+}
+
+// QuestionFeedback describes responses to correct and incorrect answers.
+type QuestionFeedback struct {
+	Correct   string `bson:"correct" json:"correct"`
+	Incorrect string `bson:"incorrect" json:"incorrect"`
+}
+
+// QuestionRubric describes expected points and common misconceptions.
+type QuestionRubric struct {
+	KeyPoints      []string `bson:"keyPoints" json:"keyPoints"`
+	Misconceptions []string `bson:"misconceptions" json:"misconceptions"`
+}
+
+// Question is one multiple-choice or written question.
+type Question struct {
+	ID              string           `bson:"id" json:"id"`
+	Type            string           `bson:"type" json:"type"`
+	Prompt          string           `bson:"prompt" json:"prompt"`
+	Options         []QuestionOption `bson:"options,omitempty" json:"options,omitempty"`
+	CorrectOptionID string           `bson:"correctOptionId,omitempty" json:"correctOptionId,omitempty"`
+	TargetConcepts  []string         `bson:"targetConcepts" json:"targetConcepts"`
+	Feedback        QuestionFeedback `bson:"feedback" json:"feedback"`
+	Rubrics         QuestionRubric   `bson:"rubrics" json:"rubrics"`
+}
+
+// QuestionSet is the question-set response shape.
 type QuestionSet struct {
-	ID        string          `json:"id"`
-	TopicID   string          `json:"topicId"`
-	Topic     *Topic          `json:"topic"`
-	SetType   string          `json:"setType"`
-	Level     int64           `json:"level"`
-	Questions json.RawMessage `json:"questions"`
-	CreatedAt time.Time       `json:"createdAt"`
-	UpdatedAt time.Time       `json:"updatedAt"`
+	ID        string     `json:"id"`
+	TopicID   string     `json:"topicId"`
+	Topic     *Topic     `json:"topic"`
+	SetType   string     `json:"setType"`
+	Level     int64      `json:"level"`
+	Questions []Question `json:"questions"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 }

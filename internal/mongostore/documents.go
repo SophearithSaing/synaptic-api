@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+
+	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 )
 
 // UserDocument is the exact users BSON representation, including the
@@ -33,9 +35,6 @@ type AuthSessionDocument struct {
 	Version          int           `bson:"__v"`
 }
 
-// Catalog read support: questions are loose embedded documents, so the
-// raw types below keep their stored field order and values.
-
 // CategoryDocument is the exact categories BSON representation.
 type CategoryDocument struct {
 	ID          bson.ObjectID `bson:"_id"`
@@ -59,14 +58,13 @@ type TopicDocument struct {
 	Version     int           `bson:"__v"`
 }
 
-// QuestionSetDocument is the exact questionSets BSON representation
-// with loose embedded questions.
+// QuestionSetDocument is the exact questionSets BSON representation.
 type QuestionSetDocument struct {
-	ID        bson.ObjectID `bson:"_id"`
-	TopicID   bson.ObjectID `bson:"topicId"`
-	SetType   string        `bson:"setType"`
-	Level     int64         `bson:"level"`
-	Questions bson.RawValue `bson:"questions"`
-	CreatedAt time.Time     `bson:"createdAt"`
-	UpdatedAt time.Time     `bson:"updatedAt"`
+	ID        bson.ObjectID      `bson:"_id"`
+	TopicID   bson.ObjectID      `bson:"topicId"`
+	SetType   string             `bson:"setType"`
+	Level     int64              `bson:"level"`
+	Questions []catalog.Question `bson:"questions"`
+	CreatedAt time.Time          `bson:"createdAt"`
+	UpdatedAt time.Time          `bson:"updatedAt"`
 }

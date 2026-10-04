@@ -1,7 +1,6 @@
 package catalog_test
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -43,15 +42,26 @@ func seededCatalog() (http.Handler, string) {
 	}
 	repo.seedTopic(topic)
 
-	seedQuestions := json.RawMessage(`[` +
-		`{"id":"seed-l0-q1","type":"mcq","prompt":"What is 1 + 1 in binary?",` +
-		`"options":[{"id":"o1","text":"seed-l0-q1 option one"},` +
-		`{"id":"o2","text":"seed-l0-q1 option two"},` +
-		`{"id":"o3","text":"seed-l0-q1 option three"}],` +
-		`"correctOptionId":"o1","targetConcepts":["binary-addition"],` +
-		`"feedback":{"correct":"Correct feedback.","incorrect":` +
-		`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],` +
-		`"misconceptions":["Misconception."]}}]`)
+	seedQuestions := []catalog.Question{{
+		ID:     "seed-l0-q1",
+		Type:   "mcq",
+		Prompt: "What is 1 + 1 in binary?",
+		Options: []catalog.QuestionOption{
+			{ID: "o1", Text: "seed-l0-q1 option one"},
+			{ID: "o2", Text: "seed-l0-q1 option two"},
+			{ID: "o3", Text: "seed-l0-q1 option three"},
+		},
+		CorrectOptionID: "o1",
+		TargetConcepts:  []string{"binary-addition"},
+		Feedback: catalog.QuestionFeedback{
+			Correct:   "Correct feedback.",
+			Incorrect: "Incorrect feedback.",
+		},
+		Rubrics: catalog.QuestionRubric{
+			KeyPoints:      []string{"Key point."},
+			Misconceptions: []string{"Misconception."},
+		},
+	}}
 	seedDate := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	questionSet := catalog.QuestionSet{
 		ID:        "665f1e2b9d1a2c3b4d5e0006",

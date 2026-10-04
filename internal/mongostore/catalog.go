@@ -2,7 +2,6 @@ package mongostore
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -367,18 +366,13 @@ func (s *CatalogStore) decodeQuestionSet(
 		return nil, err
 	}
 
-	questions, err := questionPassthrough(raw)
-	if err != nil {
-		return nil, err
-	}
-
 	return &catalog.QuestionSet{
 		ID:        document.ID.Hex(),
 		TopicID:   document.TopicID.Hex(),
 		Topic:     topic,
 		SetType:   document.SetType,
 		Level:     document.Level,
-		Questions: questions,
+		Questions: document.Questions,
 		CreatedAt: document.CreatedAt,
 		UpdatedAt: document.UpdatedAt,
 	}, nil
@@ -408,15 +402,4 @@ func (s *CatalogStore) questionSetTopic(
 	}
 
 	return topic, nil
-}
-
-// questionPassthrough encodes the stored questions array untouched, in
-// stored field order.
-func questionPassthrough(raw bson.Raw) (json.RawMessage, error) {
-	questions := raw.Lookup("questions")
-	if questions.Type == bson.TypeNull {
-		return json.RawMessage("null"), nil
-	}
-
-	return rawValueJSON(questions)
 }
