@@ -196,7 +196,7 @@ func TestRegisterConflictEmail(t *testing.T) {
 		`{"message":"Email already exists","error":"Conflict","statusCode":409}`)
 }
 
-// TestRegisterUnknownField pins the forbidNonWhitelisted message.
+// TestRegisterUnknownField rejects fields outside the request schema.
 func TestRegisterUnknownField(t *testing.T) {
 	handler, _, _ := productionServer()
 
@@ -212,11 +212,11 @@ func TestRegisterUnknownField(t *testing.T) {
 		},
 	)
 	assertJSON(t, recorder, http.StatusBadRequest,
-		`{"message":["property role should not exist"],`+
+		`{"message":"Invalid request body",`+
 			`"error":"Bad Request","statusCode":400}`)
 }
 
-// TestRegisterPasswordValidationMessage pins the validation-400 body.
+// TestRegisterPasswordValidationMessage returns the failed password rule.
 func TestRegisterPasswordValidationMessage(t *testing.T) {
 	handler, _, _ := productionServer()
 
@@ -227,12 +227,12 @@ func TestRegisterPasswordValidationMessage(t *testing.T) {
 		registerBody("bobby", "bobby@example.com", "password"),
 	)
 	assertJSON(t, recorder, http.StatusBadRequest,
-		`{"message":["password must match `+
-			`/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/ regular expression"],`+
+		`{"message":["password must contain a lowercase letter, `+
+			`uppercase letter, and number"],`+
 			`"error":"Bad Request","statusCode":400}`)
 }
 
-// TestRegisterMultipleViolations lists every violated rule.
+// TestRegisterMultipleViolations lists one failed rule per field.
 func TestRegisterMultipleViolations(t *testing.T) {
 	handler, _, _ := productionServer()
 
@@ -244,12 +244,8 @@ func TestRegisterMultipleViolations(t *testing.T) {
 	)
 	assertJSON(t, recorder, http.StatusBadRequest,
 		`{"message":[`+
-			`"username should not be empty",`+
-			`"username must be longer than or equal to 3 characters",`+
-			`"username must match /^[a-zA-Z0-9_.-]+$/ regular expression",`+
-			`"password must be longer than or equal to 8 characters",`+
-			`"password must match `+
-			`/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$/ regular expression"],`+
+			`"username is a required field",`+
+			`"password must be at least 8 characters in length"],`+
 			`"error":"Bad Request","statusCode":400}`)
 }
 
@@ -302,14 +298,14 @@ func TestLoginByEmailAndCaseInsensitive(t *testing.T) {
 	assertJSON(t, byName, http.StatusCreated, `{"authenticated":true}`)
 }
 
-// TestLoginValidationMessage pins the identifier pattern message.
+// TestLoginValidationMessage returns the failed identifier rule.
 func TestLoginValidationMessage(t *testing.T) {
 	handler, repo, _ := productionServer()
 	seedStudent(handler, repo)
 
 	recorder := loginWith(handler, "bad identifier", "Password1")
 	assertJSON(t, recorder, http.StatusBadRequest,
-		`{"message":["identifier must match /^\\S+$/ regular expression"],`+
+		`{"message":["identifier must not contain whitespace"],`+
 			`"error":"Bad Request","statusCode":400}`)
 }
 

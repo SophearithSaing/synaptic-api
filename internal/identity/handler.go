@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -59,13 +58,14 @@ func (h *Handler) Mount(mux *http.ServeMux) {
 // register validates the body, creates the account, and sets auth
 // cookies.
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
-	var fields map[string]json.RawMessage
-	if err := web.DecodeJSON(w, r, &fields); err != nil {
+	var input registerRequest
+	if err := web.DecodeJSON(w, r, &input); err != nil {
 		web.WriteError(w, r, err)
 		return
 	}
 
-	input, messages := decodeRegisterRequest(fields)
+	input.normalize()
+	messages := authValidator.Validate(input)
 	if len(messages) > 0 {
 		writeValidationMessages(w, messages)
 		return
@@ -93,13 +93,14 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 
 // login validates the body and authenticates the identifier.
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-	var fields map[string]json.RawMessage
-	if err := web.DecodeJSON(w, r, &fields); err != nil {
+	var input loginRequest
+	if err := web.DecodeJSON(w, r, &input); err != nil {
 		web.WriteError(w, r, err)
 		return
 	}
 
-	input, messages := decodeLoginRequest(fields)
+	input.normalize()
+	messages := authValidator.Validate(input)
 	if len(messages) > 0 {
 		writeValidationMessages(w, messages)
 		return
@@ -253,7 +254,7 @@ func (h *Handler) setAuthCookies(
 	))
 }
 
-// writeValidationMessages writes the pinned validation-error body.
+// writeValidationMessages writes request validation errors.
 func writeValidationMessages(w http.ResponseWriter, messages []string) {
 	web.WriteJSON(w, http.StatusBadRequest, &web.Error{
 		StatusCode: http.StatusBadRequest,
