@@ -19,8 +19,8 @@ type authRepo struct {
 	user *identity.User
 }
 
-// FindUserByID implements identity.UserResolver.
-func (r *authRepo) FindUserByID(
+// GetUserByID implements identity.UserResolver.
+func (r *authRepo) GetUserByID(
 	_ context.Context, _ string,
 ) (*identity.User, error) {
 	if r.user != nil {
