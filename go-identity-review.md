@@ -23,7 +23,7 @@ the Docker socket is not accessible in this environment.
 
 ```go
 type Middleware = func(http.Handler) http.Handler
-type Mounter = func(mux *http.ServeMux)
+type MountFunc = func(mux *http.ServeMux)
 ```
 
 These declarations are aliases, so they do not introduce type identity. Use
@@ -31,7 +31,7 @@ defined function types instead:
 
 ```go
 type Middleware func(http.Handler) http.Handler
-type Mounter func(*http.ServeMux)
+type MountFunc func(*http.ServeMux)
 ```
 
 Method values remain assignable to these types.

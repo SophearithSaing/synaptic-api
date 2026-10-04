@@ -118,7 +118,7 @@ func New(cfg config.Config) (*App, error) {
 	catalogHandler := catalog.NewHandler(catalogStore, authenticator)
 
 	middleware := []web.Middleware{throttler.Middleware}
-	mounters := []web.Mounter{authHandler.Mount, catalogHandler.Mount}
+	mounters := []web.MountFunc{authHandler.Mount, catalogHandler.Mount}
 
 	router := web.NewRouter(cfg.ClientURL, ready, middleware, mounters)
 

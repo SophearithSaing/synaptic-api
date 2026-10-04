@@ -11,8 +11,8 @@ type ReadyProbe func(ctx context.Context) error
 // Middleware wraps a handler with additional request processing.
 type Middleware func(http.Handler) http.Handler
 
-// Mounter registers one feature's routes on the request mux.
-type Mounter func(*http.ServeMux)
+// MountFunc registers one feature's routes on the request mux.
+type MountFunc func(*http.ServeMux)
 
 // NewRouter builds the root router with global middleware, extra
 // application middleware (e.g. rate limiting), and the infrastructure
@@ -22,7 +22,7 @@ func NewRouter(
 	clientURL string,
 	ready ReadyProbe,
 	middleware []Middleware,
-	mounters []Mounter,
+	mounters []MountFunc,
 ) http.Handler {
 	mux := http.NewServeMux()
 
