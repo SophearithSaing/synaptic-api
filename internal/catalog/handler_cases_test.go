@@ -134,8 +134,8 @@ func TestGetQuestionSetVariants(t *testing.T) {
 			`"feedback":{"correct":"Correct feedback.","incorrect":`+
 			`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],`+
 			`"misconceptions":["Misconception."]}}],`+
-			`"createdAt":"2026-01-01T00:00:00.000Z",`+
-			`"updatedAt":"2026-01-01T00:00:00.000Z"}`)
+			`"createdAt":"2026-01-01T00:00:00Z",`+
+			`"updatedAt":"2026-01-01T00:00:00Z"}`)
 
 	invalid := catalogGet(t, handler, token, "/questions/not-an-id")
 	assertBody(t, invalid, http.StatusBadRequest,
@@ -168,8 +168,8 @@ func TestGetQuestionSetsByTopic(t *testing.T) {
 			`"feedback":{"correct":"Correct feedback.","incorrect":`+
 			`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],`+
 			`"misconceptions":["Misconception."]}}],`+
-			`"createdAt":"2026-01-01T00:00:00.000Z",`+
-			`"updatedAt":"2026-01-01T00:00:00.000Z"}]`)
+			`"createdAt":"2026-01-01T00:00:00Z",`+
+			`"updatedAt":"2026-01-01T00:00:00Z"}]`)
 
 	notFound := catalogGet(t, handler, token,
 		"/questions/topic/no-such-topic")

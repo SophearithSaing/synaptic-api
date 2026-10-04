@@ -67,6 +67,6 @@ func setBody(id, topicID, topic, level string, questions string) string {
 		`","topic":` + topic +
 		`,"setType":"regular","level":` + level +
 		`,"questions":` + questions +
-		`,"createdAt":"2026-01-01T00:00:00.000Z",` +
-		`"updatedAt":"2026-01-01T00:00:00.000Z"}`
+		`,"createdAt":"2026-01-01T00:00:00Z",` +
+		`"updatedAt":"2026-01-01T00:00:00Z"}`
 }

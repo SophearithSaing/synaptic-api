@@ -3,6 +3,7 @@ package catalog_test
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 )
@@ -51,6 +52,7 @@ func seededCatalog() (http.Handler, string) {
 		`"feedback":{"correct":"Correct feedback.","incorrect":` +
 		`"Incorrect feedback."},"rubrics":{"keyPoints":["Key point."],` +
 		`"misconceptions":["Misconception."]}}]`)
+	seedDate := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	questionSet := catalog.QuestionSet{
 		ID:        "665f1e2b9d1a2c3b4d5e0006",
 		TopicID:   topic.ID,
@@ -58,8 +60,8 @@ func seededCatalog() (http.Handler, string) {
 		SetType:   "regular",
 		Level:     0,
 		Questions: seedQuestions,
-		CreatedAt: "2026-01-01T00:00:00.000Z",
-		UpdatedAt: "2026-01-01T00:00:00.000Z",
+		CreatedAt: seedDate,
+		UpdatedAt: seedDate,
 	}
 	repo.seedQuestionSet(questionSet)
 	repo.seedQuestionSetsForSlug(

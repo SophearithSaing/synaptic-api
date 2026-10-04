@@ -8,14 +8,12 @@ import (
 	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-
-	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 )
 
 // rawValueJSON encodes one stored BSON value as JSON exactly like the
 // legacy Express encoder produced: field order preserved from the
-// stored document, ObjectIds as hex strings, dates as JS ISO-8601 with
-// millisecond precision. BSON types the legacy capture never covered
+// stored document, ObjectIds as hex strings, and dates as RFC 3339 timestamps.
+// BSON types the legacy capture never covered
 // (binary, decimal, regex, timestamps, code, DB pointers) render as
 // MongoDB extended JSON so no valid stored document can fail encoding.
 func rawValueJSON(value bson.RawValue) (json.RawMessage, error) {
@@ -39,9 +37,11 @@ func (stream *rawJSONEncoder) value(value bson.RawValue) error {
 	case bson.TypeObjectID:
 		stream.out.WriteString(strconv.Quote(value.ObjectID().Hex()))
 	case bson.TypeDateTime:
-		stream.out.WriteString(strconv.Quote(
-			catalog.ISO8601(value.Time()),
-		))
+		encoded, err := json.Marshal(value.Time().UTC())
+		if err != nil {
+			return err
+		}
+		stream.out.Write(encoded)
 	case bson.TypeString, bson.TypeSymbol:
 		encoded, err := json.Marshal(value.StringValue())
 		if err != nil {

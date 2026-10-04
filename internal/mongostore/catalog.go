@@ -379,8 +379,8 @@ func (s *CatalogStore) decodeQuestionSet(
 		SetType:   document.SetType,
 		Level:     document.Level,
 		Questions: questions,
-		CreatedAt: catalog.ISO8601(document.CreatedAt),
-		UpdatedAt: catalog.ISO8601(document.UpdatedAt),
+		CreatedAt: document.CreatedAt,
+		UpdatedAt: document.UpdatedAt,
 	}, nil
 }
 

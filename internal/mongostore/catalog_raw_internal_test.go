@@ -72,12 +72,12 @@ func TestRawValueJSONConversionBoundary(t *testing.T) {
 			want:  "1.5",
 		},
 		{
-			name: "dateTimeUsesMilliseconds", build: func(t *testing.T) bson.RawValue {
+			name: "dateTimeUsesRFC3339", build: func(t *testing.T) bson.RawValue {
 				return marshalValue(
 					t, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 				)
 			},
-			want: `"2026-01-01T00:00:00.000Z"`,
+			want: `"2026-01-01T00:00:00Z"`,
 		},
 		{
 			name: "binaryUsesExtendedJSON", build: legacy(

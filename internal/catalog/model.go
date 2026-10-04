@@ -45,12 +45,6 @@ type QuestionSet struct {
 	SetType   string          `json:"setType"`
 	Level     int64           `json:"level"`
 	Questions json.RawMessage `json:"questions"`
-	CreatedAt string          `json:"createdAt"`
-	UpdatedAt string          `json:"updatedAt"`
-}
-
-// ISO8601 renders a stored instant the way a JS Date serializes:
-// millisecond precision in UTC.
-func ISO8601(t time.Time) string {
-	return t.UTC().Format("2006-01-02T15:04:05.000") + "Z"
+	CreatedAt time.Time       `json:"createdAt"`
+	UpdatedAt time.Time       `json:"updatedAt"`
 }
