@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/SophearithSaing/synaptic-api/internal/web"
@@ -145,11 +146,9 @@ func RequireRole(roles ...Role) func(http.Handler) http.Handler {
 				return
 			}
 
-			for _, role := range roles {
-				if user.Role == role {
-					next.ServeHTTP(w, r)
-					return
-				}
+			if slices.Contains(roles, user.Role) {
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			web.WriteError(w, r, web.NewError(
