@@ -43,6 +43,7 @@ func RunMigrations(ctx context.Context, database *mongo.Database) error {
 	return nil
 }
 
+// migrateReference renames and normalizes one collection reference field.
 func migrateReference(
 	ctx context.Context,
 	collection *mongo.Collection,
@@ -111,6 +112,7 @@ func migrateReference(
 	return nil
 }
 
+// setObjectID builds an update stage that converts a field to an ObjectID.
 func setObjectID(target string, source string) bson.D {
 	return bson.D{{Key: "$set", Value: bson.D{{
 		Key: target,

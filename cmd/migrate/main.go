@@ -12,6 +12,7 @@ import (
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
 )
 
+// main loads the database configuration and applies required migrations.
 func main() {
 	cfg, err := config.LoadMongo()
 	if err != nil {
