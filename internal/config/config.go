@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,29 +16,24 @@ import (
 
 // Config holds the validated process configuration.
 type Config struct {
-	// AppEnv is the deployment environment, e.g. "development" or
-	// "production".
-	AppEnv string
-	// Port is the HTTP listen port.
-	Port int
-	// ClientURL is the single credentialed CORS origin.
-	ClientURL string
-	// MongoURI is the MongoDB connection string.
-	MongoURI string
-	// MongoDatabase is the MongoDB database name.
-	MongoDatabase string
-	// JWTSecret signs and verifies access tokens.
-	JWTSecret string
-	// JWTIssuer is the required JWT iss claim.
-	JWTIssuer string
-	// JWTAudience is the required JWT aud claim.
-	JWTAudience string
-	// JWTAccessTTL is the access token lifetime.
-	JWTAccessTTL time.Duration
-	// JWTRefreshTTL is the refresh token lifetime.
-	JWTRefreshTTL time.Duration
-	// TogetherAPIKey authenticates with the Together AI API.
-	TogetherAPIKey string
+	AppEnv                 string
+	Port                   int
+	ClientURL              string
+	MongoURI               string
+	MongoDatabase          string
+	JWTSecret              string
+	JWTIssuer              string
+	JWTAudience            string
+	JWTAccessTTL           time.Duration
+	JWTRefreshTTL          time.Duration
+	TogetherAPIKey         string
+	ThrottleTrustedProxies []string
+}
+
+// MongoConfig holds the database settings required by maintenance commands.
+type MongoConfig struct {
+	URI      string
+	Database string
 }
 
 // Production reports whether the process runs in production mode.
@@ -79,8 +75,74 @@ func Load() (Config, error) {
 	cfg.TogetherAPIKey = required("TOGETHER_API_KEY", &errs)
 	cfg.JWTAccessTTL = durationEnv("JWT_ACCESS_EXPIRES_IN", &errs)
 	cfg.JWTRefreshTTL = durationEnv("JWT_REFRESH_EXPIRES_IN", &errs)
+	trustedProxies, err := trustedProxies()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("THROTTLE_TRUSTED_PROXIES: %w", err))
+	}
+	cfg.ThrottleTrustedProxies = trustedProxies
 
 	return cfg, errors.Join(errs...)
+}
+
+// LoadMongo reads the MongoDB settings without requiring API-only settings.
+func LoadMongo() (MongoConfig, error) {
+	if err := loadDotEnv(".env"); err != nil {
+		return MongoConfig{}, err
+	}
+
+	var errs []error
+	cfg := MongoConfig{
+		URI:      required("DB_URI", &errs),
+		Database: required("DB_NAME", &errs),
+	}
+
+	return cfg, errors.Join(errs...)
+}
+
+// trustedProxies parses the optional comma-separated
+// THROTTLE_TRUSTED_PROXIES list of exact addresses or CIDR ranges,
+// rejecting unparseable entries.
+func trustedProxies() ([]string, error) {
+	raw := os.Getenv("THROTTLE_TRUSTED_PROXIES")
+	if raw == "" {
+		return nil, nil
+	}
+
+	var proxies []string
+	for _, entry := range strings.Split(raw, ",") {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" {
+			continue
+		}
+		proxies = append(proxies, trimmed)
+	}
+
+	return proxies, validateTrustedProxies(proxies)
+}
+
+// validateTrustedProxies reports whether every trusted proxy entry is
+// an exact IP address or a CIDR range.
+func validateTrustedProxies(proxies []string) error {
+	var errs []error
+	for _, proxy := range proxies {
+		if strings.Contains(proxy, "/") {
+			if _, _, err := net.ParseCIDR(proxy); err != nil {
+				errs = append(errs, fmt.Errorf(
+					"trusted proxy %q: %w", proxy, err,
+				))
+			}
+
+			continue
+		}
+		if net.ParseIP(proxy) == nil {
+			errs = append(errs, fmt.Errorf(
+				"trusted proxy %q: want an exact IP address or CIDR range",
+				proxy,
+			))
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 var durationPattern = regexp.MustCompile(`^(\d+)(ms|s|m|h|d)$`)

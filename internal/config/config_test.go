@@ -96,6 +96,24 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadMongoOnlyRequiresDatabaseSettings(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("DB_URI", "mongodb://localhost:27017")
+	t.Setenv("DB_NAME", "synaptic")
+	t.Setenv("JWT_SECRET", "")
+
+	cfg, err := config.LoadMongo()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.URI != "mongodb://localhost:27017" {
+		t.Errorf("got URI %q", cfg.URI)
+	}
+	if cfg.Database != "synaptic" {
+		t.Errorf("got database %q", cfg.Database)
+	}
+}
+
 func TestLoadProductionEnablesSecureCookies(t *testing.T) {
 	t.Chdir(t.TempDir())
 	setRequiredEnv(t)
@@ -151,6 +169,55 @@ func TestLoadRejectsInvalidDuration(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "JWT_ACCESS_EXPIRES_IN") {
 		t.Errorf("error %q does not name the variable", err)
+	}
+}
+
+func TestLoadDefaultsToNoTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ThrottleTrustedProxies != nil {
+		t.Errorf("default trusted proxies %+v, want nil", cfg.ThrottleTrustedProxies)
+	}
+}
+
+func TestLoadParsesTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+	t.Setenv("THROTTLE_TRUSTED_PROXIES",
+		" 192.0.2.1 , 10.0.0.0/8 ,\t172.16.0.1\t")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"192.0.2.1", "10.0.0.0/8", "172.16.0.1"}
+	if len(cfg.ThrottleTrustedProxies) != len(want) {
+		t.Fatalf("parsed %+v, want %+v", cfg.ThrottleTrustedProxies, want)
+	}
+	for index, proxy := range want {
+		if cfg.ThrottleTrustedProxies[index] != proxy {
+			t.Errorf("entry %d %q, want %q",
+				index, cfg.ThrottleTrustedProxies[index], proxy)
+		}
+	}
+}
+
+func TestLoadRejectsInvalidTrustedProxies(t *testing.T) {
+	t.Chdir(t.TempDir())
+	setRequiredEnv(t)
+	t.Setenv("THROTTLE_TRUSTED_PROXIES", "10.0.0.1,not-a-proxy")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected an error for an invalid trusted proxy")
+	}
+	if !strings.Contains(err.Error(), "THROTTLE_TRUSTED_PROXIES") {
+		t.Errorf("error %q does not name THROTTLE_TRUSTED_PROXIES", err)
 	}
 }
 

@@ -16,6 +16,7 @@ reference.
 ```bash
 make docker-up              # start local MongoDB (single-node replica set)
 cp .env.example .env        # then fill in real values
+make migrate                # migrate stored references to ObjectIDs
 make run                    # start the API on :3000
 ```
 
@@ -28,6 +29,7 @@ transactions for its idempotency guarantees.
 | ----------------------- | ------------------------------------------------ |
 | `make build`            | Build the API binary to `bin/api`                |
 | `make run`              | Run the API with `go run`                        |
+| `make migrate`          | Apply required MongoDB schema migrations         |
 | `make test`             | Unit tests (no Docker needed)                    |
 | `make test-integration` | All tests, incl. MongoDB containers (needs Docker) |
 | `make test-race`        | Unit tests with the race detector                |
@@ -37,6 +39,14 @@ transactions for its idempotency guarantees.
 | `make docker-up`        | Start local MongoDB on :27017                    |
 | `make docker-down`      | Stop local MongoDB                               |
 | `make docker-logs`      | Follow MongoDB logs                              |
+
+## Database migrations
+
+Run `make migrate` before starting a newer API version. The catalog migration
+renames `topics.category` to `topics.categoryId` and `questionSets.topic` to
+`questionSets.topicId`, converting hexadecimal string references to BSON
+`ObjectID` values. The migration is transactional and aborts on conflicting or
+invalid data.
 
 ## Endpoints
 
@@ -54,7 +64,6 @@ internal/app/       composition root (wiring)
 internal/config/    environment loading and validation
 internal/web/       HTTP server, router, middleware, request/response
 internal/mongostore/ MongoDB client and BSON persistence
-internal/testutil/  integration test helpers (testcontainers)
 ```
 
 ## Configuration

@@ -19,7 +19,7 @@ func TestWriteJSON(t *testing.T) {
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("got status %d, want 201", recorder.Code)
 	}
-	if got := recorder.Header().Get("Content-Type"); got != "application/json" {
+	if got := recorder.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
 		t.Fatalf("got content type %q", got)
 	}
 	var body map[string]string

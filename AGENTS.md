@@ -27,6 +27,8 @@
   required for JSON.
 - **Line Width:** Keep code blocks under 80 characters per line where
   possible.
-- **Go:** `gofmt` is mandatory (`make fmt-check` runs in CI). Every exported
-  identifier MUST have a doc comment. No body comments except for complex
-  algorithmic logic or non-obvious workarounds for third-party bugs.
+- **Go:** `gofmt` is mandatory (`make fmt-check` runs in CI). In non-test Go
+  files, every declared function and exported type MUST have a doc comment
+  beginning with its name. Avoid comments that merely restate field, constant,
+  variable, or error names. No body comments except for complex algorithmic
+  logic or non-obvious workarounds for third-party bugs.

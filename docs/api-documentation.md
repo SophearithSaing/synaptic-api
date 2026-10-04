@@ -411,7 +411,7 @@ Request:
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
   "tags": ["systems", "runtime"],
-  "category": "<category-id>"
+  "categoryId": "<category-id>"
 }
 ```
 
@@ -425,6 +425,7 @@ Response `201`:
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
   "tags": ["systems", "runtime"],
+  "categoryId": "<category-id>",
   "category": {
     "id": "<category-id>",
     "title": "Computer Science Concepts",
@@ -482,7 +483,8 @@ For MCQ answers, submit the selected option `id` as the answer.
 ```ts
 {
   id: string;
-  topic: string | Topic;
+  topicId: string;
+  topic: Topic | null;
   setType: 'regular' | 'live';
   level: number;
   questions: Question[];
@@ -501,7 +503,7 @@ Request:
 ```json
 [
   {
-    "topic": "<topic-id>",
+    "topicId": "<topic-id>",
     "setType": "regular",
     "level": 0,
     "questions": [
@@ -543,7 +545,7 @@ Request:
 [
   {
     "id": "<question-set-id>",
-    "topic": "<topic-id>",
+    "topicId": "<topic-id>",
     "setType": "regular",
     "level": 1
   }
@@ -572,21 +574,17 @@ Important errors:
 
 - `404 Question set not found`
 
-### `GET /questions/topic/:slug?populateTopic=true`
+### `GET /questions/topic/:slug`
 
-Returns question sets for a topic slug.
-
-- `populateTopic=true`: topic is populated.
-- Any other value or omitted: topic is the topic ID string.
+Returns question sets for a topic slug. Each result contains the stored
+`topicId` and the left-joined `topic`. A missing topic produces `topic: null`.
 
 Response `200`: array of question set responses.
 
-### `GET /questions/:id?populateTopic=true`
+### `GET /questions/:id`
 
-Returns one question set by ID.
-
-- default behavior populates topic.
-- `populateTopic=false` returns topic as an ID string.
+Returns one question set by ID with the same `topicId` and nullable `topic`
+fields.
 
 Response `200`: question set response.
 

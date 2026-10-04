@@ -1,13 +1,16 @@
 BINARY := bin/api
 
-.PHONY: build run test test-integration test-race vet fmt fmt-check tidy \
-	ci clean docker-up docker-down docker-logs
+.PHONY: build run migrate test test-integration test-race vet fmt fmt-check \
+	tidy ci clean docker-up docker-down docker-logs
 
 build:
 	go build -o $(BINARY) ./cmd/api
 
 run:
 	go run ./cmd/api
+
+migrate:
+	go run ./cmd/migrate
 
 test:
 	go test -short ./...
