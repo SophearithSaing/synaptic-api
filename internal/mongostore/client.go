@@ -1,5 +1,5 @@
 // Package mongostore implements the feature repositories against MongoDB
-// and owns the exact BSON document representations, including legacy shapes.
+// and owns the BSON document representations and migrations.
 package mongostore
 
 import (

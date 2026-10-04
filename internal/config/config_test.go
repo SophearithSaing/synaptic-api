@@ -96,6 +96,24 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadMongoOnlyRequiresDatabaseSettings(t *testing.T) {
+	t.Chdir(t.TempDir())
+	t.Setenv("DB_URI", "mongodb://localhost:27017")
+	t.Setenv("DB_NAME", "synaptic")
+	t.Setenv("JWT_SECRET", "")
+
+	cfg, err := config.LoadMongo()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.URI != "mongodb://localhost:27017" {
+		t.Errorf("got URI %q", cfg.URI)
+	}
+	if cfg.Database != "synaptic" {
+		t.Errorf("got database %q", cfg.Database)
+	}
+}
+
 func TestLoadProductionEnablesSecureCookies(t *testing.T) {
 	t.Chdir(t.TempDir())
 	setRequiredEnv(t)

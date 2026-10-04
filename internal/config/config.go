@@ -45,6 +45,14 @@ type Config struct {
 	ThrottleTrustedProxies []string
 }
 
+// MongoConfig holds the database settings required by maintenance commands.
+type MongoConfig struct {
+	// URI is the MongoDB connection string.
+	URI string
+	// Database is the MongoDB database name.
+	Database string
+}
+
 // Production reports whether the process runs in production mode.
 func (c Config) Production() bool {
 	return c.AppEnv == "production"
@@ -89,6 +97,21 @@ func Load() (Config, error) {
 		errs = append(errs, fmt.Errorf("THROTTLE_TRUSTED_PROXIES: %w", err))
 	}
 	cfg.ThrottleTrustedProxies = trustedProxies
+
+	return cfg, errors.Join(errs...)
+}
+
+// LoadMongo reads the MongoDB settings without requiring API-only settings.
+func LoadMongo() (MongoConfig, error) {
+	if err := loadDotEnv(".env"); err != nil {
+		return MongoConfig{}, err
+	}
+
+	var errs []error
+	cfg := MongoConfig{
+		URI:      required("DB_URI", &errs),
+		Database: required("DB_NAME", &errs),
+	}
 
 	return cfg, errors.Join(errs...)
 }
