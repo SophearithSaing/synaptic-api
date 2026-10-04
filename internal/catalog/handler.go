@@ -122,27 +122,24 @@ func (h *Handler) listQuestionSetsByTopic(
 	web.WriteJSON(w, http.StatusOK, questionSets)
 }
 
-// writeLookupError maps catalog sentinels to their pinned bodies: an
-// unparsable ObjectId is 400 and each missing document is 404 with
-// its fixed message. Other failures keep their error mapping. Callers
-// invoke it only for a non-nil error.
+// writeLookupError maps catalog lookup errors to HTTP responses.
 func writeLookupError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ErrInvalidObjectID):
 		web.WriteError(w, r, web.NewError(
-			http.StatusBadRequest, "Invalid MongoDB ObjectId",
+			http.StatusBadRequest, ErrInvalidObjectID.Error(),
 		))
 	case errors.Is(err, ErrCategoryNotFound):
 		web.WriteError(w, r, web.NewError(
-			http.StatusNotFound, "Category not found",
+			http.StatusNotFound, ErrCategoryNotFound.Error(),
 		))
 	case errors.Is(err, ErrTopicNotFound):
 		web.WriteError(w, r, web.NewError(
-			http.StatusNotFound, "Topic not found",
+			http.StatusNotFound, ErrTopicNotFound.Error(),
 		))
 	case errors.Is(err, ErrQuestionSetNotFound):
 		web.WriteError(w, r, web.NewError(
-			http.StatusNotFound, "Question set not found",
+			http.StatusNotFound, ErrQuestionSetNotFound.Error(),
 		))
 	default:
 		web.WriteError(w, r, err)
