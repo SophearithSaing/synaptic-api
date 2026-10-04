@@ -8,7 +8,8 @@ import (
 const handlerTopic = `{"id":"665f1e2b9d1a2c3b4d5e0004",` +
 	`"title":"Binary Basics","slug":"binary-basics",` +
 	`"description":"Binary numbers and arithmetic.","icon":"binary",` +
-	`"tags":["binary","arithmetic"],"category":{` +
+	`"tags":["binary","arithmetic"],` +
+	`"categoryId":"665f1e2b9d1a2c3b4d5e0003","category":{` +
 	`"id":"665f1e2b9d1a2c3b4d5e0003","title":"Core Concepts",` +
 	`"slug":"core-concepts","description":` +
 	`"Foundational computing theory.","icon":"cpu"}}`
@@ -46,7 +47,8 @@ func TestGetTopicsFixtureShape(t *testing.T) {
 		`[{"id":"665f1e2b9d1a2c3b4d5e0004","title":"Binary Basics",`+
 			`"slug":"binary-basics","description":`+
 			`"Binary numbers and arithmetic.","icon":"binary",`+
-			`"tags":["binary","arithmetic"],"category":{`+
+			`"tags":["binary","arithmetic"],`+
+			`"categoryId":"665f1e2b9d1a2c3b4d5e0003","category":{`+
 			`"id":"665f1e2b9d1a2c3b4d5e0003","title":"Core Concepts",`+
 			`"slug":"core-concepts","description":`+
 			`"Foundational computing theory.","icon":"cpu"}}]`)
@@ -94,7 +96,8 @@ func TestGetTopicByIdVariants(t *testing.T) {
 		`{"id":"665f1e2b9d1a2c3b4d5e0004","title":"Binary Basics",`+
 			`"slug":"binary-basics","description":`+
 			`"Binary numbers and arithmetic.","icon":"binary",`+
-			`"tags":["binary","arithmetic"],"category":{`+
+			`"tags":["binary","arithmetic"],`+
+			`"categoryId":"665f1e2b9d1a2c3b4d5e0003","category":{`+
 			`"id":"665f1e2b9d1a2c3b4d5e0003","title":"Core Concepts",`+
 			`"slug":"core-concepts","description":`+
 			`"Foundational computing theory.","icon":"cpu"}}`)

@@ -5,6 +5,7 @@ const joinedTopic = `{"id":"5eed00000000000000000021",` +
 	`"title":"Binary Basics","slug":"binary-basics",` +
 	`"description":"Binary numbers and arithmetic.","icon":"binary",` +
 	`"tags":["binary","arithmetic"],` +
+	`"categoryId":"5eed00000000000000000011",` +
 	`"category":` + categoryCore + `}`
 
 // questionQ1 and questionQ2 are the pinned stored question bodies.
@@ -56,6 +57,7 @@ func topicNested(
 	return `{"id":"` + id + `","title":"` + title +
 		`","slug":"` + slug + `","description":"` + description +
 		`","icon":"` + icon + `","tags":` + tags +
+		`,"categoryId":"5eed00000000000000000011"` +
 		`,"category":` + categoryCore + `}`
 }
 

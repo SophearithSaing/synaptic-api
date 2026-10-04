@@ -411,7 +411,7 @@ Request:
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
   "tags": ["systems", "runtime"],
-  "category": "<category-id>"
+  "categoryId": "<category-id>"
 }
 ```
 
@@ -425,6 +425,7 @@ Response `201`:
   "description": "Understanding stack, heap, and garbage collection.",
   "icon": "memory-management",
   "tags": ["systems", "runtime"],
+  "categoryId": "<category-id>",
   "category": {
     "id": "<category-id>",
     "title": "Computer Science Concepts",
@@ -502,7 +503,7 @@ Request:
 ```json
 [
   {
-    "topic": "<topic-id>",
+    "topicId": "<topic-id>",
     "setType": "regular",
     "level": 0,
     "questions": [
@@ -544,7 +545,7 @@ Request:
 [
   {
     "id": "<question-set-id>",
-    "topic": "<topic-id>",
+    "topicId": "<topic-id>",
     "setType": "regular",
     "level": 1
   }

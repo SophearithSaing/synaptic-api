@@ -31,6 +31,7 @@ func seededCatalog() (http.Handler, string) {
 		Description: "Binary numbers and arithmetic.",
 		Icon:        "binary",
 		Tags:        []string{"binary", "arithmetic"},
+		CategoryID:  "665f1e2b9d1a2c3b4d5e0003",
 		Category: &catalog.Category{
 			ID:          "665f1e2b9d1a2c3b4d5e0003",
 			Title:       "Core Concepts",

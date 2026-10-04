@@ -1,6 +1,5 @@
 // Package catalog implements the protected catalog read paths for
-// categories, topics, and question sets, preserving the fixture-pinned
-// HTTP shapes including legacy BSON toleration.
+// categories, topics, and question sets.
 package catalog
 
 import (
@@ -49,8 +48,10 @@ type Topic struct {
 	Icon string `json:"icon"`
 	// Tags are the topic labels.
 	Tags []string `json:"tags"`
+	// CategoryID is the stored category identifier.
+	CategoryID string `json:"categoryId"`
 	// Category embeds the joined category. A nil value serializes to
-	// null only for unresolved legacy references.
+	// null when the category no longer exists or cannot be joined.
 	Category *Category `json:"category"`
 }
 

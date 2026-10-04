@@ -57,7 +57,7 @@ func seedFixturesCatalog(
 		{Key: "icon", Value: "binary"},
 		{Key: "tags", Value: plainArray("binary", "arithmetic")},
 		{
-			Key:   "category",
+			Key:   "categoryId",
 			Value: objectIDOf(t, "5eed00000000000000000011"),
 		},
 		{Key: "createdAt", Value: seedDate},
@@ -72,7 +72,7 @@ func seedFixturesCatalog(
 		{Key: "icon", Value: "empty"},
 		{Key: "tags", Value: plainArray("misc")},
 		{
-			Key:   "category",
+			Key:   "categoryId",
 			Value: objectIDOf(t, "5eed00000000000000000011"),
 		},
 		{Key: "createdAt", Value: seedDate},
@@ -87,7 +87,7 @@ func seedFixturesCatalog(
 		{Key: "icon", Value: "gate"},
 		{Key: "tags", Value: plainArray("logic")},
 		{
-			Key:   "category",
+			Key:   "categoryId",
 			Value: objectIDOf(t, "5eed00000000000000000011"),
 		},
 		{Key: "createdAt", Value: seedDate},
@@ -130,13 +130,13 @@ func seedFixturesCatalog(
 
 // regularSet builds a regular question set with fixed order and dates.
 func regularSet(
-	t *testing.T, id string, topic bson.ObjectID, level int64, questions []any,
+	t *testing.T, id string, topicID bson.ObjectID, level int64, questions []any,
 ) bson.D {
 	t.Helper()
 
 	return bson.D{
 		{Key: "_id", Value: objectIDOf(t, id)},
-		{Key: "topic", Value: topic},
+		{Key: "topicId", Value: topicID},
 		{Key: "setType", Value: "regular"},
 		{Key: "level", Value: level},
 		{Key: "questions", Value: questions},

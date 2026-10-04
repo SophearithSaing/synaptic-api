@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -13,8 +12,7 @@ import (
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 )
 
-// CatalogStore implements catalog.Repository with the exact stored
-// shapes, reading loose BSON without repairing legacy documents.
+// CatalogStore implements catalog.Repository using MongoDB.
 type CatalogStore struct {
 	categories   *mongo.Collection
 	topics       *mongo.Collection
@@ -187,7 +185,7 @@ func (s *CatalogStore) QuestionSetsByTopicSlug(
 	}
 
 	cursor, err := s.questionSets.Find(ctx, bson.M{
-		"topic": topicRaw.Lookup("_id").ObjectID(),
+		"topicId": topicRaw.Lookup("_id").ObjectID(),
 	})
 	if err != nil {
 		return nil, err
@@ -256,9 +254,7 @@ func decodeCategory(raw bson.Raw) (*catalog.Category, error) {
 	}, nil
 }
 
-// decodeTopic maps the stored topic document, resolving a stored
-// ObjectId category through the resolver. A missing or legacy
-// string-typed category keeps the nested response nil.
+// decodeTopic maps the stored topic document and joins its category.
 func (s *CatalogStore) decodeTopic(
 	ctx context.Context,
 	raw bson.Raw,
@@ -269,14 +265,9 @@ func (s *CatalogStore) decodeTopic(
 		return nil, err
 	}
 
-	var nested *catalog.Category
-	category := raw.Lookup("category")
-	if category.Type == bson.TypeObjectID {
-		resolved, err := resolve(ctx, category.ObjectID())
-		if err != nil {
-			return nil, err
-		}
-		nested = resolved
+	nested, err := resolve(ctx, document.CategoryID)
+	if err != nil {
+		return nil, err
 	}
 
 	return &catalog.Topic{
@@ -286,11 +277,12 @@ func (s *CatalogStore) decodeTopic(
 		Description: document.Description,
 		Icon:        document.Icon,
 		Tags:        document.Tags,
+		CategoryID:  document.CategoryID.Hex(),
 		Category:    nested,
 	}, nil
 }
 
-// batchTopics resolves every ObjectId category reference of the stored
+// batchCategories resolves every category reference of the stored
 // topic documents in one query.
 func (s *CatalogStore) batchCategories(
 	ctx context.Context,
@@ -298,11 +290,11 @@ func (s *CatalogStore) batchCategories(
 ) (map[bson.ObjectID]*catalog.Category, error) {
 	references := make([]bson.ObjectID, 0, len(raws))
 	for _, raw := range raws {
-		category := raw.Lookup("category")
-		if category.Type != bson.TypeObjectID {
-			continue
+		var document TopicDocument
+		if err := bson.Unmarshal(raw, &document); err != nil {
+			return nil, err
 		}
-		references = append(references, category.ObjectID())
+		references = append(references, document.CategoryID)
 	}
 
 	if len(references) == 0 {
@@ -370,9 +362,7 @@ func (s *CatalogStore) decodeQuestionSet(
 		return nil, err
 	}
 
-	topicID, topic, err := s.questionSetTopic(
-		ctx, raw.Lookup("topic"), preloadedTopic,
-	)
+	topic, err := s.questionSetTopic(ctx, document.TopicID, preloadedTopic)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +374,7 @@ func (s *CatalogStore) decodeQuestionSet(
 
 	return &catalog.QuestionSet{
 		ID:        document.ID.Hex(),
-		TopicID:   topicID,
+		TopicID:   document.TopicID.Hex(),
 		Topic:     topic,
 		SetType:   document.SetType,
 		Level:     document.Level,
@@ -397,49 +387,27 @@ func (s *CatalogStore) decodeQuestionSet(
 // questionSetTopic builds the stored identifier and its left-joined topic.
 func (s *CatalogStore) questionSetTopic(
 	ctx context.Context,
-	reference bson.RawValue,
+	topicID bson.ObjectID,
 	preloadedTopic *catalog.Topic,
-) (string, *catalog.Topic, error) {
-	topicID, err := questionSetTopicID(reference)
-	if err != nil {
-		return "", nil, err
+) (*catalog.Topic, error) {
+	if preloadedTopic != nil && preloadedTopic.ID == topicID.Hex() {
+		return preloadedTopic, nil
 	}
 
-	if preloadedTopic != nil && preloadedTopic.ID == topicID {
-		return topicID, preloadedTopic, nil
-	}
-	if reference.Type != bson.TypeObjectID {
-		return topicID, nil, nil
-	}
-
-	raw, err := s.findRaw(ctx, s.topics, reference.ObjectID())
+	raw, err := s.findRaw(ctx, s.topics, topicID)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	if raw == nil {
-		return topicID, nil, nil
+		return nil, nil
 	}
 
 	topic, err := s.decodeTopic(ctx, raw, s.categoryByObjectID)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return topicID, topic, nil
-}
-
-// questionSetTopicID returns the string form of a stored topic reference.
-func questionSetTopicID(reference bson.RawValue) (string, error) {
-	switch reference.Type {
-	case bson.TypeObjectID:
-		return reference.ObjectID().Hex(), nil
-	case bson.TypeString:
-		return reference.StringValue(), nil
-	default:
-		return "", fmt.Errorf(
-			"unsupported question set topic type %s", reference.Type,
-		)
-	}
+	return topic, nil
 }
 
 // questionPassthrough encodes the stored questions array untouched, in
