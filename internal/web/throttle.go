@@ -14,12 +14,8 @@ import (
 
 // ThrottleConfig describes a fixed-window rate limit.
 type ThrottleConfig struct {
-	// Limit is the maximum number of requests per window.
 	Limit int
-	// TTL is the window length.
-	TTL time.Duration
-	// Block is how long requests are rejected after the limit is
-	// exceeded.
+	TTL   time.Duration
 	Block time.Duration
 }
 
@@ -33,15 +29,9 @@ const unknownClientIP = "unknown"
 // ThrottleState is the persisted fixed-window state of one rate limit
 // key.
 type ThrottleState struct {
-	// Epoch is the start of the counting window.
-	Epoch time.Time
-	// Expire is the horizon of the counting window: the first instant
-	// after which the window rolls over.
-	Expire time.Time
-	// Count is the number of hits recorded inside the window.
-	Count int
-	// BlockedUntil is a future instant while rejected requests share
-	// the pinned 429 with a Retry-After countdown.
+	Epoch        time.Time
+	Expire       time.Time
+	Count        int
 	BlockedUntil time.Time
 }
 

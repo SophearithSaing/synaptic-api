@@ -62,12 +62,10 @@ type TopicDocument struct {
 // QuestionSetDocument is the exact questionSets BSON representation
 // with loose embedded questions.
 type QuestionSetDocument struct {
-	ID      bson.ObjectID `bson:"_id"`
-	TopicID bson.ObjectID `bson:"topicId"`
-	SetType string        `bson:"setType"`
-	Level   int64         `bson:"level"`
-	// Questions stores each embedded question loosely to preserve its
-	// stored field order and values.
+	ID        bson.ObjectID `bson:"_id"`
+	TopicID   bson.ObjectID `bson:"topicId"`
+	SetType   string        `bson:"setType"`
+	Level     int64         `bson:"level"`
 	Questions bson.RawValue `bson:"questions"`
 	CreatedAt time.Time     `bson:"createdAt"`
 	UpdatedAt time.Time     `bson:"updatedAt"`

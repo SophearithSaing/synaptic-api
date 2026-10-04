@@ -16,40 +16,23 @@ import (
 
 // Config holds the validated process configuration.
 type Config struct {
-	// AppEnv is the deployment environment, e.g. "development" or
-	// "production".
-	AppEnv string
-	// Port is the HTTP listen port.
-	Port int
-	// ClientURL is the single credentialed CORS origin.
-	ClientURL string
-	// MongoURI is the MongoDB connection string.
-	MongoURI string
-	// MongoDatabase is the MongoDB database name.
-	MongoDatabase string
-	// JWTSecret signs and verifies access tokens.
-	JWTSecret string
-	// JWTIssuer is the required JWT iss claim.
-	JWTIssuer string
-	// JWTAudience is the required JWT aud claim.
-	JWTAudience string
-	// JWTAccessTTL is the access token lifetime.
-	JWTAccessTTL time.Duration
-	// JWTRefreshTTL is the refresh token lifetime.
-	JWTRefreshTTL time.Duration
-	// TogetherAPIKey authenticates with the Together AI API.
-	TogetherAPIKey string
-	// ThrottleTrustedProxies lists the reverse-proxy addresses or
-	// CIDRs whose X-Forwarded-For values the rate limiter trusts.
-	// Empty keeps direct transport-peer throttling.
+	AppEnv                 string
+	Port                   int
+	ClientURL              string
+	MongoURI               string
+	MongoDatabase          string
+	JWTSecret              string
+	JWTIssuer              string
+	JWTAudience            string
+	JWTAccessTTL           time.Duration
+	JWTRefreshTTL          time.Duration
+	TogetherAPIKey         string
 	ThrottleTrustedProxies []string
 }
 
 // MongoConfig holds the database settings required by maintenance commands.
 type MongoConfig struct {
-	// URI is the MongoDB connection string.
-	URI string
-	// Database is the MongoDB database name.
+	URI      string
 	Database string
 }
 

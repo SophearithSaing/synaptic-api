@@ -11,13 +11,9 @@ import (
 // matching the legacy NestJS error shape. Field order matches the
 // legacy encoder output.
 type Error struct {
-	// Message describes the failure for the client. It may be a string
-	// or a list of validation messages.
-	Message any `json:"message"`
-	// ErrorName is the conventional HTTP error label, when applicable.
-	ErrorName string `json:"error,omitempty"`
-	// StatusCode is the HTTP status code.
-	StatusCode int `json:"statusCode"`
+	Message    any    `json:"message"`
+	ErrorName  string `json:"error,omitempty"`
+	StatusCode int    `json:"statusCode"`
 }
 
 // Error returns the message when it is a string, or the status text.

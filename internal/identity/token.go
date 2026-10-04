@@ -14,9 +14,7 @@ import (
 // Claims carries the identity claims of an access token on top of the
 // registered claim set.
 type Claims struct {
-	// Email is the user's normalized login email address.
-	Email string `json:"email"`
-	// Username is the user's public display name.
+	Email    string `json:"email"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }

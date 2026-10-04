@@ -28,6 +28,7 @@
 - **Line Width:** Keep code blocks under 80 characters per line where
   possible.
 - **Go:** `gofmt` is mandatory (`make fmt-check` runs in CI). In non-test Go
-  files, every declared function and every exported identifier MUST have a doc
-  comment beginning with its name. No body comments except for complex
-  algorithmic logic or non-obvious workarounds for third-party bugs.
+  files, every declared function and exported type MUST have a doc comment
+  beginning with its name. Avoid comments that merely restate field, constant,
+  variable, or error names. No body comments except for complex algorithmic
+  logic or non-obvious workarounds for third-party bugs.
