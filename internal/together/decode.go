@@ -93,7 +93,9 @@ func decodeCompletionJSON(output string, destination any) error {
 // unfenceJSON preserves legacy optional markdown JSON fence compatibility.
 func unfenceJSON(output string) string {
 	output = strings.TrimSpace(output)
-	output = strings.TrimPrefix(output, "```json")
+	if strings.HasPrefix(strings.ToLower(output), "```json") {
+		output = output[len("```json"):]
+	}
 	output = strings.TrimPrefix(output, "```")
 	output = strings.TrimSuffix(output, "```")
 	return strings.TrimSpace(output)
@@ -101,6 +103,9 @@ func unfenceJSON(output string) string {
 
 // validateGeneratedQuestion checks generated-question semantic constraints.
 func validateGeneratedQuestion(question catalog.Question) error {
+	if len(question.TargetConcepts) == 0 {
+		return fmt.Errorf("question target concepts are required")
+	}
 	if question.Type != inference.QuestionTypeMCQ {
 		return nil
 	}
@@ -135,7 +140,7 @@ type generatedQuestion struct {
 	Prompt          *string            `json:"prompt"`
 	Options         *[]generatedOption `json:"options"`
 	CorrectOptionID *string            `json:"correctOptionId"`
-	TargetConcepts  *[]string          `json:"targetConcepts"`
+	TargetConcepts  *strictStrings     `json:"targetConcepts"`
 	Feedback        *generatedFeedback `json:"feedback"`
 	Rubrics         *generatedRubrics  `json:"rubrics"`
 }
@@ -151,8 +156,8 @@ type generatedFeedback struct {
 }
 
 type generatedRubrics struct {
-	KeyPoints      *[]string `json:"keyPoints"`
-	Misconceptions *[]string `json:"misconceptions"`
+	KeyPoints      *strictStrings `json:"keyPoints"`
+	Misconceptions *strictStrings `json:"misconceptions"`
 }
 
 // question converts a strict generated DTO into neutral content.
@@ -167,11 +172,11 @@ func (source *generatedQuestion) question() (catalog.Question, error) {
 	}
 	question := catalog.Question{
 		ID: *source.ID, Type: *source.Type, Prompt: *source.Prompt,
-		TargetConcepts: *source.TargetConcepts,
+		TargetConcepts: []string(*source.TargetConcepts),
 		Feedback: catalog.QuestionFeedback{Correct: *source.Feedback.Correct,
 			Incorrect: *source.Feedback.Incorrect},
-		Rubrics: catalog.QuestionRubric{KeyPoints: *source.Rubrics.KeyPoints,
-			Misconceptions: *source.Rubrics.Misconceptions},
+		Rubrics: catalog.QuestionRubric{KeyPoints: []string(*source.Rubrics.KeyPoints),
+			Misconceptions: []string(*source.Rubrics.Misconceptions)},
 	}
 	if source.Options != nil {
 		question.Options = make([]catalog.QuestionOption, len(*source.Options))
@@ -193,12 +198,12 @@ type writtenEvaluationResponse struct {
 }
 
 type writtenEvaluation struct {
-	QuestionID    *string   `json:"questionId"`
-	Score         *float64  `json:"score"`
-	CorrectAnswer *string   `json:"correctAnswer"`
-	Feedback      *string   `json:"feedback"`
-	Strengths     *[]string `json:"strengths"`
-	Weaknesses    *[]string `json:"weaknesses"`
+	QuestionID    *string        `json:"questionId"`
+	Score         *float64       `json:"score"`
+	CorrectAnswer *string        `json:"correctAnswer"`
+	Feedback      *string        `json:"feedback"`
+	Strengths     *strictStrings `json:"strengths"`
+	Weaknesses    *strictStrings `json:"weaknesses"`
 }
 
 // evaluation converts a strict grading DTO into a neutral evaluation.
@@ -213,6 +218,28 @@ func (source writtenEvaluation) evaluation() (inference.WrittenEvaluation, error
 	}
 	return inference.WrittenEvaluation{QuestionID: *source.QuestionID,
 		Score: *source.Score, CorrectAnswer: *source.CorrectAnswer,
-		Feedback: *source.Feedback, Strengths: *source.Strengths,
-		Weaknesses: *source.Weaknesses}, nil
+		Feedback: *source.Feedback, Strengths: []string(*source.Strengths),
+		Weaknesses: []string(*source.Weaknesses)}, nil
+}
+
+// strictStrings rejects null and non-string elements in a required array.
+type strictStrings []string
+
+// UnmarshalJSON decodes an array while rejecting null elements.
+func (values *strictStrings) UnmarshalJSON(data []byte) error {
+	var rawValues []json.RawMessage
+	if err := json.Unmarshal(data, &rawValues); err != nil {
+		return err
+	}
+	decoded := make([]string, len(rawValues))
+	for index, raw := range rawValues {
+		if bytes.Equal(raw, []byte("null")) {
+			return fmt.Errorf("null string array member")
+		}
+		if err := json.Unmarshal(raw, &decoded[index]); err != nil {
+			return err
+		}
+	}
+	*values = decoded
+	return nil
 }

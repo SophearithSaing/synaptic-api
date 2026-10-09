@@ -19,6 +19,7 @@ const (
 	defaultTimeout      = 30 * time.Second
 	defaultMaxBodyBytes = int64(1 << 20)
 	defaultMaxRetries   = 2
+	maxRetries          = 3
 )
 
 // Config configures a Together inference provider.
@@ -28,8 +29,10 @@ type Config struct {
 	HTTPClient   *http.Client
 	Timeout      time.Duration
 	MaxBodyBytes int64
-	MaxRetries   int
-	Backoff      func(int) time.Duration
+	// MaxRetries uses the default when zero; negative values disable retries.
+	// Positive values are capped at three retries.
+	MaxRetries int
+	Backoff    func(int) time.Duration
 }
 
 // Client implements inference.Provider with Together's chat completions API.
@@ -57,11 +60,12 @@ func NewClient(config Config) *Client {
 	if config.MaxBodyBytes <= 0 {
 		config.MaxBodyBytes = defaultMaxBodyBytes
 	}
-	if config.MaxRetries < 0 {
-		config.MaxRetries = 0
-	}
 	if config.MaxRetries == 0 {
 		config.MaxRetries = defaultMaxRetries
+	} else if config.MaxRetries < 0 {
+		config.MaxRetries = 0
+	} else if config.MaxRetries > maxRetries {
+		config.MaxRetries = maxRetries
 	}
 	if config.Backoff == nil {
 		config.Backoff = defaultBackoff
@@ -200,7 +204,7 @@ func (client *Client) doCompletion(
 		if ctx.Err() != nil {
 			return "", false, ctx.Err()
 		}
-		return "", true, fmt.Errorf("Together request failed: %w", err)
+		return "", false, fmt.Errorf("Together request failed: %w", err)
 	}
 	defer response.Body.Close()
 	responseBody, err := readBounded(response.Body, client.maxBodyBytes)
@@ -280,11 +284,10 @@ func wait(ctx context.Context, duration time.Duration) error {
 
 // defaultBackoff returns a bounded exponential retry delay.
 func defaultBackoff(attempt int) time.Duration {
-	delay := 100 * time.Millisecond * time.Duration(1<<attempt)
-	if delay > time.Second {
+	if attempt >= 4 {
 		return time.Second
 	}
-	return delay
+	return 100 * time.Millisecond * time.Duration(1<<attempt)
 }
 
 var errEmptyCompletion = errors.New("empty Together completion")
