@@ -8,6 +8,9 @@ reference.
 
 Administrators can inspect AI audit logs at `GET /ai/logs`, including
 question-generation and written-grading operations.
+Future AI workflows should wrap providers with the audited provider; it keeps
+raw prompts and outputs (which may be sensitive) and records bounded retries
+and deadlines. No session workflow is wired to AI inference yet.
 
 ## Prerequisites
 
