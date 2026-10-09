@@ -64,11 +64,52 @@ func TestWrittenGradingPrompt(t *testing.T) {
 	}
 }
 
+func TestPromptNormalizesNilArraysWithoutMutatingRequest(t *testing.T) {
+	recent := inference.RecentQuestion{Level: 1, Prompt: "Old question"}
+	rejected := &catalog.Question{
+		ID: "q1", Type: inference.QuestionTypeWritten,
+	}
+	request := generationRequest()
+	request.RecentAcceptedQuestions = []inference.RecentQuestion{recent}
+	request.RejectedQuestion = rejected
+	request.RejectionReason = "Try again"
+
+	prompt, err := CreateGenerationUserPrompt(request)
+	if err != nil {
+		t.Fatalf("CreateGenerationUserPrompt() error = %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(prompt), &decoded); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	recentPrompt := decoded["recentAcceptedQuestions"].([]any)[0].(map[string]any)
+	if concepts := recentPrompt["targetConcepts"]; len(concepts.([]any)) != 0 {
+		t.Fatalf("recent targetConcepts = %#v", concepts)
+	}
+	rejectedPrompt := decoded["rejectedQuestion"].(map[string]any)
+	if concepts := rejectedPrompt["targetConcepts"]; len(concepts.([]any)) != 0 {
+		t.Fatalf("rejected targetConcepts = %#v", concepts)
+	}
+	rubrics := rejectedPrompt["rubrics"].(map[string]any)
+	if keyPoints := rubrics["keyPoints"]; len(keyPoints.([]any)) != 0 {
+		t.Fatalf("rejected keyPoints = %#v", keyPoints)
+	}
+	if misconceptions := rubrics["misconceptions"]; len(misconceptions.([]any)) != 0 {
+		t.Fatalf("rejected misconceptions = %#v", misconceptions)
+	}
+	if recent.TargetConcepts != nil || rejected.TargetConcepts != nil ||
+		rejected.Rubrics.KeyPoints != nil || rejected.Rubrics.Misconceptions != nil {
+		t.Fatal("CreateGenerationUserPrompt() mutated request arrays")
+	}
+}
+
 func TestTogetherRequestConstantsAndSchemas(t *testing.T) {
-	if inference.Model != "openai/gpt-oss-120b" || GenerationTemperature != 0.7 || GradingTemperature != 0 {
+	if Model != "openai/gpt-oss-120b" || GenerationTemperature != 0.7 || GradingTemperature != 0 {
 		t.Fatal("legacy model or temperatures changed")
 	}
-	for _, format := range []JSONSchemaResponseFormat{GeneratedQuestionResponseFormat, WrittenEvaluationResponseFormat} {
+	for _, format := range []JSONSchemaResponseFormat{
+		GeneratedQuestionResponseFormat, WrittenEvaluationResponseFormat,
+	} {
 		if !format.JSONSchema.Strict {
 			t.Fatalf("schema %q is not strict", format.JSONSchema.Name)
 		}
@@ -76,8 +117,9 @@ func TestTogetherRequestConstantsAndSchemas(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshal(%q): %v", format.JSONSchema.Name, err)
 		}
-		if len(encoded) == 0 {
-			t.Fatal("empty schema")
+		want := golden(t, format.JSONSchema.Name+".schema.golden")
+		if string(encoded) != want {
+			t.Errorf("schema %q changed", format.JSONSchema.Name)
 		}
 	}
 }

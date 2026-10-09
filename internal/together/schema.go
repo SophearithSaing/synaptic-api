@@ -36,6 +36,7 @@ var WrittenEvaluationResponseFormat = JSONSchemaResponseFormat{
 	},
 }
 
+// generatedQuestionSchema returns the legacy generation response schema.
 func generatedQuestionSchema() map[string]any {
 	stringField := map[string]any{"type": "string"}
 	stringArray := map[string]any{
@@ -83,6 +84,7 @@ func generatedQuestionSchema() map[string]any {
 	}
 }
 
+// writtenEvaluationSchema returns the legacy written-grading response schema.
 func writtenEvaluationSchema() map[string]any {
 	stringField := map[string]any{"type": "string"}
 	stringArray := map[string]any{

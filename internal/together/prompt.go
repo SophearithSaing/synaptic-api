@@ -9,6 +9,9 @@ import (
 )
 
 const (
+	// Model is the canonical Together model used by the legacy implementation.
+	Model = "openai/gpt-oss-120b"
+
 	// GenerationTemperature preserves the legacy question generation temperature.
 	GenerationTemperature = 0.7
 	// GradingTemperature preserves the legacy written-answer grading temperature.
@@ -52,7 +55,7 @@ func CreateGenerationUserPrompt(request inference.GenerationRequest) (string, er
 		Level: request.Level, QuestionNumber: request.QuestionNumber,
 		QuestionType:            request.QuestionType,
 		RecentAcceptedQuestions: recentQuestions(request.RecentAcceptedQuestions),
-		RejectedQuestion:        request.RejectedQuestion,
+		RejectedQuestion:        normalizedRejectedQuestion(request.RejectedQuestion),
 		RejectionReason:         request.RejectionReason, Instructions: instructions,
 	}
 	value, err := json.Marshal(prompt)
@@ -89,6 +92,7 @@ func CreateWrittenGradingUserPrompt(request inference.GradeWrittenRequest) (stri
 	return string(value), nil
 }
 
+// stringSlice encodes absent string arrays as empty JSON arrays.
 func stringSlice(values []string) []string {
 	if values == nil {
 		return []string{}
@@ -96,9 +100,27 @@ func stringSlice(values []string) []string {
 	return values
 }
 
+// recentQuestions normalizes nested arrays without mutating the caller slice.
 func recentQuestions(values []inference.RecentQuestion) []inference.RecentQuestion {
 	if values == nil {
 		return []inference.RecentQuestion{}
 	}
-	return values
+	normalized := make([]inference.RecentQuestion, len(values))
+	for index, question := range values {
+		question.TargetConcepts = stringSlice(question.TargetConcepts)
+		normalized[index] = question
+	}
+	return normalized
+}
+
+// normalizedRejectedQuestion normalizes required arrays without mutating input.
+func normalizedRejectedQuestion(question *catalog.Question) *catalog.Question {
+	if question == nil {
+		return nil
+	}
+	normalized := *question
+	normalized.TargetConcepts = stringSlice(question.TargetConcepts)
+	normalized.Rubrics.KeyPoints = stringSlice(question.Rubrics.KeyPoints)
+	normalized.Rubrics.Misconceptions = stringSlice(question.Rubrics.Misconceptions)
+	return &normalized
 }

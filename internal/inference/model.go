@@ -9,9 +9,6 @@ import (
 )
 
 const (
-	// Model is the canonical Together model used by the legacy implementation.
-	Model = "openai/gpt-oss-120b"
-
 	// QuestionTypeMCQ identifies multiple-choice questions.
 	QuestionTypeMCQ = "mcq"
 	// QuestionTypeWritten identifies written questions.
