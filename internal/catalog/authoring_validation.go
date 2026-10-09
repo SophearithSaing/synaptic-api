@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/SophearithSaing/synaptic-api/internal/validation"
+	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // AuthoringValidator validates catalog authoring requests and question
@@ -14,12 +16,22 @@ type AuthoringValidator struct {
 
 // NewAuthoringValidator builds an AuthoringValidator.
 func NewAuthoringValidator() (*AuthoringValidator, error) {
-	validator, err := validation.New()
+	validator, err := validation.New(validation.Rule{
+		Tag:      "objectid",
+		Validate: isObjectID,
+		Message:  "{0} must be a valid ObjectID",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("new request validator: %w", err)
 	}
 
 	return &AuthoringValidator{validator: validator}, nil
+}
+
+// isObjectID reports whether a string is a MongoDB ObjectID hex value.
+func isObjectID(field validator.FieldLevel) bool {
+	_, err := bson.ObjectIDFromHex(field.Field().String())
+	return err == nil
 }
 
 // ValidateCreateCategory validates a category create request.

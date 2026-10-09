@@ -15,14 +15,14 @@ type CreateTopicRequest struct {
 	Description string   `json:"description" validate:"required,min=1"`
 	Icon        string   `json:"icon" validate:"required,min=1"`
 	Tags        []string `json:"tags" validate:"required,min=1,max=2,dive,required"`
-	Category    string   `json:"category" validate:"required,min=1"`
+	Category    string   `json:"category" validate:"required,objectid"`
 }
 
 // CreateQuestionSetRequest is the input for creating one question set.
 type CreateQuestionSetRequest struct {
-	Topic     string     `json:"topic" validate:"required,min=1"`
+	Topic     string     `json:"topic" validate:"required,objectid"`
 	SetType   string     `json:"setType" validate:"required,oneof=regular live"`
-	Level     int64      `json:"level" validate:"gte=0"`
+	Level     *int64     `json:"level" validate:"required,gte=0"`
 	Questions []Question `json:"questions" validate:"required,min=1,dive"`
 }
 
@@ -30,7 +30,7 @@ type CreateQuestionSetRequest struct {
 // Pointers preserve whether the client omitted a field or supplied its zero
 // value.
 type UpdateQuestionSetRequest struct {
-	Topic     *string     `json:"topic,omitempty" validate:"omitempty,min=1"`
+	Topic     *string     `json:"topic,omitempty" validate:"omitempty,objectid"`
 	SetType   *string     `json:"setType,omitempty" validate:"omitempty,oneof=regular live"`
 	Level     *int64      `json:"level,omitempty" validate:"omitempty,gte=0"`
 	Questions *[]Question `json:"questions,omitempty" validate:"omitempty,min=1,dive"`
@@ -38,6 +38,6 @@ type UpdateQuestionSetRequest struct {
 
 // BulkUpdateQuestionSetRequest is one item in a bulk question-set update.
 type BulkUpdateQuestionSetRequest struct {
-	ID string `json:"id" validate:"required,min=1"`
+	ID string `json:"id" validate:"required,objectid"`
 	UpdateQuestionSetRequest
 }
