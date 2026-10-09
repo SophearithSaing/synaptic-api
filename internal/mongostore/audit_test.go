@@ -54,4 +54,7 @@ func TestAuditStorePersistencePaginationAndJoin(t *testing.T) {
 	if err != nil || id == "" {
 		t.Fatalf("create=%q err=%v", id, err)
 	}
+	if err := store.LinkLiveQuestion(ctx, id, questionID.Hex()); err != nil {
+		t.Fatalf("LinkLiveQuestion() error = %v", err)
+	}
 }
