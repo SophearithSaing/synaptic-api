@@ -20,12 +20,15 @@ type pageRepository struct {
 	Page
 	err   error
 	calls int
+	page  int64
+	limit int64
 }
 
 func (repository *pageRepository) Create(context.Context, Record) (string, error)         { return "", nil }
 func (repository *pageRepository) LinkLiveQuestion(context.Context, string, string) error { return nil }
-func (repository *pageRepository) List(context.Context, int64, int64) (Page, error) {
+func (repository *pageRepository) List(_ context.Context, page int64, limit int64) (Page, error) {
 	repository.calls++
+	repository.page, repository.limit = page, limit
 	return repository.Page, repository.err
 }
 
@@ -67,9 +70,19 @@ func TestHandlerAuthenticationPaginationAndResponse(t *testing.T) {
 		if response.Code != http.StatusOK {
 			t.Fatalf("cookie status=%d", response.Code)
 		}
+		if repository.page != 2 || repository.limit != 100 {
+			t.Fatalf("args=%d,%d", repository.page, repository.limit)
+		}
 		response = requestHandler(handler, "?limit=101", "")
 		if response.Code != http.StatusBadRequest {
 			t.Fatalf("bound status=%d", response.Code)
+		}
+	})
+	t.Run("whitelist and accumulated errors", func(t *testing.T) {
+		response := requestHandler(handler, "?page=&limit=0&extra=x", "")
+		want := `{"message":["property extra should not exist","page must not be less than 1","limit must not be less than 1"],"error":"Bad Request","statusCode":400}` + "\n"
+		if response.Code != http.StatusBadRequest || response.Body.String() != want {
+			t.Fatalf("response=%d %s", response.Code, response.Body.String())
 		}
 	})
 	t.Run("repository error", func(t *testing.T) {

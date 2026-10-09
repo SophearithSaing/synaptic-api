@@ -1,8 +1,11 @@
 package audit
 
 import (
+	"math"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/web"
@@ -50,34 +53,59 @@ func (handler *Handler) list(writer http.ResponseWriter, request *http.Request) 
 
 // pagination reads legacy one-based page and limit query values.
 func pagination(request *http.Request) (int64, int64, error) {
-	page, err := paginationValue(request, "page", defaultPage, 0)
-	if err != nil {
-		return 0, 0, err
+	query := request.URL.Query()
+	errors := make([]string, 0)
+	unknown := make([]string, 0)
+	for name := range query {
+		if name != "page" && name != "limit" {
+			unknown = append(unknown, name)
+		}
 	}
-	limit, err := paginationValue(request, "limit", defaultLimit, maxLimit)
-	if err != nil {
-		return 0, 0, err
+	sort.Strings(unknown)
+	for _, name := range unknown {
+		errors = append(errors, "property "+name+" should not exist")
+	}
+	page, pageErrors := paginationValue(query, "page", defaultPage, 0)
+	limit, limitErrors := paginationValue(query, "limit", defaultLimit, maxLimit)
+	errors = append(errors, pageErrors...)
+	errors = append(errors, limitErrors...)
+	if len(errors) != 0 {
+		return 0, 0, web.NewError(http.StatusBadRequest, errors)
+	}
+	if page-1 > math.MaxInt64/limit {
+		return 0, 0, validationError("page", "must be within the supported range")
 	}
 	return page, limit, nil
 }
 
 // paginationValue parses one positive query integer with an optional maximum.
-func paginationValue(request *http.Request, name string, fallback int64, maximum int64) (int64, error) {
-	value := request.URL.Query().Get(name)
-	if value == "" {
+func paginationValue(query map[string][]string, name string, fallback int64, maximum int64) (int64, []string) {
+	values, exists := query[name]
+	if !exists {
 		return fallback, nil
 	}
-	parsed, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return 0, validationError(name, "must be an integer")
+	value := ""
+	if len(values) > 0 {
+		value = values[0]
 	}
-	if parsed < 1 {
-		return 0, validationError(name, "must not be less than 1")
+	trimmed := strings.TrimSpace(value)
+	parsed := float64(0)
+	var err error
+	if trimmed != "" {
+		parsed, err = strconv.ParseFloat(trimmed, 64)
 	}
-	if maximum > 0 && parsed > maximum {
-		return 0, validationError(name, "must not be greater than "+strconv.FormatInt(maximum, 10))
+	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) || math.Trunc(parsed) != parsed || parsed > math.MaxInt64 || parsed < math.MinInt64 {
+		return 0, []string{name + " must be an integer number"}
 	}
-	return parsed, nil
+	integer := int64(parsed)
+	errors := make([]string, 0, 2)
+	if integer < 1 {
+		errors = append(errors, name+" must not be less than 1")
+	}
+	if maximum > 0 && integer > maximum {
+		errors = append(errors, name+" must not be greater than "+strconv.FormatInt(maximum, 10))
+	}
+	return integer, errors
 }
 
 // validationError produces the pinned legacy validation body.

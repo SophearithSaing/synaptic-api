@@ -11,6 +11,8 @@ import (
 type fakeProvider struct {
 	generation    inference.GenerationResult
 	generationErr error
+	grading       inference.GradeWrittenResult
+	gradingErr    error
 	calls         int
 }
 
@@ -19,19 +21,41 @@ func (p *fakeProvider) GenerateQuestion(context.Context, inference.GenerationReq
 	return p.generation, p.generationErr
 }
 func (p *fakeProvider) GradeWritten(context.Context, inference.GradeWrittenRequest) (inference.GradeWrittenResult, error) {
-	return inference.GradeWrittenResult{}, nil
+	p.calls++
+	return p.grading, p.gradingErr
 }
 
 type fakeRepository struct {
-	records    []Record
-	err        error
-	contextErr error
+	records     []Record
+	err         error
+	contextErr  error
+	hasDeadline bool
 }
 
 func (r *fakeRepository) Create(ctx context.Context, record Record) (string, error) {
 	r.contextErr = ctx.Err()
+	_, r.hasDeadline = ctx.Deadline()
 	r.records = append(r.records, record)
 	return "audit-id", r.err
+}
+
+func TestProviderAuditsGradingAndPersistenceFailure(t *testing.T) {
+	repo := &fakeRepository{}
+	provider := &fakeProvider{grading: inference.GradeWrittenResult{Completion: inference.CompletionMetadata{Model: "m", UserPrompt: "p", RawOutput: "o"}}}
+	result, err := NewProvider(provider, repo).GradeWritten(context.Background(), inference.GradeWrittenRequest{})
+	if err != nil || result.AuditID != "audit-id" || len(repo.records) != 1 || repo.records[0].Operation != OperationWrittenGrading {
+		t.Fatalf("result=%#v err=%v records=%#v", result, err, repo.records)
+	}
+	repo.err = errors.New("store")
+	_, err = NewProvider(provider, repo).GradeWritten(context.Background(), inference.GradeWrittenRequest{})
+	if !errors.Is(err, repo.err) {
+		t.Fatalf("error=%v", err)
+	}
+	provider.calls = 0
+	_, err = NewProvider(provider, repo).GradeWritten(context.Background(), inference.GradeWrittenRequest{Answers: []inference.WrittenAnswer{{}}})
+	if err == nil || provider.calls != 0 {
+		t.Fatalf("invalid grading error=%v calls=%d", err, provider.calls)
+	}
 }
 func (r *fakeRepository) LinkLiveQuestion(context.Context, string, string) error { return nil }
 func (r *fakeRepository) List(context.Context, int64, int64) (Page, error)       { return Page{}, nil }
@@ -86,5 +110,8 @@ func TestProviderAuditsCancelledCallsWithDetachedContext(t *testing.T) {
 	if !errors.Is(err, context.Canceled) || len(repo.records) != 1 ||
 		repo.contextErr != nil {
 		t.Fatalf("error=%v records=%d audit context=%v", err, len(repo.records), repo.contextErr)
+	}
+	if !repo.hasDeadline {
+		t.Fatal("detached audit context has no deadline")
 	}
 }
