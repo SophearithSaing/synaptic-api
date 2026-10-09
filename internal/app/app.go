@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 
+	"github.com/SophearithSaing/synaptic-api/internal/audit"
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 	"github.com/SophearithSaing/synaptic-api/internal/config"
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
@@ -116,9 +117,12 @@ func New(cfg config.Config) (*App, error) {
 		mongoClient.Database(cfg.MongoDatabase),
 	)
 	catalogHandler := catalog.NewHandler(catalogStore, authenticator)
+	auditStore := mongostore.NewAuditStore(mongoClient.Database(cfg.MongoDatabase))
+	auditHandler := audit.NewHandler(auditStore, authenticator)
 
 	middleware := []web.Middleware{throttler.Middleware}
-	mounters := []web.MountFunc{authHandler.Mount, catalogHandler.Mount}
+	mounters := []web.MountFunc{authHandler.Mount, catalogHandler.Mount,
+		auditHandler.Mount}
 
 	router := web.NewRouter(cfg.ClientURL, ready, middleware, mounters)
 
