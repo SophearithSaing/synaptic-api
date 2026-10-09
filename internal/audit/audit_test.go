@@ -3,9 +3,13 @@ package audit
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/SophearithSaing/synaptic-api/internal/inference"
+	"github.com/SophearithSaing/synaptic-api/internal/together"
 )
 
 type fakeProvider struct {
@@ -55,6 +59,31 @@ func TestProviderAuditsGradingAndPersistenceFailure(t *testing.T) {
 	_, err = NewProvider(provider, repo).GradeWritten(context.Background(), inference.GradeWrittenRequest{Answers: []inference.WrittenAnswer{{}}})
 	if err == nil || provider.calls != 0 {
 		t.Fatalf("invalid grading error=%v calls=%d", err, provider.calls)
+	}
+}
+
+func TestProviderAuditsGradingFailureAndRetriedTogetherCallOnce(t *testing.T) {
+	gradingErr := &inference.Error{Kind: inference.ErrorInvalidResponse, Completion: inference.CompletionMetadata{Model: "m", UserPrompt: "p", RawOutput: "bad"}}
+	repo := &fakeRepository{}
+	_, err := NewProvider(&fakeProvider{gradingErr: gradingErr}, repo).GradeWritten(context.Background(), inference.GradeWrittenRequest{})
+	if !errors.Is(err, gradingErr) || len(repo.records) != 1 || repo.records[0].Output != "bad" {
+		t.Fatalf("error=%v records=%#v", err, repo.records)
+	}
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		calls++
+		if calls == 1 {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = writer.Write([]byte(`{"choices":[{"message":{"content":"{\"question\":{\"id\":\"x\",\"type\":\"written\",\"prompt\":\"p\",\"targetConcepts\":[\"c\"],\"feedback\":{\"correct\":\"y\",\"incorrect\":\"n\"},\"rubrics\":{\"keyPoints\":[],\"misconceptions\":[]}}}"}}]}`))
+	}))
+	defer server.Close()
+	repo = &fakeRepository{}
+	provider := together.NewClient(together.Config{APIKey: "key", Endpoint: server.URL, MaxRetries: 1, Backoff: func(int) time.Duration { return 0 }})
+	result, err := NewProvider(provider, repo).GenerateQuestion(context.Background(), inference.GenerationRequest{QuestionType: inference.QuestionTypeWritten})
+	if err != nil || calls != 2 || len(repo.records) != 1 || result.AuditID == "" || repo.records[0].Model == "" || repo.records[0].Prompt == "" || repo.records[0].Output == "" {
+		t.Fatalf("result=%#v error=%v calls=%d records=%#v", result, err, calls, repo.records)
 	}
 }
 func (r *fakeRepository) LinkLiveQuestion(context.Context, string, string) error { return nil }

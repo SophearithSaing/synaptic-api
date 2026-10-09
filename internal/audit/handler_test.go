@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,6 +84,33 @@ func TestHandlerAuthenticationPaginationAndResponse(t *testing.T) {
 		want := `{"message":["property extra should not exist","page must not be less than 1","limit must not be less than 1"],"error":"Bad Request","statusCode":400}` + "\n"
 		if response.Code != http.StatusBadRequest || response.Body.String() != want {
 			t.Fatalf("response=%d %s", response.Code, response.Body.String())
+		}
+	})
+	t.Run("numeric transforms repeated overflow and role reload", func(t *testing.T) {
+		response := requestHandler(handler, "?page=1.0&limit=%201e1%20", "")
+		if response.Code != http.StatusOK || repository.page != 1 || repository.limit != 10 {
+			t.Fatalf("transform=%d args=%d,%d", response.Code, repository.page, repository.limit)
+		}
+		response = requestHandler(handler, "?page=1&page=2", "")
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("repeated=%d", response.Code)
+		}
+		response = requestHandler(handler, "?page=9223372036854775807&limit=100", "")
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("overflow=%d", response.Code)
+		}
+		admin.Role = identity.RoleUser
+		response = requestHandler(handler, "", "")
+		admin.Role = identity.RoleAdmin
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("reloaded role=%d", response.Code)
+		}
+	})
+	t.Run("populated and null response shapes", func(t *testing.T) {
+		repository.Page = Page{Items: []Record{{ID: "a", Operation: OperationQuestionGeneration, Model: "m", Prompt: "p", Output: "o", LiveQuestion: nil}, {ID: "b", Operation: OperationWrittenGrading, Model: "m", Prompt: "p", Output: "o", LiveQuestion: &LiveQuestion{ID: "q", Status: "pending"}}}, Total: 2, Page: 1, Limit: 20}
+		response := requestHandler(handler, "", "")
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"liveQuestion":null`) || !strings.Contains(response.Body.String(), `"operation":"written-grading"`) {
+			t.Fatalf("body=%s", response.Body.String())
 		}
 	})
 	t.Run("repository error", func(t *testing.T) {

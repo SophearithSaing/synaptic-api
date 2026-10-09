@@ -84,10 +84,11 @@ func paginationValue(query map[string][]string, name string, fallback int64, max
 	if !exists {
 		return fallback, nil
 	}
-	value := ""
-	if len(values) > 0 {
-		value = values[0]
+	if len(values) != 1 {
+		return 0, []string{name + " must be an integer number"}
 	}
+	value := ""
+	value = values[0]
 	trimmed := strings.TrimSpace(value)
 	parsed := float64(0)
 	var err error
