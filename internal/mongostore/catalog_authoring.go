@@ -28,7 +28,7 @@ func (s *CatalogStore) CreateCategory(
 		return nil, err
 	}
 
-	return decodeCategoryDocument(document)
+	return categoryFromDocument(document), nil
 }
 
 // CreateTopic creates a topic after transactionally guarding its category.
@@ -49,7 +49,7 @@ func (s *CatalogStore) CreateTopic(
 		if category == nil {
 			return nil, catalog.ErrCategoryNotFound
 		}
-		if err := s.bumpVersion(ctx, s.categories, categoryID, category.Version); err != nil {
+		if err := s.bumpVersion(ctx, s.categories, categoryID); err != nil {
 			return nil, err
 		}
 
@@ -63,11 +63,7 @@ func (s *CatalogStore) CreateTopic(
 			return nil, err
 		}
 
-		nested, err := decodeCategoryDocument(*category)
-		if err != nil {
-			return nil, err
-		}
-		return topicFromDocument(document, nested), nil
+		return topicFromDocument(document, categoryFromDocument(*category)), nil
 	})
 	if err != nil {
 		return nil, err
@@ -102,7 +98,7 @@ func (s *CatalogStore) CreateQuestionSet(
 		if topic == nil {
 			return nil, catalog.ErrTopicNotFound
 		}
-		if err := s.bumpVersion(ctx, s.topics, topicID, topic.Version); err != nil {
+		if err := s.bumpVersion(ctx, s.topics, topicID); err != nil {
 			return nil, err
 		}
 
@@ -110,7 +106,7 @@ func (s *CatalogStore) CreateQuestionSet(
 		document := QuestionSetDocument{
 			ID: bson.NewObjectID(), TopicID: topicID, SetType: request.SetType,
 			Level: *request.Level, Questions: request.Questions,
-			CreatedAt: now, UpdatedAt: now,
+			CreatedAt: now, UpdatedAt: now, Version: 0,
 		}
 		if _, err := s.questionSets.InsertOne(ctx, document); err != nil {
 			return nil, err
@@ -156,7 +152,7 @@ func (s *CatalogStore) UpdateQuestionSet(
 		}
 
 		set := bson.M{"updatedAt": time.Now().UTC()}
-		if request.Topic != nil && nextTopicID != document.TopicID {
+		if request.Topic != nil {
 			topic, err := s.topicDocument(ctx, nextTopicID)
 			if err != nil {
 				return nil, err
@@ -164,10 +160,12 @@ func (s *CatalogStore) UpdateQuestionSet(
 			if topic == nil {
 				return nil, catalog.ErrTopicNotFound
 			}
-			if err := s.bumpVersion(ctx, s.topics, nextTopicID, topic.Version); err != nil {
+			if err := s.bumpVersion(ctx, s.topics, nextTopicID); err != nil {
 				return nil, err
 			}
-			set["topicId"] = nextTopicID
+			if nextTopicID != document.TopicID {
+				set["topicId"] = nextTopicID
+			}
 		}
 		if request.SetType != nil {
 			set["setType"] = *request.SetType
@@ -222,7 +220,9 @@ func (s *CatalogStore) DeleteCategory(ctx context.Context, id string) error {
 			}
 			return nil, catalog.ErrCategoryNotFound
 		}
-		if referenced, err := s.exists(ctx, s.topics, "categoryId", objectID); err != nil || referenced {
+		if referenced, err := s.hasReferences(
+			ctx, s.topics, []string{"categoryId", "category"}, objectID,
+		); err != nil || referenced {
 			if err != nil {
 				return nil, err
 			}
@@ -249,13 +249,17 @@ func (s *CatalogStore) DeleteTopic(ctx context.Context, id string) error {
 		}
 		for _, reference := range []struct {
 			collection *mongo.Collection
-			field      string
+			fields     []string
 		}{
-			{s.questionSets, "topicId"}, {s.sessions, "topicId"},
-			{s.liveSessions, "topicId"}, {s.setAttempts, "topicId"},
-			{s.sessionEvaluations, "topicId"},
+			{s.questionSets, []string{"topicId", "topic"}},
+			{s.sessions, []string{"topic", "topicId"}},
+			{s.liveSessions, []string{"topic", "topicId"}},
+			{s.setAttempts, []string{"topic", "topicId"}},
+			{s.sessionEvaluations, []string{"topic", "topicId"}},
 		} {
-			if referenced, err := s.exists(ctx, reference.collection, reference.field, objectID); err != nil || referenced {
+			if referenced, err := s.hasReferences(
+				ctx, reference.collection, reference.fields, objectID,
+			); err != nil || referenced {
 				if err != nil {
 					return nil, err
 				}
@@ -283,11 +287,14 @@ func (s *CatalogStore) DeleteQuestionSet(ctx context.Context, id string) error {
 		}
 		for _, reference := range []struct {
 			collection *mongo.Collection
-			field      string
+			fields     []string
 		}{
-			{s.setAttempts, "questionSetId"}, {s.liveQuestions, "questionSetId"},
+			{s.setAttempts, []string{"questionSet", "questionSetId"}},
+			{s.liveQuestions, []string{"questionSet", "questionSetId"}},
 		} {
-			if referenced, err := s.exists(ctx, reference.collection, reference.field, objectID); err != nil || referenced {
+			if referenced, err := s.hasReferences(
+				ctx, reference.collection, reference.fields, objectID,
+			); err != nil || referenced {
 				if err != nil {
 					return nil, err
 				}
@@ -301,12 +308,21 @@ func (s *CatalogStore) DeleteQuestionSet(ctx context.Context, id string) error {
 }
 
 // SelectQuestionSet selects the first exact topic, level, and type match.
-func (s *CatalogStore) SelectQuestionSet(ctx context.Context, topic string, level int64, setType string) (*catalog.QuestionSet, error) {
+func (s *CatalogStore) SelectQuestionSet(
+	ctx context.Context,
+	topic string,
+	level int64,
+	setType string,
+) (*catalog.QuestionSet, error) {
 	topicID, err := parseObjectID(topic)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := s.questionSets.FindOne(ctx, bson.M{"topicId": topicID, "level": level, "setType": setType}, options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}})).Raw()
+	raw, err := s.questionSets.FindOne(
+		ctx,
+		bson.M{"topicId": topicID, "level": level, "setType": setType},
+		options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}}),
+	).Raw()
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return nil, catalog.ErrQuestionSetNotFound
 	}
@@ -317,7 +333,10 @@ func (s *CatalogStore) SelectQuestionSet(ctx context.Context, topic string, leve
 }
 
 // withTransaction runs callback in a MongoDB transaction.
-func (s *CatalogStore) withTransaction(ctx context.Context, callback func(context.Context) (any, error)) (any, error) {
+func (s *CatalogStore) withTransaction(
+	ctx context.Context,
+	callback func(context.Context) (any, error),
+) (any, error) {
 	session, err := s.categories.Database().Client().StartSession()
 	if err != nil {
 		return nil, fmt.Errorf("start catalog transaction: %w", err)
@@ -326,8 +345,13 @@ func (s *CatalogStore) withTransaction(ctx context.Context, callback func(contex
 	return session.WithTransaction(ctx, callback)
 }
 
-// exists reports whether collection has an ObjectID reference.
-func (s *CatalogStore) exists(ctx context.Context, collection *mongo.Collection, field string, value bson.ObjectID) (bool, error) {
+// exists reports whether collection has an ObjectID document or reference.
+func (s *CatalogStore) exists(
+	ctx context.Context,
+	collection *mongo.Collection,
+	field string,
+	value bson.ObjectID,
+) (bool, error) {
 	err := collection.FindOne(ctx, bson.M{field: value}).Err()
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return false, nil
@@ -335,9 +359,36 @@ func (s *CatalogStore) exists(ctx context.Context, collection *mongo.Collection,
 	return err == nil, err
 }
 
+// hasReferences reports whether collection has a historical or canonical
+// reference to value.
+func (s *CatalogStore) hasReferences(
+	ctx context.Context,
+	collection *mongo.Collection,
+	fields []string,
+	value bson.ObjectID,
+) (bool, error) {
+	filters := make(bson.A, 0, len(fields))
+	for _, field := range fields {
+		filters = append(filters, bson.M{field: bson.M{
+			"$in": bson.A{value, value.Hex()},
+		}})
+	}
+	err := collection.FindOne(ctx, bson.M{"$or": filters}).Err()
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 // bumpVersion atomically advances a parent document's legacy version.
-func (s *CatalogStore) bumpVersion(ctx context.Context, collection *mongo.Collection, id bson.ObjectID, version int) error {
-	result, err := collection.UpdateOne(ctx, bson.M{"_id": id, "__v": version}, bson.M{"$inc": bson.M{"__v": 1}})
+func (s *CatalogStore) bumpVersion(
+	ctx context.Context,
+	collection *mongo.Collection,
+	id bson.ObjectID,
+) error {
+	result, err := collection.UpdateOne(
+		ctx, bson.M{"_id": id}, bson.M{"$inc": bson.M{"__v": 1}},
+	)
 	if err != nil {
 		return err
 	}
@@ -348,7 +399,10 @@ func (s *CatalogStore) bumpVersion(ctx context.Context, collection *mongo.Collec
 }
 
 // categoryDocument loads one category document or nil when absent.
-func (s *CatalogStore) categoryDocument(ctx context.Context, id bson.ObjectID) (*CategoryDocument, error) {
+func (s *CatalogStore) categoryDocument(
+	ctx context.Context,
+	id bson.ObjectID,
+) (*CategoryDocument, error) {
 	var document CategoryDocument
 	err := s.categories.FindOne(ctx, bson.M{"_id": id}).Decode(&document)
 	if errors.Is(err, mongo.ErrNoDocuments) {
@@ -358,7 +412,10 @@ func (s *CatalogStore) categoryDocument(ctx context.Context, id bson.ObjectID) (
 }
 
 // topicDocument loads one topic document or nil when absent.
-func (s *CatalogStore) topicDocument(ctx context.Context, id bson.ObjectID) (*TopicDocument, error) {
+func (s *CatalogStore) topicDocument(
+	ctx context.Context,
+	id bson.ObjectID,
+) (*TopicDocument, error) {
 	var document TopicDocument
 	err := s.topics.FindOne(ctx, bson.M{"_id": id}).Decode(&document)
 	if errors.Is(err, mongo.ErrNoDocuments) {
@@ -368,7 +425,10 @@ func (s *CatalogStore) topicDocument(ctx context.Context, id bson.ObjectID) (*To
 }
 
 // questionSetDocument loads one question-set document or nil when absent.
-func (s *CatalogStore) questionSetDocument(ctx context.Context, id bson.ObjectID) (*QuestionSetDocument, error) {
+func (s *CatalogStore) questionSetDocument(
+	ctx context.Context,
+	id bson.ObjectID,
+) (*QuestionSetDocument, error) {
 	var document QuestionSetDocument
 	err := s.questionSets.FindOne(ctx, bson.M{"_id": id}).Decode(&document)
 	if errors.Is(err, mongo.ErrNoDocuments) {
@@ -377,26 +437,36 @@ func (s *CatalogStore) questionSetDocument(ctx context.Context, id bson.ObjectID
 	return &document, err
 }
 
-// decodeCategoryDocument maps an in-memory category document.
-func decodeCategoryDocument(document CategoryDocument) (*catalog.Category, error) {
-	return &catalog.Category{ID: document.ID.Hex(), Title: document.Title, Slug: document.Slug, Description: document.Description, Icon: document.Icon}, nil
+// categoryFromDocument maps an in-memory category document.
+func categoryFromDocument(document CategoryDocument) *catalog.Category {
+	return &catalog.Category{
+		ID: document.ID.Hex(), Title: document.Title, Slug: document.Slug,
+		Description: document.Description, Icon: document.Icon,
+	}
 }
 
 // topicFromDocument maps an in-memory topic document.
 func topicFromDocument(document TopicDocument, category *catalog.Category) *catalog.Topic {
-	return &catalog.Topic{ID: document.ID.Hex(), Title: document.Title, Slug: document.Slug, Description: document.Description, Icon: document.Icon, Tags: document.Tags, CategoryID: document.CategoryID.Hex(), Category: category}
+	return &catalog.Topic{
+		ID: document.ID.Hex(), Title: document.Title, Slug: document.Slug,
+		Description: document.Description, Icon: document.Icon, Tags: document.Tags,
+		CategoryID: document.CategoryID.Hex(), Category: category,
+	}
 }
 
 // questionSetFromDocument maps an in-memory question-set document.
-func (s *CatalogStore) questionSetFromDocument(ctx context.Context, document QuestionSetDocument) (*catalog.QuestionSet, error) {
-	return s.decodeQuestionSet(ctx, mustMarshalDocument(document), nil)
-}
-
-// mustMarshalDocument serializes an in-memory question-set document.
-func mustMarshalDocument(document QuestionSetDocument) bson.Raw {
-	raw, err := bson.Marshal(document)
+func (s *CatalogStore) questionSetFromDocument(
+	ctx context.Context,
+	document QuestionSetDocument,
+) (*catalog.QuestionSet, error) {
+	topic, err := s.questionSetTopic(ctx, document.TopicID, nil)
 	if err != nil {
-		panic(fmt.Sprintf("marshal question set document: %v", err))
+		return nil, err
 	}
-	return raw
+	return &catalog.QuestionSet{
+		ID: document.ID.Hex(), TopicID: document.TopicID.Hex(), Topic: topic,
+		SetType: document.SetType, Level: document.Level,
+		Questions: document.Questions, CreatedAt: document.CreatedAt,
+		UpdatedAt: document.UpdatedAt,
+	}, nil
 }

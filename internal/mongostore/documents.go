@@ -70,4 +70,5 @@ type QuestionSetDocument struct {
 	Questions []catalog.Question `bson:"questions"`
 	CreatedAt time.Time          `bson:"createdAt"`
 	UpdatedAt time.Time          `bson:"updatedAt"`
+	Version   int                `bson:"__v"`
 }
