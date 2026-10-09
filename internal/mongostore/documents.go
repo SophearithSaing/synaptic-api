@@ -42,6 +42,9 @@ type CategoryDocument struct {
 	Slug        string        `bson:"slug"`
 	Description string        `bson:"description"`
 	Icon        string        `bson:"icon"`
+	CreatedAt   time.Time     `bson:"createdAt"`
+	UpdatedAt   time.Time     `bson:"updatedAt"`
+	Version     int           `bson:"__v"`
 }
 
 // TopicDocument is the exact topics BSON representation.
