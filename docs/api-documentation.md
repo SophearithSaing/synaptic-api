@@ -275,6 +275,7 @@ Important errors:
 
 Admin only. Returns AI completion logs, sorted newest first. Linked live
 questions are populated when available.
+Operations are `question-generation` or `written-grading`.
 
 Query parameters:
 

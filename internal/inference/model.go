@@ -53,6 +53,7 @@ type GenerationRequest struct {
 type GenerationResult struct {
 	Question   catalog.Question
 	Completion CompletionMetadata
+	AuditID    string
 }
 
 // WrittenAnswer supplies the question and answer context needed for grading.
@@ -80,6 +81,7 @@ type WrittenEvaluation struct {
 type GradeWrittenResult struct {
 	Evaluations []WrittenEvaluation
 	Completion  CompletionMetadata
+	AuditID     string
 }
 
 // ErrorKind identifies provider failures without coupling them to HTTP.

@@ -68,3 +68,25 @@ type QuestionSetDocument struct {
 	CreatedAt time.Time          `bson:"createdAt"`
 	UpdatedAt time.Time          `bson:"updatedAt"`
 }
+
+// AILogDocument is the compatible aiLogs BSON representation.
+type AILogDocument struct {
+	ID           bson.ObjectID  `bson:"_id,omitempty"`
+	Operation    string         `bson:"operation"`
+	AIModel      string         `bson:"aiModel"`
+	Prompt       string         `bson:"prompt"`
+	Output       string         `bson:"output"`
+	LiveQuestion *bson.ObjectID `bson:"liveQuestion,omitempty"`
+	CreatedAt    time.Time      `bson:"createdAt"`
+	UpdatedAt    time.Time      `bson:"updatedAt"`
+	Version      int            `bson:"__v"`
+}
+
+// LiveQuestionDocument is the joined liveQuestions BSON representation.
+type LiveQuestionDocument struct {
+	ID             bson.ObjectID    `bson:"_id"`
+	Question       catalog.Question `bson:"question"`
+	Level          int64            `bson:"level"`
+	QuestionNumber int64            `bson:"questionNumber"`
+	Status         string           `bson:"status"`
+}

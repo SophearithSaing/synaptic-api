@@ -1,0 +1,90 @@
+package audit
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/SophearithSaing/synaptic-api/internal/inference"
+)
+
+type fakeProvider struct {
+	generation    inference.GenerationResult
+	generationErr error
+	calls         int
+}
+
+func (p *fakeProvider) GenerateQuestion(context.Context, inference.GenerationRequest) (inference.GenerationResult, error) {
+	p.calls++
+	return p.generation, p.generationErr
+}
+func (p *fakeProvider) GradeWritten(context.Context, inference.GradeWrittenRequest) (inference.GradeWrittenResult, error) {
+	return inference.GradeWrittenResult{}, nil
+}
+
+type fakeRepository struct {
+	records    []Record
+	err        error
+	contextErr error
+}
+
+func (r *fakeRepository) Create(ctx context.Context, record Record) (string, error) {
+	r.contextErr = ctx.Err()
+	r.records = append(r.records, record)
+	return "audit-id", r.err
+}
+func (r *fakeRepository) LinkLiveQuestion(context.Context, string, string) error { return nil }
+func (r *fakeRepository) List(context.Context, int64, int64) (Page, error)       { return Page{}, nil }
+
+func TestProviderAuditsSuccessAndFailure(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := &fakeRepository{}
+		wrapped := NewProvider(&fakeProvider{generation: inference.GenerationResult{Completion: inference.CompletionMetadata{Model: "m", UserPrompt: "p", RawOutput: "o"}}}, repo)
+		result, err := wrapped.GenerateQuestion(context.Background(), inference.GenerationRequest{QuestionType: inference.QuestionTypeMCQ})
+		if err != nil || result.AuditID != "audit-id" || len(repo.records) != 1 {
+			t.Fatalf("result=%#v err=%v records=%#v", result, err, repo.records)
+		}
+	})
+	t.Run("failure", func(t *testing.T) {
+		callErr := &inference.Error{Kind: inference.ErrorInvalidResponse, Completion: inference.CompletionMetadata{Model: "m", UserPrompt: "p", RawOutput: "bad"}}
+		repo := &fakeRepository{}
+		wrapped := NewProvider(&fakeProvider{generationErr: callErr}, repo)
+		_, err := wrapped.GenerateQuestion(context.Background(), inference.GenerationRequest{QuestionType: inference.QuestionTypeMCQ})
+		if !errors.Is(err, callErr) || len(repo.records) != 1 || repo.records[0].Output != "bad" {
+			t.Fatalf("err=%v records=%#v", err, repo.records)
+		}
+	})
+}
+
+func TestProviderSkipsInvalidInputAndPreservesPersistenceFailure(t *testing.T) {
+	provider := &fakeProvider{}
+	repo := &fakeRepository{err: errors.New("store unavailable")}
+	wrapped := NewProvider(provider, repo)
+	_, err := wrapped.GenerateQuestion(context.Background(), inference.GenerationRequest{QuestionType: "invalid"})
+	if err == nil || provider.calls != 0 || len(repo.records) != 0 {
+		t.Fatalf("err=%v calls=%d records=%d", err, provider.calls, len(repo.records))
+	}
+	callErr := errors.New("provider failed")
+	provider.generationErr = callErr
+	_, err = wrapped.GenerateQuestion(context.Background(), inference.GenerationRequest{QuestionType: inference.QuestionTypeMCQ})
+	if !errors.Is(err, callErr) || !errors.Is(err, repo.err) {
+		t.Fatalf("joined error=%v", err)
+	}
+}
+
+func TestProviderAuditsCancelledCallsWithDetachedContext(t *testing.T) {
+	callErr := &inference.Error{Kind: inference.ErrorUpstream,
+		Cause:      context.Canceled,
+		Completion: inference.CompletionMetadata{Model: "m", UserPrompt: "p"}}
+	repo := &fakeRepository{}
+	wrapped := NewProvider(&fakeProvider{generationErr: callErr}, repo)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := wrapped.GenerateQuestion(ctx, inference.GenerationRequest{
+		QuestionType: inference.QuestionTypeMCQ,
+	})
+	if !errors.Is(err, context.Canceled) || len(repo.records) != 1 ||
+		repo.contextErr != nil {
+		t.Fatalf("error=%v records=%d audit context=%v", err, len(repo.records), repo.contextErr)
+	}
+}

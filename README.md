@@ -6,6 +6,9 @@ package for HTTP (no router framework) and the official MongoDB driver v2.
 The legacy NestJS implementation lives on the `main` branch for contract
 reference.
 
+Administrators can inspect AI audit logs at `GET /ai/logs`, including
+question-generation and written-grading operations.
+
 ## Prerequisites
 
 - Go (version pinned in `go.mod`)
