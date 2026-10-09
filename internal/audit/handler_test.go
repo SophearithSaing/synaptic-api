@@ -62,6 +62,24 @@ func TestHandlerAuthenticationPaginationAndResponse(t *testing.T) {
 			t.Fatalf("response=%d %s", response.Code, response.Body.String())
 		}
 	})
+	t.Run("cookie and bounds", func(t *testing.T) {
+		response := requestHandler(handler, "?page=2&limit=100", "cookie")
+		if response.Code != http.StatusOK {
+			t.Fatalf("cookie status=%d", response.Code)
+		}
+		response = requestHandler(handler, "?limit=101", "")
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("bound status=%d", response.Code)
+		}
+	})
+	t.Run("repository error", func(t *testing.T) {
+		repository.err = context.DeadlineExceeded
+		response := requestHandler(handler, "", "")
+		repository.err = nil
+		if response.Code != http.StatusInternalServerError {
+			t.Fatalf("status=%d", response.Code)
+		}
+	})
 }
 
 func newTestHandler(t *testing.T, repository Repository, user *identity.User) http.Handler {
@@ -76,13 +94,20 @@ func newTestHandler(t *testing.T, repository Repository, user *identity.User) ht
 		t.Fatal(err)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Header.Set("Authorization", "Bearer "+token)
+		if r.Header.Get("X-Test-Auth") == "cookie" {
+			r.AddCookie(&http.Cookie{Name: "access_token", Value: token})
+		} else {
+			r.Header.Set("Authorization", "Bearer "+token)
+		}
 		mux.ServeHTTP(w, r)
 	})
 }
 
-func requestHandler(handler http.Handler, query string, _ string) *httptest.ResponseRecorder {
+func requestHandler(handler http.Handler, query string, authentication string) *httptest.ResponseRecorder {
 	request := httptest.NewRequest(http.MethodGet, "/ai/logs"+query, nil)
+	if authentication != "" {
+		request.Header.Set("X-Test-Auth", authentication)
+	}
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	return response
