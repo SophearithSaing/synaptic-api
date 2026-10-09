@@ -189,6 +189,19 @@ func TestHandlerSuccessMatchesContractFixture(t *testing.T) {
 	}
 }
 
+func TestHandlerRejectsGoNumericSyntaxAndPaginationOverflow(t *testing.T) {
+	repository := &pageRepository{Page: Page{Items: []Record{}}}
+	admin := &identity.User{ID: "user", Email: "admin@example.com", Username: "admin", Role: identity.RoleAdmin}
+	handler := newTestHandler(t, repository, admin)
+	for _, query := range []string{"?page=1_0", "?page=0x1p2", "?page=1e18&limit=100"} {
+		repository.calls = 0
+		response := requestHandler(handler, query, "")
+		if response.Code != http.StatusBadRequest || repository.calls != 0 {
+			t.Fatalf("query=%s status=%d calls=%d", query, response.Code, repository.calls)
+		}
+	}
+}
+
 func newTestHandler(t *testing.T, repository Repository, user *identity.User) http.Handler {
 	t.Helper()
 	issuer := identity.NewTokenIssuer("secret", "issuer", "audience", time.Hour)

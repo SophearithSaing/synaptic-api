@@ -3,12 +3,17 @@ package audit
 import (
 	"math"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/web"
+)
+
+var decimalNumberPattern = regexp.MustCompile(
+	`^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$`,
 )
 
 const (
@@ -90,12 +95,8 @@ func paginationValue(query map[string][]string, name string, fallback int64, max
 	value := ""
 	value = values[0]
 	trimmed := strings.TrimSpace(value)
-	parsed := float64(0)
-	var err error
-	if trimmed != "" {
-		parsed, err = strconv.ParseFloat(trimmed, 64)
-	}
-	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) || math.Trunc(parsed) != parsed || parsed > math.MaxInt64 || parsed < math.MinInt64 {
+	parsed, ok := parseJSDecimal(trimmed)
+	if !ok || math.Trunc(parsed) != parsed || parsed >= float64(math.MaxInt64) || parsed < math.MinInt64 {
 		return 0, []string{name + " must be an integer number"}
 	}
 	integer := int64(parsed)
@@ -107,6 +108,18 @@ func paginationValue(query map[string][]string, name string, fallback int64, max
 		errors = append(errors, name+" must not be greater than "+strconv.FormatInt(maximum, 10))
 	}
 	return integer, errors
+}
+
+// parseJSDecimal accepts JavaScript decimal and exponent number syntax only.
+func parseJSDecimal(value string) (float64, bool) {
+	if value == "" {
+		return 0, true
+	}
+	if !decimalNumberPattern.MatchString(value) {
+		return 0, false
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	return parsed, err == nil && !math.IsNaN(parsed) && !math.IsInf(parsed, 0)
 }
 
 // validationError produces the pinned legacy validation body.
