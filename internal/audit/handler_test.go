@@ -152,6 +152,43 @@ func TestHandlerValidationMatchesContractFixture(t *testing.T) {
 	}
 }
 
+func TestHandlerSuccessMatchesContractFixture(t *testing.T) {
+	fixture, err := os.ReadFile(filepath.Join("..", "..", "contract", "fixtures", "get-ai-logs", "success.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture = []byte(strings.ReplaceAll(string(fixture), "<isoDate>", "2026-01-02T03:04:05Z"))
+	var contract struct {
+		Response struct {
+			Body json.RawMessage `json:"body"`
+		} `json:"response"`
+	}
+	if err := json.Unmarshal(fixture, &contract); err != nil {
+		t.Fatal(err)
+	}
+	var expectedPage pageResponse
+	if err := json.Unmarshal(contract.Response.Body, &expectedPage); err != nil {
+		t.Fatal(err)
+	}
+	repository := &pageRepository{Page: Page{
+		Items: expectedPage.Items, Total: expectedPage.Total,
+		Page: expectedPage.Page, Limit: expectedPage.Limit,
+	}}
+	admin := &identity.User{ID: "user", Email: "admin@example.com", Username: "admin", Role: identity.RoleAdmin}
+	response := requestHandler(newTestHandler(t, repository, admin), "", "")
+	var actual any
+	var expected any
+	if err := json.Unmarshal(response.Body.Bytes(), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(contract.Response.Body, &expected); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != http.StatusOK || !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("actual=%#v expected=%#v", actual, expected)
+	}
+}
+
 func newTestHandler(t *testing.T, repository Repository, user *identity.User) http.Handler {
 	t.Helper()
 	issuer := identity.NewTokenIssuer("secret", "issuer", "audience", time.Hour)
