@@ -9,12 +9,18 @@ type Service struct {
 }
 
 // NewService builds a catalog authoring service.
-func NewService(repo AuthoringRepository, validator *AuthoringValidator) *Service {
+func NewService(
+	repo AuthoringRepository,
+	validator *AuthoringValidator,
+) *Service {
 	return &Service{repo: repo, validator: validator}
 }
 
 // CreateCategory persists a validated category.
-func (s *Service) CreateCategory(ctx context.Context, request CreateCategoryRequest) (*Category, []string, error) {
+func (s *Service) CreateCategory(
+	ctx context.Context,
+	request CreateCategoryRequest,
+) (*Category, []string, error) {
 	if messages := s.validator.ValidateCreateCategory(request); len(messages) != 0 {
 		return nil, messages, nil
 	}
@@ -23,7 +29,10 @@ func (s *Service) CreateCategory(ctx context.Context, request CreateCategoryRequ
 }
 
 // CreateTopic persists a validated topic.
-func (s *Service) CreateTopic(ctx context.Context, request CreateTopicRequest) (*Topic, []string, error) {
+func (s *Service) CreateTopic(
+	ctx context.Context,
+	request CreateTopicRequest,
+) (*Topic, []string, error) {
 	if messages := s.validator.ValidateCreateTopic(request); len(messages) != 0 {
 		return nil, messages, nil
 	}
@@ -33,7 +42,10 @@ func (s *Service) CreateTopic(ctx context.Context, request CreateTopicRequest) (
 
 // CreateQuestionSets validates every request before creating each in input
 // order. Storage errors leave any preceding creates intact.
-func (s *Service) CreateQuestionSets(ctx context.Context, requests []CreateQuestionSetRequest) ([]QuestionSet, []string, error) {
+func (s *Service) CreateQuestionSets(
+	ctx context.Context,
+	requests []CreateQuestionSetRequest,
+) ([]QuestionSet, []string, error) {
 	for _, request := range requests {
 		if messages := s.validator.ValidateCreateQuestionSet(request); len(messages) != 0 {
 			return nil, messages, nil
@@ -51,7 +63,11 @@ func (s *Service) CreateQuestionSets(ctx context.Context, requests []CreateQuest
 }
 
 // UpdateQuestionSet applies one validated patch.
-func (s *Service) UpdateQuestionSet(ctx context.Context, id string, request UpdateQuestionSetRequest) (*QuestionSet, []string, error) {
+func (s *Service) UpdateQuestionSet(
+	ctx context.Context,
+	id string,
+	request UpdateQuestionSetRequest,
+) (*QuestionSet, []string, error) {
 	if messages := s.validator.ValidateUpdateQuestionSet(request); len(messages) != 0 {
 		return nil, messages, nil
 	}
@@ -61,7 +77,10 @@ func (s *Service) UpdateQuestionSet(ctx context.Context, id string, request Upda
 
 // UpdateQuestionSets validates all patches before attempting each one. It
 // returns the first error in input order after every item has been attempted.
-func (s *Service) UpdateQuestionSets(ctx context.Context, requests []BulkUpdateQuestionSetRequest) ([]QuestionSet, []string, error) {
+func (s *Service) UpdateQuestionSets(
+	ctx context.Context,
+	requests []BulkUpdateQuestionSetRequest,
+) ([]QuestionSet, []string, error) {
 	for _, request := range requests {
 		if messages := s.validator.ValidateBulkUpdateQuestionSet(request); len(messages) != 0 {
 			return nil, messages, nil
@@ -70,7 +89,9 @@ func (s *Service) UpdateQuestionSets(ctx context.Context, requests []BulkUpdateQ
 	updated := make([]QuestionSet, 0, len(requests))
 	var first error
 	for _, request := range requests {
-		questionSet, err := s.repo.UpdateQuestionSet(ctx, request.ID, request.UpdateQuestionSetRequest)
+		questionSet, err := s.repo.UpdateQuestionSet(
+			ctx, request.ID, request.UpdateQuestionSetRequest,
+		)
 		if err != nil && first == nil {
 			first = err
 		}

@@ -29,13 +29,26 @@ type Repository interface {
 // AuthoringRepository persists catalog authoring operations.
 type AuthoringRepository interface {
 	// CreateCategory persists a category.
-	CreateCategory(ctx context.Context, request CreateCategoryRequest) (*Category, error)
+	CreateCategory(
+		ctx context.Context,
+		request CreateCategoryRequest,
+	) (*Category, error)
 	// CreateTopic persists a topic.
-	CreateTopic(ctx context.Context, request CreateTopicRequest) (*Topic, error)
+	CreateTopic(
+		ctx context.Context,
+		request CreateTopicRequest,
+	) (*Topic, error)
 	// CreateQuestionSet persists a question set.
-	CreateQuestionSet(ctx context.Context, request CreateQuestionSetRequest) (*QuestionSet, error)
+	CreateQuestionSet(
+		ctx context.Context,
+		request CreateQuestionSetRequest,
+	) (*QuestionSet, error)
 	// UpdateQuestionSet applies a question-set patch.
-	UpdateQuestionSet(ctx context.Context, id string, request UpdateQuestionSetRequest) (*QuestionSet, error)
+	UpdateQuestionSet(
+		ctx context.Context,
+		id string,
+		request UpdateQuestionSetRequest,
+	) (*QuestionSet, error)
 	// DeleteCategory removes an unreferenced category.
 	DeleteCategory(ctx context.Context, id string) error
 	// DeleteTopic removes an unreferenced topic.
@@ -43,5 +56,10 @@ type AuthoringRepository interface {
 	// DeleteQuestionSet removes an unreferenced question set.
 	DeleteQuestionSet(ctx context.Context, id string) error
 	// SelectQuestionSet resolves one exact question-set selection.
-	SelectQuestionSet(ctx context.Context, topic string, level int64, setType string) (*QuestionSet, error)
+	SelectQuestionSet(
+		ctx context.Context,
+		topic string,
+		level int64,
+		setType string,
+	) (*QuestionSet, error)
 }

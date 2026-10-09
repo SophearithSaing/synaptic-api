@@ -3,6 +3,7 @@ package mongostore_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -154,43 +155,66 @@ func TestCatalogDeletesHonorHistoricalAndCanonicalReferences(t *testing.T) {
 
 func TestCatalogWriteDeleteRacesPreserveReferences(t *testing.T) {
 	ctx, database, store := newCatalogAuthoringStore(t)
-	category, err := store.CreateCategory(ctx, catalog.CreateCategoryRequest{Title: "Category", Slug: "category", Description: "Category", Icon: "book"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	runTogether(
-		func() {
-			_, _ = store.CreateTopic(ctx, catalog.CreateTopicRequest{Title: "Created", Slug: "created", Description: "Created", Icon: "tag", Tags: []string{"tag"}, Category: category.ID})
-		},
-		func() { _ = store.DeleteCategory(ctx, category.ID) },
-	)
-	assertNoDanglingReference(t, ctx, database, "topics", "categoryId", mustID(t, category.ID), "categories")
+	for attempt := 0; attempt < 3; attempt++ {
+		suffix := fmt.Sprintf("race-%d", attempt)
+		category, err := store.CreateCategory(ctx, catalog.CreateCategoryRequest{
+			Title: suffix, Slug: suffix + "-category", Description: suffix,
+			Icon: "book",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		outcomes := runTogether(
+			func() error {
+				_, err := store.CreateTopic(ctx, topicRequest(
+					suffix+"-child", category.ID,
+				))
+				return err
+			},
+			func() error { return store.DeleteCategory(ctx, category.ID) },
+		)
+		assertRaceOutcome(t, outcomes, catalog.ErrCategoryNotFound,
+			catalog.ErrCategoryReferenced)
+		assertNoDanglingReference(t, ctx, database, "topics", "categoryId",
+			mustID(t, category.ID), "categories")
 
-	category, topic := createCategoryAndTopic(t, ctx, store, "set-race")
-	level := int64(0)
-	runTogether(
-		func() {
-			_, _ = store.CreateQuestionSet(ctx, catalog.CreateQuestionSetRequest{Topic: topic.ID, SetType: "regular", Level: &level, Questions: []catalog.Question{validMCQ()}})
-		},
-		func() { _ = store.DeleteTopic(ctx, topic.ID) },
-	)
-	assertNoDanglingReference(t, ctx, database, "questionSets", "topicId", mustID(t, topic.ID), "topics")
-	_ = category
+		_, topic := createCategoryAndTopic(t, ctx, store, suffix+"-set")
+		level := int64(0)
+		outcomes = runTogether(
+			func() error {
+				_, err := store.CreateQuestionSet(ctx, questionSetRequest(
+					topic.ID, level,
+				))
+				return err
+			},
+			func() error { return store.DeleteTopic(ctx, topic.ID) },
+		)
+		assertRaceOutcome(t, outcomes, catalog.ErrTopicNotFound,
+			catalog.ErrTopicReferenced)
+		assertNoDanglingReference(t, ctx, database, "questionSets", "topicId",
+			mustID(t, topic.ID), "topics")
 
-	_, source := createCategoryAndTopic(t, ctx, store, "move-source")
-	_, target := createCategoryAndTopic(t, ctx, store, "move-target")
-	set, err := store.CreateQuestionSet(ctx, catalog.CreateQuestionSetRequest{Topic: source.ID, SetType: "regular", Level: &level, Questions: []catalog.Question{validMCQ()}})
-	if err != nil {
-		t.Fatal(err)
+		_, source := createCategoryAndTopic(t, ctx, store, suffix+"-source")
+		_, target := createCategoryAndTopic(t, ctx, store, suffix+"-target")
+		set, err := store.CreateQuestionSet(ctx, questionSetRequest(source.ID, level))
+		if err != nil {
+			t.Fatal(err)
+		}
+		targetID := target.ID
+		outcomes = runTogether(
+			func() error {
+				_, err := store.UpdateQuestionSet(ctx, set.ID,
+					catalog.UpdateQuestionSetRequest{Topic: &targetID},
+				)
+				return err
+			},
+			func() error { return store.DeleteTopic(ctx, target.ID) },
+		)
+		assertRaceOutcome(t, outcomes, catalog.ErrTopicNotFound,
+			catalog.ErrTopicReferenced)
+		assertNoDanglingReference(t, ctx, database, "questionSets", "topicId",
+			mustID(t, target.ID), "topics")
 	}
-	targetID := target.ID
-	runTogether(
-		func() {
-			_, _ = store.UpdateQuestionSet(ctx, set.ID, catalog.UpdateQuestionSetRequest{Topic: &targetID})
-		},
-		func() { _ = store.DeleteTopic(ctx, target.ID) },
-	)
-	assertNoDanglingReference(t, ctx, database, "questionSets", "topicId", mustID(t, target.ID), "topics")
 }
 
 func TestCatalogBulkWritesUseDocumentedPartialBehavior(t *testing.T) {
@@ -247,7 +271,7 @@ func TestCatalogIndexesRejectDuplicateSlugs(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = store.CreateCategory(ctx, catalog.CreateCategoryRequest{Title: "Two", Slug: "same", Description: "Two", Icon: "two"})
-	if err == nil {
+	if !mongo.IsDuplicateKeyError(err) {
 		t.Fatal("duplicate category slug was accepted")
 	}
 	_, err = store.CreateTopic(ctx, catalog.CreateTopicRequest{Title: "One", Slug: "topic", Description: "One", Icon: "one", Tags: []string{"tag"}, Category: category.ID})
@@ -255,13 +279,13 @@ func TestCatalogIndexesRejectDuplicateSlugs(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = store.CreateTopic(ctx, catalog.CreateTopicRequest{Title: "Two", Slug: "topic", Description: "Two", Icon: "two", Tags: []string{"tag"}, Category: category.ID})
-	if err == nil {
+	if !mongo.IsDuplicateKeyError(err) {
 		t.Fatal("duplicate topic slug was accepted")
 	}
 }
 
 func TestCatalogSelectionAllowsDuplicateGroupsInObjectIDOrder(t *testing.T) {
-	ctx, _, store := newCatalogAuthoringStore(t)
+	ctx, database, store := newCatalogAuthoringStore(t)
 	category, err := store.CreateCategory(ctx, catalog.CreateCategoryRequest{Title: "One", Slug: "one", Description: "One", Icon: "one"})
 	if err != nil {
 		t.Fatal(err)
@@ -270,31 +294,24 @@ func TestCatalogSelectionAllowsDuplicateGroupsInObjectIDOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	level := int64(1)
-	first, err := store.CreateQuestionSet(ctx, catalog.CreateQuestionSetRequest{Topic: topic.ID, SetType: "regular", Level: &level, Questions: []catalog.Question{validMCQ()}})
-	if err != nil {
+	topicID := mustID(t, topic.ID)
+	low := mustID(t, "665f1e2b9d1a2c3b4d5e0001")
+	high := mustID(t, "665f1e2b9d1a2c3b4d5e0002")
+	live := mustID(t, "665f1e2b9d1a2c3b4d5e0003")
+	otherLevel := mustID(t, "665f1e2b9d1a2c3b4d5e0004")
+	if _, err := database.Collection("questionSets").InsertMany(ctx, []any{
+		questionSetDocument(high, topicID, "regular", 1),
+		questionSetDocument(low, topicID, "regular", 1),
+		questionSetDocument(live, topicID, "live", 1),
+		questionSetDocument(otherLevel, topicID, "regular", 2),
+	}); err != nil {
 		t.Fatal(err)
 	}
-	second, err := store.CreateQuestionSet(ctx, catalog.CreateQuestionSetRequest{Topic: topic.ID, SetType: "regular", Level: &level, Questions: []catalog.Question{validMCQ()}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	selected, err := store.SelectQuestionSet(ctx, topic.ID, level, "regular")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := first.ID
-	if second.ID < want {
-		want = second.ID
-	}
-	if selected.ID != want {
-		t.Fatalf("selected %s, want %s", selected.ID, want)
-	}
-	if _, err := store.SelectQuestionSet(ctx, topic.ID, level, "live"); !errors.Is(err, catalog.ErrQuestionSetNotFound) {
-		t.Fatalf("exact type selection: %v", err)
-	}
-	if _, err := store.SelectQuestionSet(ctx, topic.ID, level+1, "regular"); !errors.Is(err, catalog.ErrQuestionSetNotFound) {
-		t.Fatalf("exact level selection: %v", err)
+	assertSelectedID(t, ctx, store, topic.ID, 1, "regular", low.Hex())
+	assertSelectedID(t, ctx, store, topic.ID, 1, "live", live.Hex())
+	assertSelectedID(t, ctx, store, topic.ID, 2, "regular", otherLevel.Hex())
+	if _, err := store.SelectQuestionSet(ctx, topic.ID, 3, "regular"); !errors.Is(err, catalog.ErrQuestionSetNotFound) {
+		t.Fatalf("no match: %v", err)
 	}
 }
 
@@ -387,7 +404,34 @@ func newCatalogAuthoringValidator(t *testing.T) *catalog.AuthoringValidator {
 }
 
 func validMCQ() catalog.Question {
-	return catalog.Question{ID: "q", Type: "mcq", Prompt: "Question", Options: []catalog.QuestionOption{{ID: "a", Text: "Answer"}}, CorrectOptionID: "a", TargetConcepts: []string{"concept"}, Feedback: catalog.QuestionFeedback{Correct: "Correct", Incorrect: "Incorrect"}, Rubrics: catalog.QuestionRubric{KeyPoints: []string{"point"}, Misconceptions: []string{"mistake"}}}
+	return catalog.Question{
+		ID: "q", Type: "mcq", Prompt: "Question", CorrectOptionID: "a",
+		Options:        []catalog.QuestionOption{{ID: "a", Text: "Answer"}},
+		TargetConcepts: []string{"concept"},
+		Feedback: catalog.QuestionFeedback{
+			Correct: "Correct", Incorrect: "Incorrect",
+		},
+		Rubrics: catalog.QuestionRubric{
+			KeyPoints: []string{"point"}, Misconceptions: []string{"mistake"},
+		},
+	}
+}
+
+func topicRequest(slug, categoryID string) catalog.CreateTopicRequest {
+	return catalog.CreateTopicRequest{
+		Title: slug, Slug: slug, Description: slug, Icon: "tag",
+		Tags: []string{"tag"}, Category: categoryID,
+	}
+}
+
+func questionSetRequest(
+	topicID string,
+	level int64,
+) catalog.CreateQuestionSetRequest {
+	return catalog.CreateQuestionSetRequest{
+		Topic: topicID, SetType: "regular", Level: &level,
+		Questions: []catalog.Question{validMCQ()},
+	}
 }
 
 func mustID(t *testing.T, value string) bson.ObjectID {
@@ -399,19 +443,65 @@ func mustID(t *testing.T, value string) bson.ObjectID {
 	return id
 }
 
-func runTogether(first, second func()) {
+func runTogether(first, second func() error) [2]error {
 	ready := make(chan struct{})
+	var outcomes [2]error
 	var group sync.WaitGroup
 	group.Add(2)
-	for _, operation := range []func(){first, second} {
-		go func(operation func()) {
+	for index, operation := range []func() error{first, second} {
+		go func(index int, operation func() error) {
 			defer group.Done()
 			<-ready
-			operation()
-		}(operation)
+			outcomes[index] = operation()
+		}(index, operation)
 	}
 	close(ready)
 	group.Wait()
+	return outcomes
+}
+
+func assertRaceOutcome(
+	t *testing.T,
+	outcomes [2]error,
+	createNotFound, deleteReferenced error,
+) {
+	t.Helper()
+	if outcomes[0] == nil && errors.Is(outcomes[1], deleteReferenced) {
+		return
+	}
+	if errors.Is(outcomes[0], createNotFound) && outcomes[1] == nil {
+		return
+	}
+	t.Fatalf("race outcomes %v and %v", outcomes[0], outcomes[1])
+}
+
+func assertSelectedID(
+	t *testing.T,
+	ctx context.Context,
+	store *mongostore.CatalogStore,
+	topic string,
+	level int64,
+	setType, want string,
+) {
+	t.Helper()
+	selected, err := store.SelectQuestionSet(ctx, topic, level, setType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if selected.ID != want {
+		t.Fatalf("selected %s, want %s", selected.ID, want)
+	}
+}
+
+func questionSetDocument(
+	id, topicID bson.ObjectID,
+	setType string,
+	level int64,
+) bson.M {
+	return bson.M{
+		"_id": id, "topicId": topicID, "setType": setType, "level": level,
+		"questions": bson.A{}, "__v": 0,
+	}
 }
 
 func assertNoDanglingReference(
@@ -446,11 +536,17 @@ func createCategoryAndTopic(
 	suffix string,
 ) (*catalog.Category, *catalog.Topic) {
 	t.Helper()
-	category, err := store.CreateCategory(ctx, catalog.CreateCategoryRequest{Title: suffix, Slug: suffix + "-category", Description: suffix, Icon: "book"})
+	category, err := store.CreateCategory(ctx, catalog.CreateCategoryRequest{
+		Title: suffix, Slug: suffix + "-category", Description: suffix,
+		Icon: "book",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	topic, err := store.CreateTopic(ctx, catalog.CreateTopicRequest{Title: suffix, Slug: suffix + "-topic", Description: suffix, Icon: "tag", Tags: []string{"tag"}, Category: category.ID})
+	topic, err := store.CreateTopic(ctx, catalog.CreateTopicRequest{
+		Title: suffix, Slug: suffix + "-topic", Description: suffix,
+		Icon: "tag", Tags: []string{"tag"}, Category: category.ID,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
