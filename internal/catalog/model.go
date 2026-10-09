@@ -27,32 +27,32 @@ type Topic struct {
 
 // QuestionOption is one selectable answer for a question.
 type QuestionOption struct {
-	ID   string `bson:"id" json:"id"`
-	Text string `bson:"text" json:"text"`
+	ID   string `bson:"id" json:"id" validate:"required,min=1"`
+	Text string `bson:"text" json:"text" validate:"required,min=1"`
 }
 
 // QuestionFeedback describes responses to correct and incorrect answers.
 type QuestionFeedback struct {
-	Correct   string `bson:"correct" json:"correct"`
-	Incorrect string `bson:"incorrect" json:"incorrect"`
+	Correct   string `bson:"correct" json:"correct" validate:"required,min=1"`
+	Incorrect string `bson:"incorrect" json:"incorrect" validate:"required,min=1"`
 }
 
 // QuestionRubric describes expected points and common misconceptions.
 type QuestionRubric struct {
-	KeyPoints      []string `bson:"keyPoints" json:"keyPoints"`
-	Misconceptions []string `bson:"misconceptions" json:"misconceptions"`
+	KeyPoints      []string `bson:"keyPoints" json:"keyPoints" validate:"required,min=1,dive,required"`
+	Misconceptions []string `bson:"misconceptions" json:"misconceptions" validate:"required,min=1,dive,required"`
 }
 
 // Question is one multiple-choice or written question.
 type Question struct {
-	ID              string           `bson:"id" json:"id"`
-	Type            string           `bson:"type" json:"type"`
-	Prompt          string           `bson:"prompt" json:"prompt"`
-	Options         []QuestionOption `bson:"options,omitempty" json:"options,omitempty"`
+	ID              string           `bson:"id" json:"id" validate:"required,min=1"`
+	Type            string           `bson:"type" json:"type" validate:"required,oneof=mcq written"`
+	Prompt          string           `bson:"prompt" json:"prompt" validate:"required,min=1"`
+	Options         []QuestionOption `bson:"options,omitempty" json:"options,omitempty" validate:"dive"`
 	CorrectOptionID string           `bson:"correctOptionId,omitempty" json:"correctOptionId,omitempty"`
-	TargetConcepts  []string         `bson:"targetConcepts" json:"targetConcepts"`
-	Feedback        QuestionFeedback `bson:"feedback" json:"feedback"`
-	Rubrics         QuestionRubric   `bson:"rubrics" json:"rubrics"`
+	TargetConcepts  []string         `bson:"targetConcepts" json:"targetConcepts" validate:"required,min=1,dive,required"`
+	Feedback        QuestionFeedback `bson:"feedback" json:"feedback" validate:"required"`
+	Rubrics         QuestionRubric   `bson:"rubrics" json:"rubrics" validate:"required"`
 }
 
 // QuestionSet is the question-set response shape.
