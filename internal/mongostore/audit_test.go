@@ -31,7 +31,7 @@ func TestAuditStorePersistencePaginationAndJoin(t *testing.T) {
 	danglingID := bson.NewObjectID()
 	_, err = database.Collection("aiLogs").InsertMany(ctx, []any{
 		mongostore.AILogDocument{ID: linkedID, Operation: "question-generation", AIModel: "m", Prompt: "p", Output: "o", LiveQuestion: &questionID, CreatedAt: now, UpdatedAt: now},
-		mongostore.AILogDocument{ID: bson.NewObjectID(), Operation: "written-grading", AIModel: "m", Prompt: "p2", Output: "o2", LiveQuestion: &danglingID, CreatedAt: now.Add(time.Second), UpdatedAt: now},
+		mongostore.AILogDocument{ID: bson.NewObjectID(), Operation: "written-grading", AIModel: "m", Prompt: "p2", Output: "o2", LiveQuestion: &danglingID, CreatedAt: now, UpdatedAt: now},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -56,5 +56,24 @@ func TestAuditStorePersistencePaginationAndJoin(t *testing.T) {
 	}
 	if err := store.LinkLiveQuestion(ctx, id, questionID.Hex()); err != nil {
 		t.Fatalf("LinkLiveQuestion() error = %v", err)
+	}
+	page, err = store.List(ctx, 1, 20)
+	if err != nil || page.Total != 3 || len(page.Items) != 3 ||
+		page.Items[0].ID != id || page.Items[0].LiveQuestion == nil {
+		t.Fatalf("linked page=%#v err=%v", page, err)
+	}
+	empty, err := store.List(ctx, 99, 20)
+	if err != nil || empty.Total != 3 || empty.Items == nil || len(empty.Items) != 0 {
+		t.Fatalf("empty page=%#v err=%v", empty, err)
+	}
+	createdID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := database.Collection("aiLogs").FindOne(ctx, bson.M{"_id": createdID}).Raw()
+	if err != nil || raw.Lookup("operation").StringValue() != "written-grading" ||
+		raw.Lookup("aiModel").StringValue() != "m" || raw.Lookup("liveQuestion").ObjectID() != questionID ||
+		raw.Lookup("createdAt").Type != bson.TypeDateTime || raw.Lookup("__v").Type != bson.TypeInt32 {
+		t.Fatalf("raw=%v err=%v", raw, err)
 	}
 }

@@ -2,8 +2,12 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -121,6 +125,31 @@ func TestHandlerAuthenticationPaginationAndResponse(t *testing.T) {
 			t.Fatalf("status=%d", response.Code)
 		}
 	})
+}
+
+func TestHandlerValidationMatchesContractFixture(t *testing.T) {
+	fixture, err := os.ReadFile(filepath.Join("..", "..", "contract", "fixtures", "get-ai-logs", "validation-400.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract struct {
+		Response struct {
+			Body any `json:"body"`
+		} `json:"response"`
+	}
+	if err := json.Unmarshal(fixture, &contract); err != nil {
+		t.Fatal(err)
+	}
+	repository := &pageRepository{}
+	admin := &identity.User{ID: "user", Email: "admin@example.com", Username: "admin", Role: identity.RoleAdmin}
+	response := requestHandler(newTestHandler(t, repository, admin), "?limit=0", "")
+	var actual any
+	if err := json.Unmarshal(response.Body.Bytes(), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != http.StatusBadRequest || !reflect.DeepEqual(actual, contract.Response.Body) {
+		t.Fatalf("actual=%#v contract=%#v", actual, contract.Response.Body)
+	}
 }
 
 func newTestHandler(t *testing.T, repository Repository, user *identity.User) http.Handler {
