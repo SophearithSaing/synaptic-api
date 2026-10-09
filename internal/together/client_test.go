@@ -218,8 +218,7 @@ func TestDecodeWrittenEvaluationsRejectsInvalidResults(t *testing.T) {
 
 func TestDecodeGeneratedQuestionRejectsInvalidMCQ(t *testing.T) {
 	for _, output := range []string{
-		`{"question":{"id":"x","type":"written","prompt":"p","targetConcepts":[],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
-		`{"question":{"id":"x","type":"mcq","prompt":"p","targetConcepts":[],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
+		`{"question":{"id":"x","type":"mcq","prompt":"p","options":[{"id":"o1","text":"a"},{"id":"o2","text":"b"},{"id":"o3","text":"c"}],"correctOptionId":"o2","targetConcepts":[],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
 		generatedQuestionJSON("mcq") + ` trailing`,
 		`{"question":{"id":"x","type":"mcq","prompt":"p","targetConcepts":[null],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
 		`{"question":{"id":"x","type":"mcq","prompt":"p","targetConcepts":["dfa"],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[1],"misconceptions":[]}}}`,
@@ -237,6 +236,10 @@ func TestDecodeGeneratedQuestionSemanticValidation(t *testing.T) {
 	if question, err := decodeGeneratedQuestion(written, request); err != nil || question.ID == "" {
 		t.Fatalf("written question = %#v, error = %v", question, err)
 	}
+	emptyWritten := `{"question":{"id":"x","type":"written","prompt":"p","targetConcepts":[],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`
+	if _, err := decodeGeneratedQuestion(emptyWritten, request); err == nil {
+		t.Fatal("written question with empty concepts accepted")
+	}
 	for _, output := range []string{
 		`{"question":{"id":"x","type":"written","prompt":"p","targetConcepts":[],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
 		`{"question":{"id":"x","type":"mcq","prompt":"p","options":[{"id":"o1","text":"a"},{"id":"o1","text":"b"},{"id":"o3","text":"c"}],"correctOptionId":"o1","targetConcepts":["dfa"],"feedback":{"correct":"","incorrect":""},"rubrics":{"keyPoints":[],"misconceptions":[]}}}`,
@@ -246,6 +249,23 @@ func TestDecodeGeneratedQuestionSemanticValidation(t *testing.T) {
 		if _, err := decodeGeneratedQuestion(output, transportGenerationRequest()); err == nil {
 			t.Fatalf("output accepted: %s", output)
 		}
+	}
+}
+
+func TestDecodeWrittenEvaluationsAcceptsCompleteBatch(t *testing.T) {
+	request := gradingRequest()
+	request.Answers = append(request.Answers, inference.WrittenAnswer{
+		Question: catalog.Question{ID: "q2", Type: inference.QuestionTypeWritten},
+	})
+	output := `{"evaluations":[{"questionId":"q1","score":0,"correctAnswer":"a","feedback":"f","strengths":[],"weaknesses":["dfa"]},{"questionId":"q2","score":1,"correctAnswer":"b","feedback":"g","strengths":["dfa"],"weaknesses":[]}]}`
+	evaluations, err := decodeWrittenEvaluations(output, request)
+	if err != nil {
+		t.Fatalf("decodeWrittenEvaluations() error = %v", err)
+	}
+	if len(evaluations) != 2 || evaluations[0].QuestionID != "q1" ||
+		evaluations[0].Score != 0 || evaluations[1].QuestionID != "q2" ||
+		evaluations[1].Score != 1 {
+		t.Fatalf("evaluations = %#v", evaluations)
 	}
 }
 
