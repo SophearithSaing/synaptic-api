@@ -128,7 +128,7 @@ func New(cfg config.Config) (*App, error) {
 	}
 	catalogService := catalog.NewService(catalogStore, catalogValidator)
 	catalogHandler := catalog.NewHandler(
-		catalogStore, authenticator, catalogService,
+		catalogStore, catalogService, authenticator,
 	)
 
 	middleware := []web.Middleware{throttler.Middleware}

@@ -19,13 +19,9 @@ type Handler struct {
 // NewHandler builds the catalog routes handler.
 func NewHandler(
 	repo Repository,
+	service *Service,
 	authenticator *identity.Authenticator,
-	services ...*Service,
 ) *Handler {
-	var service *Service
-	if len(services) != 0 {
-		service = services[0]
-	}
 	return &Handler{repo: repo, service: service, authenticator: authenticator}
 }
 
@@ -48,12 +44,9 @@ func (h *Handler) Mount(mux *http.ServeMux) {
 	mux.Handle("GET /questions/topic/{slug}", auth(
 		http.HandlerFunc(h.listQuestionSetsByTopic),
 	))
-	if h.service == nil {
-		return
-	}
 	admin := identity.RequireRole(identity.RoleAdmin)
 	write := func(next http.HandlerFunc) http.Handler {
-		return web.Chain(next, auth, admin, identity.RequireCSRF)
+		return web.Chain(next, identity.RequireCSRF, auth, admin)
 	}
 	mux.Handle("POST /categories/category/create", write(h.createCategory))
 	mux.Handle("POST /topics/create", write(h.createTopic))
@@ -82,27 +75,41 @@ func (h *Handler) createTopic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	created, messages, err := h.service.CreateTopic(r.Context(), request)
+	if created != nil {
+		h.writeAuthoring(w, r, http.StatusCreated, topicHTTP(*created), messages, err)
+		return
+	}
 	h.writeAuthoring(w, r, http.StatusCreated, created, messages, err)
 }
 
 // createQuestionSets decodes and creates question sets.
 func (h *Handler) createQuestionSets(w http.ResponseWriter, r *http.Request) {
-	var requests []CreateQuestionSetRequest
+	var requests *[]CreateQuestionSetRequest
 	if !h.decode(w, r, &requests) {
 		return
 	}
-	created, messages, err := h.service.CreateQuestionSets(r.Context(), requests)
-	h.writeAuthoring(w, r, http.StatusCreated, created, messages, err)
+	if requests == nil {
+		web.WriteError(w, r, web.NewError(http.StatusBadRequest,
+			"Validation failed (parsable array expected)"))
+		return
+	}
+	created, messages, err := h.service.CreateQuestionSets(r.Context(), *requests)
+	h.writeQuestionSets(w, r, http.StatusCreated, created, messages, err)
 }
 
 // updateQuestionSets decodes and applies bulk question-set patches.
 func (h *Handler) updateQuestionSets(w http.ResponseWriter, r *http.Request) {
-	var requests []BulkUpdateQuestionSetRequest
+	var requests *[]BulkUpdateQuestionSetRequest
 	if !h.decode(w, r, &requests) {
 		return
 	}
-	updated, messages, err := h.service.UpdateQuestionSets(r.Context(), requests)
-	h.writeAuthoring(w, r, http.StatusOK, updated, messages, err)
+	if requests == nil {
+		web.WriteError(w, r, web.NewError(http.StatusBadRequest,
+			"Validation failed (parsable array expected)"))
+		return
+	}
+	updated, messages, err := h.service.UpdateQuestionSets(r.Context(), *requests)
+	h.writeQuestionSets(w, r, http.StatusOK, updated, messages, err)
 }
 
 // updateQuestionSet decodes and applies one question-set patch.
@@ -112,6 +119,10 @@ func (h *Handler) updateQuestionSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	updated, messages, err := h.service.UpdateQuestionSet(r.Context(), r.PathValue("id"), request)
+	if updated != nil {
+		h.writeAuthoring(w, r, http.StatusOK, questionSetHTTP(*updated, false), messages, err)
+		return
+	}
 	h.writeAuthoring(w, r, http.StatusOK, updated, messages, err)
 }
 
@@ -150,6 +161,19 @@ func (h *Handler) writeAuthoring(w http.ResponseWriter, r *http.Request, status 
 		return
 	}
 	web.WriteJSON(w, status, value)
+}
+
+// writeQuestionSets renders authoring question sets without populated topics.
+func (h *Handler) writeQuestionSets(w http.ResponseWriter, r *http.Request, status int, sets []QuestionSet, messages []string, err error) {
+	if len(messages) != 0 || err != nil {
+		h.writeAuthoring(w, r, status, nil, messages, err)
+		return
+	}
+	response := make([]questionSetResponse, 0, len(sets))
+	for _, questionSet := range sets {
+		response = append(response, questionSetHTTP(questionSet, false))
+	}
+	web.WriteJSON(w, status, response)
 }
 
 // delete runs one catalog deletion and writes an empty successful response.
@@ -191,7 +215,11 @@ func (h *Handler) listTopics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, topics)
+	response := make([]topicResponse, 0, len(topics))
+	for _, topic := range topics {
+		response = append(response, topicHTTP(topic))
+	}
+	web.WriteJSON(w, http.StatusOK, response)
 }
 
 // getTopic validates the id and returns one topic.
@@ -202,7 +230,7 @@ func (h *Handler) getTopic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, topic)
+	web.WriteJSON(w, http.StatusOK, topicHTTP(*topic))
 }
 
 // getQuestionSet returns one question set with its joined topic.
@@ -215,7 +243,8 @@ func (h *Handler) getQuestionSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, questionSet)
+	populated := r.URL.Query().Get("populateTopic") != "false"
+	web.WriteJSON(w, http.StatusOK, questionSetHTTP(*questionSet, populated))
 }
 
 // listQuestionSetsByTopic returns a topic's question sets.
@@ -231,7 +260,12 @@ func (h *Handler) listQuestionSetsByTopic(
 		return
 	}
 
-	web.WriteJSON(w, http.StatusOK, questionSets)
+	populated := r.URL.Query().Get("populateTopic") == "true"
+	response := make([]questionSetResponse, 0, len(questionSets))
+	for _, questionSet := range questionSets {
+		response = append(response, questionSetHTTP(questionSet, populated))
+	}
+	web.WriteJSON(w, http.StatusOK, response)
 }
 
 // writeLookupError maps catalog lookup errors to HTTP responses.

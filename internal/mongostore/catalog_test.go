@@ -80,7 +80,7 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 	}
 
 	mux := http.NewServeMux()
-	catalog.NewHandler(catalogStore, identity.NewAuthenticator(
+	catalog.NewHandler(catalogStore, nil, identity.NewAuthenticator(
 		issuer, store,
 	)).Mount(mux)
 
