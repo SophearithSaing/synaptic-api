@@ -104,3 +104,18 @@ func (s *Service) UpdateQuestionSets(
 	}
 	return updated, nil, nil
 }
+
+// DeleteCategory deletes an unreferenced category.
+func (s *Service) DeleteCategory(ctx context.Context, id string) error {
+	return s.repo.DeleteCategory(ctx, id)
+}
+
+// DeleteTopic deletes an unreferenced topic.
+func (s *Service) DeleteTopic(ctx context.Context, id string) error {
+	return s.repo.DeleteTopic(ctx, id)
+}
+
+// DeleteQuestionSet deletes an unreferenced question set.
+func (s *Service) DeleteQuestionSet(ctx context.Context, id string) error {
+	return s.repo.DeleteQuestionSet(ctx, id)
+}

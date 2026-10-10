@@ -115,7 +115,21 @@ func New(cfg config.Config) (*App, error) {
 	catalogStore := mongostore.NewCatalogStore(
 		mongoClient.Database(cfg.MongoDatabase),
 	)
-	catalogHandler := catalog.NewHandler(catalogStore, authenticator)
+	if err := mongostore.EnsureCatalogIndexes(
+		ctx, mongoClient.Database(cfg.MongoDatabase),
+	); err != nil {
+		_ = mongoClient.Disconnect(context.Background())
+		return nil, fmt.Errorf("ensure catalog indexes: %w", err)
+	}
+	catalogValidator, err := catalog.NewAuthoringValidator()
+	if err != nil {
+		_ = mongoClient.Disconnect(context.Background())
+		return nil, fmt.Errorf("new catalog validator: %w", err)
+	}
+	catalogService := catalog.NewService(catalogStore, catalogValidator)
+	catalogHandler := catalog.NewHandler(
+		catalogStore, authenticator, catalogService,
+	)
 
 	middleware := []web.Middleware{throttler.Middleware}
 	mounters := []web.MountFunc{authHandler.Mount, catalogHandler.Mount}

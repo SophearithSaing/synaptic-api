@@ -152,7 +152,7 @@ func RequireRole(roles ...Role) func(http.Handler) http.Handler {
 			}
 
 			web.WriteError(w, r, web.NewError(
-				http.StatusForbidden, "Access denied",
+				http.StatusForbidden, "Forbidden resource",
 			))
 		})
 	}

@@ -1699,7 +1699,10 @@ components:
       properties:
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Required nonnegative whole-number level.
         questions:
           type: array
           minItems: 1
@@ -1711,7 +1714,10 @@ components:
       properties:
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Nonnegative whole-number level when supplied.
         questions:
           type: array
           minItems: 1
@@ -1725,7 +1731,10 @@ components:
         id: { $ref: '#/components/schemas/ObjectId' }
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Nonnegative whole-number level when supplied.
         questions:
           type: array
           minItems: 1
