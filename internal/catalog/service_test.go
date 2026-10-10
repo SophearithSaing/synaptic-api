@@ -51,6 +51,7 @@ type authoringRepository struct {
 	category *catalog.Category
 	topic    *catalog.Topic
 	question *catalog.QuestionSet
+	updates  []catalog.UpdateQuestionSetRequest
 	err      error
 }
 
@@ -67,7 +68,8 @@ func (r *authoringRepository) CreateQuestionSet(context.Context, catalog.CreateQ
 	}
 	return &catalog.QuestionSet{}, nil
 }
-func (r *authoringRepository) UpdateQuestionSet(context.Context, string, catalog.UpdateQuestionSetRequest) (*catalog.QuestionSet, error) {
+func (r *authoringRepository) UpdateQuestionSet(_ context.Context, _ string, request catalog.UpdateQuestionSetRequest) (*catalog.QuestionSet, error) {
+	r.updates = append(r.updates, request)
 	return r.question, r.err
 }
 func (r *authoringRepository) DeleteCategory(context.Context, string) error    { return r.err }
