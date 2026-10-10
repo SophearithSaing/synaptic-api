@@ -9,11 +9,12 @@ import (
 	"github.com/SophearithSaing/synaptic-api/internal/catalog"
 	"github.com/SophearithSaing/synaptic-api/internal/identity"
 	"github.com/SophearithSaing/synaptic-api/internal/mongostore"
+	"github.com/SophearithSaing/synaptic-api/internal/web"
 )
 
 // catalogWiring is the catalog routes over one seeded database.
 type catalogWiring struct {
-	mux        *http.ServeMux
+	mux        http.Handler
 	token      string
 	adminToken string
 }
@@ -39,6 +40,9 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 	database := client.Database("catalogtest")
 	if err := mongostore.EnsureIdentityIndexes(ctx, database); err != nil {
 		t.Fatalf("ensure indexes: %v", err)
+	}
+	if err := mongostore.EnsureCatalogIndexes(ctx, database); err != nil {
+		t.Fatalf("ensure catalog indexes: %v", err)
 	}
 	users := database.Collection("users")
 	password := "supersafeseed"
@@ -90,10 +94,11 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 		t.Fatal(err)
 	}
 
-	mux := http.NewServeMux()
 	service := catalog.NewService(catalogStore, validator)
 	authenticator := identity.NewAuthenticator(issuer, store)
-	catalog.NewHandler(catalogStore, service, authenticator).Mount(mux)
+	handler := catalog.NewHandler(catalogStore, service, authenticator)
+	mux := web.NewRouter("http://localhost:4200", nil, nil,
+		[]web.MountFunc{handler.Mount})
 
 	return &catalogWiring{mux: mux, token: token, adminToken: adminToken}
 }

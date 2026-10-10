@@ -2,6 +2,7 @@ package catalog_test
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -125,8 +126,11 @@ func TestAuthoringRoutesSucceedThroughService(t *testing.T) {
 		TopicID: "665f1e2b9d1a2c3b4d5e0004", SetType: "regular",
 		Questions: []catalog.Question{}}
 	stub := &authoringRepository{
-		category: &catalog.Category{ID: "1", Title: "Category"},
-		topic:    &catalog.Topic{ID: "2", Title: "Topic"}, question: set,
+		category: &catalog.Category{ID: "665f1e2b9d1a2c3b4d5e0003",
+			Title: "Category", Slug: "category", Description: "d", Icon: "i"},
+		topic: &catalog.Topic{ID: "665f1e2b9d1a2c3b4d5e0004",
+			Title: "Topic", Slug: "topic", Description: "d", Icon: "i",
+			Tags: []string{"tag"}}, question: set,
 	}
 	handler, token := buildAdminCatalogWith(t, stub)
 	cases := []struct {
@@ -160,6 +164,18 @@ func TestAuthoringRoutesSucceedThroughService(t *testing.T) {
 			t.Fatalf("%s %s: status %d, want %d", test.method, test.path,
 				response.StatusCode, test.status)
 		}
+		if test.status == http.StatusNoContent {
+			body, err := io.ReadAll(response.Body)
+			if err != nil || len(body) != 0 {
+				t.Fatalf("%s %s: delete body %q, error %v", test.method,
+					test.path, body, err)
+			}
+		}
+		if test.status != http.StatusNoContent &&
+			response.Header.Get("Content-Type") != "application/json; charset=utf-8" {
+			t.Fatalf("%s %s: content type %q", test.method, test.path,
+				response.Header.Get("Content-Type"))
+		}
 	}
 }
 
@@ -189,16 +205,28 @@ func TestAuthoringGuardsPinPrecedenceAndRoleMessage(t *testing.T) {
 
 // TestAuthoringRoutesMapServiceErrors verifies reference and storage failures.
 func TestAuthoringRoutesMapServiceErrors(t *testing.T) {
-	handler, token := buildAdminCatalogWith(t, &authoringRepository{
-		err: catalog.ErrTopicReferenced,
-	})
-	referenced := catalogAdminRequest(t, handler, token, http.MethodDelete,
-		"/topics/665f1e2b9d1a2c3b4d5e0004", "")
-	if referenced.StatusCode != http.StatusConflict {
-		t.Fatalf("referenced status %d", referenced.StatusCode)
+	for _, test := range []struct {
+		method, path, body, want string
+		status                   int
+		err                      error
+	}{
+		{http.MethodDelete, "/topics/665f1e2b9d1a2c3b4d5e0004", "",
+			`{"message":"Topic is referenced","error":"Conflict","statusCode":409}`,
+			http.StatusConflict, catalog.ErrTopicReferenced},
+		{http.MethodDelete, "/questions/not-an-id", "",
+			`{"message":"Invalid MongoDB ObjectId","error":"Bad Request","statusCode":400}`,
+			http.StatusBadRequest, catalog.ErrInvalidObjectID},
+		{http.MethodPatch, "/questions/665f1e2b9d1a2c3b4d5e0006", `{"level":0}`,
+			`{"message":"Question set not found","error":"Not Found","statusCode":404}`,
+			http.StatusNotFound, catalog.ErrQuestionSetNotFound},
+	} {
+		handler, token := buildAdminCatalogWith(t, &authoringRepository{err: test.err})
+		response := catalogAdminRequest(t, handler, token, test.method,
+			test.path, test.body)
+		assertBody(t, response, test.status, test.want)
 	}
 
-	handler, token = buildAdminCatalogWith(t, &authoringRepository{
+	handler, token := buildAdminCatalogWith(t, &authoringRepository{
 		err: errors.New("duplicate key"),
 	})
 	duplicate := catalogAdminRequest(t, handler, token, http.MethodPost,

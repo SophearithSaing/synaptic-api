@@ -456,7 +456,15 @@ paths:
                 statusCode: 404
                 message: Category not found
                 error: Not Found
-        '409': { description: Category is referenced }
+        '409':
+          description: Category is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Category is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /topics/create:
@@ -489,6 +497,15 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Referenced category not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Category not found
+                error: Not Found
         '429': { $ref: '#/components/responses/Throttled' }
         '500': { $ref: '#/components/responses/InternalError' }
 
@@ -570,7 +587,15 @@ paths:
                 statusCode: 404
                 message: Topic not found
                 error: Not Found
-        '409': { description: Topic is referenced }
+        '409':
+          description: Topic is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Topic is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /questions/create:
@@ -620,6 +645,7 @@ paths:
         Admin only. Each item must carry the target `id`; items are applied
         independently. Every item is validated first, then each write is
         attempted; successful siblings may persist when another item fails.
+        A missing set or a supplied missing topic reference returns 404.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -736,7 +762,9 @@ paths:
       tags: [questions]
       operationId: updateQuestionSet
       summary: Update a question set
-      description: Admin only. All body fields optional.
+      description: >-
+        Admin only. All body fields optional. A missing set or a supplied
+        missing topic reference returns 404.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -800,7 +828,15 @@ paths:
                 statusCode: 404
                 message: Question set not found
                 error: Not Found
-        '409': { description: Question set is referenced }
+        '409':
+          description: Question set is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Question set is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /sessions/start:
