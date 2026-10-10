@@ -25,16 +25,41 @@ type questionSetResponse struct {
 	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
+// populatedTopicResponse is the legacy populated topic response boundary.
+type populatedTopicResponse struct {
+	ID          string    `json:"_id"`
+	Title       string    `json:"title"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
+	Icon        string    `json:"icon"`
+	Tags        []string  `json:"tags"`
+	Category    string    `json:"category"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	Version     int       `json:"__v"`
+}
+
+// topicHTTP maps a topic to its standard public response boundary.
 func topicHTTP(topic Topic) topicResponse {
 	return topicResponse{ID: topic.ID, Title: topic.Title, Slug: topic.Slug,
 		Description: topic.Description, Icon: topic.Icon, Tags: topic.Tags,
 		Category: topic.Category}
 }
 
+// populatedTopicHTTP maps a topic to the question-set populated boundary.
+func populatedTopicHTTP(topic Topic) populatedTopicResponse {
+	return populatedTopicResponse{ID: topic.ID, Title: topic.Title,
+		Slug: topic.Slug, Description: topic.Description, Icon: topic.Icon,
+		Tags: topic.Tags, Category: topic.CategoryID,
+		CreatedAt: topic.CreatedAt, UpdatedAt: topic.UpdatedAt,
+		Version: topic.Version}
+}
+
+// questionSetHTTP maps a question set to its public response boundary.
 func questionSetHTTP(questionSet QuestionSet, populated bool) questionSetResponse {
 	topic := any(questionSet.TopicID)
 	if populated && questionSet.Topic != nil {
-		topic = topicHTTP(*questionSet.Topic)
+		topic = populatedTopicHTTP(*questionSet.Topic)
 	}
 	if populated && questionSet.Topic == nil {
 		topic = nil

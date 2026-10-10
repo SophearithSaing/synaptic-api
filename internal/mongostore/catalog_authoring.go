@@ -451,6 +451,8 @@ func topicFromDocument(document TopicDocument, category *catalog.Category) *cata
 		ID: document.ID.Hex(), Title: document.Title, Slug: document.Slug,
 		Description: document.Description, Icon: document.Icon, Tags: document.Tags,
 		CategoryID: document.CategoryID.Hex(), Category: category,
+		CreatedAt: document.CreatedAt, UpdatedAt: document.UpdatedAt,
+		Version: document.Version,
 	}
 }
 

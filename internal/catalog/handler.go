@@ -1,7 +1,9 @@
 package catalog
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -85,7 +87,7 @@ func (h *Handler) createTopic(w http.ResponseWriter, r *http.Request) {
 // createQuestionSets decodes and creates question sets.
 func (h *Handler) createQuestionSets(w http.ResponseWriter, r *http.Request) {
 	var requests *[]CreateQuestionSetRequest
-	if !h.decode(w, r, &requests) {
+	if !h.decodeArray(w, r, &requests) {
 		return
 	}
 	if requests == nil {
@@ -100,7 +102,7 @@ func (h *Handler) createQuestionSets(w http.ResponseWriter, r *http.Request) {
 // updateQuestionSets decodes and applies bulk question-set patches.
 func (h *Handler) updateQuestionSets(w http.ResponseWriter, r *http.Request) {
 	var requests *[]BulkUpdateQuestionSetRequest
-	if !h.decode(w, r, &requests) {
+	if !h.decodeArray(w, r, &requests) {
 		return
 	}
 	if requests == nil {
@@ -145,6 +147,28 @@ func (h *Handler) deleteQuestionSet(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) decode(w http.ResponseWriter, r *http.Request, value any) bool {
 	if err := web.DecodeJSON(w, r, value); err != nil {
 		web.WriteError(w, r, err)
+		return false
+	}
+	return true
+}
+
+// decodeArray reads a strict JSON array and preserves the bulk endpoint's
+// pinned non-array validation response.
+func (h *Handler) decodeArray(w http.ResponseWriter, r *http.Request, value any) bool {
+	var raw json.RawMessage
+	if !h.decode(w, r, &raw) {
+		return false
+	}
+	if len(bytes.TrimSpace(raw)) == 0 || bytes.TrimSpace(raw)[0] != '[' {
+		web.WriteError(w, r, web.NewError(http.StatusBadRequest,
+			"Validation failed (parsable array expected)"))
+		return false
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(value); err != nil {
+		web.WriteError(w, r, web.NewError(http.StatusBadRequest,
+			"Invalid request body"))
 		return false
 	}
 	return true

@@ -288,6 +288,9 @@ func (s *CatalogStore) decodeTopic(
 		Tags:        document.Tags,
 		CategoryID:  document.CategoryID.Hex(),
 		Category:    nested,
+		CreatedAt:   document.CreatedAt,
+		UpdatedAt:   document.UpdatedAt,
+		Version:     document.Version,
 	}, nil
 }
 

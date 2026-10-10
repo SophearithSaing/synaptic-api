@@ -23,6 +23,9 @@ type Topic struct {
 	Tags        []string  `json:"tags"`
 	CategoryID  string    `json:"categoryId"`
 	Category    *Category `json:"category"`
+	CreatedAt   time.Time `json:"-"`
+	UpdatedAt   time.Time `json:"-"`
+	Version     int       `json:"-"`
 }
 
 // QuestionOption is one selectable answer for a question.

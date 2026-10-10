@@ -5,14 +5,13 @@ import (
 	"testing"
 )
 
-const handlerTopic = `{"id":"665f1e2b9d1a2c3b4d5e0004",` +
+const handlerPopulatedTopic = `{"_id":"665f1e2b9d1a2c3b4d5e0004",` +
 	`"title":"Binary Basics","slug":"binary-basics",` +
 	`"description":"Binary numbers and arithmetic.","icon":"binary",` +
 	`"tags":["binary","arithmetic"],` +
-	`"category":{` +
-	`"id":"665f1e2b9d1a2c3b4d5e0003","title":"Core Concepts",` +
-	`"slug":"core-concepts","description":` +
-	`"Foundational computing theory.","icon":"cpu"}}`
+	`"category":"665f1e2b9d1a2c3b4d5e0003",` +
+	`"createdAt":"2026-01-01T00:00:00Z",` +
+	`"updatedAt":"2026-01-01T00:00:00Z","__v":3}`
 
 // TestGetCategoriesFixtureShape pins the list response bytes sorted
 // by title.
@@ -123,7 +122,7 @@ func TestGetQuestionSetVariants(t *testing.T) {
 	assertBody(t, response, http.StatusOK,
 		`{"id":"665f1e2b9d1a2c3b4d5e0006",`+
 			`"topic":`+
-			handlerTopic+`,`+
+			handlerPopulatedTopic+`,`+
 			`"setType":"regular","level":0,"questions":[`+
 			`{"id":"seed-l0-q1","type":"mcq",`+
 			`"prompt":"What is 1 + 1 in binary?","options":[`+
@@ -157,7 +156,7 @@ func TestGetQuestionSetsByTopic(t *testing.T) {
 		"/questions/topic/binary-basics?populateTopic=true")
 	assertBody(t, response, http.StatusOK,
 		`[{"id":"665f1e2b9d1a2c3b4d5e0006",`+
-			`"topic":`+handlerTopic+`,"setType":"regular",`+
+			`"topic":`+handlerPopulatedTopic+`,"setType":"regular",`+
 			`"level":0,"questions":[{"id":"seed-l0-q1","type":"mcq",`+
 			`"prompt":"What is 1 + 1 in binary?","options":[`+
 			`{"id":"o1","text":"seed-l0-q1 option one"},`+
