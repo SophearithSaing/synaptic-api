@@ -62,7 +62,7 @@ func topicNested(
 }
 
 // setBody builds one question-set body with a given topic value.
-func setBody(id, topicID, topic, level string, questions string) string {
+func setBody(id, topic, level string, questions string) string {
 	return `{"id":"` + id + `","topic":` + topic +
 		`,"setType":"regular","level":` + level +
 		`,"questions":` + questions +

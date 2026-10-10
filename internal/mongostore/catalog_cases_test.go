@@ -72,7 +72,6 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 		catalogGet(t, wiring, "/questions/5eed00000000000000000031"),
 		"200", setBody(
 			"5eed00000000000000000031",
-			"5eed00000000000000000021",
 			joinedTopic,
 			"0",
 			"["+questionQ1+","+questionQ2+"]",
@@ -82,8 +81,7 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 			"/questions/5eed00000000000000000031?populateTopic=false"),
 		"200", setBody(
 			"5eed00000000000000000031",
-			"5eed00000000000000000021",
-			"5eed00000000000000000021", "0",
+			`"5eed00000000000000000021"`, "0",
 			"["+questionQ1+","+questionQ2+"]",
 		))
 
@@ -92,7 +90,6 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 		catalogGet(t, wiring, "/questions/5eed00000000000000000034"),
 		"200", setBody(
 			"5eed00000000000000000034",
-			"5eed00000000000000000029",
 			"null",
 			"0",
 			"[]",
@@ -118,15 +115,14 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 	topicSetList := "[" +
 		setBody(
 			"5eed00000000000000000031",
-			"5eed00000000000000000021",
-			"5eed00000000000000000021", "0", "["+questionQ1+","+questionQ2+"]",
+			`"5eed00000000000000000021"`, "0", "["+questionQ1+","+questionQ2+"]",
 		) + "," +
 		setBody("5eed00000000000000000032",
-			"5eed00000000000000000021", "5eed00000000000000000021", "1",
+			`"5eed00000000000000000021"`, "1",
 			"["+written+"]",
 		) + "," +
 		setBody("5eed00000000000000000033",
-			"5eed00000000000000000021", "5eed00000000000000000021", "4",
+			`"5eed00000000000000000021"`, "4",
 			"["+created+"]",
 		) + "]"
 
@@ -134,12 +130,12 @@ func TestCatalogQuestionRoutes(t *testing.T) {
 		catalogGet(t, wiring, "/questions/topic/binary-basics"),
 		"200", topicSetList)
 	populatedList := "[" + setBody(
-		"5eed00000000000000000031", "5eed00000000000000000021",
+		"5eed00000000000000000031",
 		joinedTopic, "0", "["+questionQ1+","+questionQ2+"]",
 	) + "," + setBody("5eed00000000000000000032",
-		"5eed00000000000000000021", joinedTopic, "1", "["+written+"]",
+		joinedTopic, "1", "["+written+"]",
 	) + "," + setBody("5eed00000000000000000033",
-		"5eed00000000000000000021", joinedTopic, "4", "["+created+"]",
+		joinedTopic, "4", "["+created+"]",
 	) + "]"
 	assertCatalogBody(t,
 		catalogGet(t, wiring,
