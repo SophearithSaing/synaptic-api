@@ -48,3 +48,45 @@ func TestQuestionSetPopulateDefaultsAndMissingTopic(t *testing.T) {
 		t.Fatalf("missing populated topic %#v", response["topic"])
 	}
 }
+
+// TestQuestionSetPopulateQueryModes pins every raw-string populate mode for
+// ID and slug reads.
+func TestQuestionSetPopulateQueryModes(t *testing.T) {
+	handler, token := seededCatalog()
+	for _, test := range []struct {
+		path      string
+		populated bool
+	}{
+		{"/questions/665f1e2b9d1a2c3b4d5e0006", true},
+		{"/questions/665f1e2b9d1a2c3b4d5e0006?populateTopic=false", false},
+		{"/questions/665f1e2b9d1a2c3b4d5e0006?populateTopic=true", true},
+		{"/questions/665f1e2b9d1a2c3b4d5e0006?populateTopic=other", true},
+		{"/questions/topic/binary-basics", false},
+		{"/questions/topic/binary-basics?populateTopic=false", false},
+		{"/questions/topic/binary-basics?populateTopic=true", true},
+		{"/questions/topic/binary-basics?populateTopic=other", false},
+	} {
+		response := catalogGet(t, handler, token, test.path)
+		if response.StatusCode != http.StatusOK {
+			t.Fatalf("%s: status %d", test.path, response.StatusCode)
+		}
+		var body any
+		if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		var set map[string]any
+		switch value := body.(type) {
+		case map[string]any:
+			set = value
+		case []any:
+			set = value[0].(map[string]any)
+		default:
+			t.Fatalf("%s: unexpected body %T", test.path, body)
+		}
+		_, gotPopulated := set["topic"].(map[string]any)
+		if gotPopulated != test.populated {
+			t.Fatalf("%s: populated %t, want %t", test.path, gotPopulated,
+				test.populated)
+		}
+	}
+}

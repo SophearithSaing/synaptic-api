@@ -13,8 +13,9 @@ import (
 
 // catalogWiring is the catalog routes over one seeded database.
 type catalogWiring struct {
-	mux   *http.ServeMux
-	token string
+	mux        *http.ServeMux
+	token      string
+	adminToken string
 }
 
 // newCatalogWiring starts Mongo, seeds catalog data, and wires the
@@ -78,11 +79,21 @@ func newCatalogWiring(t *testing.T) *catalogWiring {
 	if err != nil {
 		t.Fatal(err)
 	}
+	adminToken, err := issuer.Issue(
+		"5eed00000000000000000002", "admin@example.com", "admin", time.Now(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validator, err := catalog.NewAuthoringValidator()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	mux := http.NewServeMux()
-	catalog.NewHandler(catalogStore, nil, identity.NewAuthenticator(
-		issuer, store,
-	)).Mount(mux)
+	service := catalog.NewService(catalogStore, validator)
+	authenticator := identity.NewAuthenticator(issuer, store)
+	catalog.NewHandler(catalogStore, service, authenticator).Mount(mux)
 
-	return &catalogWiring{mux: mux, token: token}
+	return &catalogWiring{mux: mux, token: token, adminToken: adminToken}
 }

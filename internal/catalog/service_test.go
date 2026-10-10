@@ -46,24 +46,33 @@ func validQuestionSetRequest(level int64) catalog.CreateQuestionSetRequest {
 	}
 }
 
-type authoringRepository struct{ creates int }
+type authoringRepository struct {
+	creates  int
+	category *catalog.Category
+	topic    *catalog.Topic
+	question *catalog.QuestionSet
+	err      error
+}
 
 func (r *authoringRepository) CreateCategory(context.Context, catalog.CreateCategoryRequest) (*catalog.Category, error) {
-	return nil, nil
+	return r.category, r.err
 }
 func (r *authoringRepository) CreateTopic(context.Context, catalog.CreateTopicRequest) (*catalog.Topic, error) {
-	return nil, nil
+	return r.topic, r.err
 }
 func (r *authoringRepository) CreateQuestionSet(context.Context, catalog.CreateQuestionSetRequest) (*catalog.QuestionSet, error) {
 	r.creates++
+	if r.question != nil || r.err != nil {
+		return r.question, r.err
+	}
 	return &catalog.QuestionSet{}, nil
 }
 func (r *authoringRepository) UpdateQuestionSet(context.Context, string, catalog.UpdateQuestionSetRequest) (*catalog.QuestionSet, error) {
-	return nil, nil
+	return r.question, r.err
 }
-func (r *authoringRepository) DeleteCategory(context.Context, string) error    { return nil }
-func (r *authoringRepository) DeleteTopic(context.Context, string) error       { return nil }
-func (r *authoringRepository) DeleteQuestionSet(context.Context, string) error { return nil }
+func (r *authoringRepository) DeleteCategory(context.Context, string) error    { return r.err }
+func (r *authoringRepository) DeleteTopic(context.Context, string) error       { return r.err }
+func (r *authoringRepository) DeleteQuestionSet(context.Context, string) error { return r.err }
 func (r *authoringRepository) SelectQuestionSet(context.Context, string, int64, string) (*catalog.QuestionSet, error) {
 	return nil, nil
 }
