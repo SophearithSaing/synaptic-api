@@ -33,8 +33,11 @@ func topicHTTP(topic Topic) topicResponse {
 
 func questionSetHTTP(questionSet QuestionSet, populated bool) questionSetResponse {
 	topic := any(questionSet.TopicID)
-	if populated {
-		topic = questionSet.Topic
+	if populated && questionSet.Topic != nil {
+		topic = topicHTTP(*questionSet.Topic)
+	}
+	if populated && questionSet.Topic == nil {
+		topic = nil
 	}
 	return questionSetResponse{ID: questionSet.ID, Topic: topic,
 		SetType: questionSet.SetType, Level: questionSet.Level,
