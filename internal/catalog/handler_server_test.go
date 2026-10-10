@@ -52,7 +52,9 @@ func buildCatalog(repo catalog.Repository) (http.Handler, string) {
 		panic(err)
 	}
 
-	handler := catalog.NewHandler(repo, identity.NewAuthenticator(issuer, auth))
+	handler := catalog.NewHandler(
+		repo, nil, identity.NewAuthenticator(issuer, auth),
+	)
 	mux := http.NewServeMux()
 	handler.Mount(mux)
 

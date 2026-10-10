@@ -1,12 +1,13 @@
 package mongostore_test
 
-// joinedTopic is the question-set topic for binary-basics.
-const joinedTopic = `{"id":"5eed00000000000000000021",` +
+// joinedTopic is the populated question-set topic for binary-basics.
+const joinedTopic = `{"_id":"5eed00000000000000000021",` +
 	`"title":"Binary Basics","slug":"binary-basics",` +
 	`"description":"Binary numbers and arithmetic.","icon":"binary",` +
 	`"tags":["binary","arithmetic"],` +
-	`"categoryId":"5eed00000000000000000011",` +
-	`"category":` + categoryCore + `}`
+	`"category":"5eed00000000000000000011",` +
+	`"createdAt":"2026-01-01T00:00:00Z",` +
+	`"updatedAt":"2026-01-01T00:00:00Z","__v":0}`
 
 // questionQ1 and questionQ2 are the pinned stored question bodies.
 const questionQ1 = `{"id":"seed-l0-q1","type":"mcq",` +
@@ -57,14 +58,12 @@ func topicNested(
 	return `{"id":"` + id + `","title":"` + title +
 		`","slug":"` + slug + `","description":"` + description +
 		`","icon":"` + icon + `","tags":` + tags +
-		`,"categoryId":"5eed00000000000000000011"` +
 		`,"category":` + categoryCore + `}`
 }
 
 // setBody builds one question-set body with a given topic value.
-func setBody(id, topicID, topic, level string, questions string) string {
-	return `{"id":"` + id + `","topicId":"` + topicID +
-		`","topic":` + topic +
+func setBody(id, topic, level string, questions string) string {
+	return `{"id":"` + id + `","topic":` + topic +
 		`,"setType":"regular","level":` + level +
 		`,"questions":` + questions +
 		`,"createdAt":"2026-01-01T00:00:00Z",` +
