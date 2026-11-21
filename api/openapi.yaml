@@ -2056,7 +2056,7 @@ components:
 
     AiLogOperation:
       type: string
-      enum: [question-generation]
+      enum: [question-generation, written-grading]
 
     AiLogLiveQuestion:
       type: object
