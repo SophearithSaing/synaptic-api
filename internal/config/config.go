@@ -1,248 +1,125 @@
-// Package config loads and validates process configuration from the
-// environment, with optional dotenv file support for local development.
+// Package config loads and validates application configuration.
 package config
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"net"
 	"os"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
-// Config holds the validated process configuration.
+// AppEnv identifies the application's runtime environment.
+type AppEnv string
+
+const (
+	AppEnvDevelopment AppEnv = "development"
+	AppEnvProduction  AppEnv = "production"
+)
+
+// Config contains the application's runtime configuration.
 type Config struct {
-	AppEnv                 string
-	Port                   int
-	ClientURL              string
-	MongoURI               string
-	MongoDatabase          string
-	JWTSecret              string
-	JWTIssuer              string
-	JWTAudience            string
-	JWTAccessTTL           time.Duration
-	JWTRefreshTTL          time.Duration
-	TogetherAPIKey         string
-	ThrottleTrustedProxies []string
+	AppEnv               AppEnv
+	Port                 string
+	ClientURL            string
+	DBURL                string
+	JWTSecret            string
+	JWTIssuer            string
+	JWTAudience          string
+	JWTAccessExpiration  time.Duration
+	JWTRefreshExpiration time.Duration
+	TogetherAPIKey       string
 }
 
-// MongoConfig holds the database settings required by maintenance commands.
-type MongoConfig struct {
-	URI      string
-	Database string
-}
-
-// Production reports whether the process runs in production mode.
-func (c Config) Production() bool {
-	return c.AppEnv == "production"
-}
-
-// SecureCookies reports whether auth cookies use the production policy
-// (Secure with SameSite=None). Other environments use SameSite=Lax without
-// Secure, because browsers reject SameSite=None cookies over plain HTTP.
-func (c Config) SecureCookies() bool {
-	return c.Production()
-}
-
-// Load reads an optional .env file and returns the validated configuration.
-// Every required variable must be present or the process fails at startup.
+// Load parses and validates configuration from the environment and an optional
+// .env file. Existing environment variables take precedence.
 func Load() (Config, error) {
-	if err := loadDotEnv(".env"); err != nil {
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Config{}, fmt.Errorf("load .env: %w", err)
+	}
+
+	appEnvValue, err := loadRequiredEnv("APP_ENV")
+	if err != nil {
+		return Config{}, err
+	}
+	appEnv := AppEnv(appEnvValue)
+	if appEnv != AppEnvDevelopment && appEnv != AppEnvProduction {
+		return Config{}, errors.New("invalid app environment")
+	}
+
+	portValue, err := loadRequiredEnv("PORT")
+	if err != nil {
+		return Config{}, err
+	}
+	portNumber, err := strconv.Atoi(portValue)
+	if err != nil || portNumber < 1 || portNumber > 65535 {
+		return Config{}, errors.New("invalid PORT")
+	}
+	port := strconv.Itoa(portNumber)
+
+	clientURL, err := loadRequiredEnv("CLIENT_URL")
+	if err != nil {
+		return Config{}, err
+	}
+	dbURL, err := loadRequiredEnv("DB_URL")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtSecret, err := loadRequiredEnv("JWT_SECRET")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtIssuer, err := loadRequiredEnv("JWT_ISSUER")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtAudience, err := loadRequiredEnv("JWT_AUDIENCE")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtAccessExpirationValue, err := loadRequiredEnv("JWT_ACCESS_EXPIRES_IN")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtAccessExpiration, err := time.ParseDuration(jwtAccessExpirationValue)
+	if err != nil || jwtAccessExpiration <= 0 {
+		return Config{}, errors.New("invalid JWT_ACCESS_EXPIRES_IN")
+	}
+	jwtRefreshExpirationValue, err := loadRequiredEnv("JWT_REFRESH_EXPIRES_IN")
+	if err != nil {
+		return Config{}, err
+	}
+	jwtRefreshExpiration, err := time.ParseDuration(jwtRefreshExpirationValue)
+	if err != nil || jwtRefreshExpiration <= 0 {
+		return Config{}, errors.New("invalid JWT_REFRESH_EXPIRES_IN")
+	}
+
+	togetherAPIKey, err := loadRequiredEnv("TOGETHER_API_KEY")
+	if err != nil {
 		return Config{}, err
 	}
 
-	cfg := Config{
-		AppEnv:    envOr("APP_ENV", "development"),
-		ClientURL: envOr("CLIENT_URL", "http://localhost:4200"),
-	}
-
-	port, err := strconv.Atoi(envOr("PORT", "3000"))
-	if err != nil || port < 1 || port > 65535 {
-		return Config{}, fmt.Errorf("PORT must be a valid TCP port number")
-	}
-	cfg.Port = port
-
-	var errs []error
-	cfg.MongoURI = required("DB_URI", &errs)
-	cfg.MongoDatabase = required("DB_NAME", &errs)
-	cfg.JWTSecret = required("JWT_SECRET", &errs)
-	cfg.JWTIssuer = required("JWT_ISSUER", &errs)
-	cfg.JWTAudience = required("JWT_AUDIENCE", &errs)
-	cfg.TogetherAPIKey = required("TOGETHER_API_KEY", &errs)
-	cfg.JWTAccessTTL = durationEnv("JWT_ACCESS_EXPIRES_IN", &errs)
-	cfg.JWTRefreshTTL = durationEnv("JWT_REFRESH_EXPIRES_IN", &errs)
-	trustedProxies, err := trustedProxies()
-	if err != nil {
-		errs = append(errs, fmt.Errorf("THROTTLE_TRUSTED_PROXIES: %w", err))
-	}
-	cfg.ThrottleTrustedProxies = trustedProxies
-
-	return cfg, errors.Join(errs...)
+	return Config{
+		AppEnv:               appEnv,
+		Port:                 port,
+		ClientURL:            clientURL,
+		DBURL:                dbURL,
+		JWTSecret:            jwtSecret,
+		JWTIssuer:            jwtIssuer,
+		JWTAudience:          jwtAudience,
+		JWTAccessExpiration:  jwtAccessExpiration,
+		JWTRefreshExpiration: jwtRefreshExpiration,
+		TogetherAPIKey:       togetherAPIKey,
+	}, nil
 }
 
-// LoadMongo reads the MongoDB settings without requiring API-only settings.
-func LoadMongo() (MongoConfig, error) {
-	if err := loadDotEnv(".env"); err != nil {
-		return MongoConfig{}, err
-	}
-
-	var errs []error
-	cfg := MongoConfig{
-		URI:      required("DB_URI", &errs),
-		Database: required("DB_NAME", &errs),
-	}
-
-	return cfg, errors.Join(errs...)
-}
-
-// trustedProxies parses the optional comma-separated
-// THROTTLE_TRUSTED_PROXIES list of exact addresses or CIDR ranges,
-// rejecting unparseable entries.
-func trustedProxies() ([]string, error) {
-	raw := os.Getenv("THROTTLE_TRUSTED_PROXIES")
-	if raw == "" {
-		return nil, nil
-	}
-
-	var proxies []string
-	for _, entry := range strings.Split(raw, ",") {
-		trimmed := strings.TrimSpace(entry)
-		if trimmed == "" {
-			continue
-		}
-		proxies = append(proxies, trimmed)
-	}
-
-	return proxies, validateTrustedProxies(proxies)
-}
-
-// validateTrustedProxies reports whether every trusted proxy entry is
-// an exact IP address or a CIDR range.
-func validateTrustedProxies(proxies []string) error {
-	var errs []error
-	for _, proxy := range proxies {
-		if strings.Contains(proxy, "/") {
-			if _, _, err := net.ParseCIDR(proxy); err != nil {
-				errs = append(errs, fmt.Errorf(
-					"trusted proxy %q: %w", proxy, err,
-				))
-			}
-
-			continue
-		}
-		if net.ParseIP(proxy) == nil {
-			errs = append(errs, fmt.Errorf(
-				"trusted proxy %q: want an exact IP address or CIDR range",
-				proxy,
-			))
-		}
-	}
-
-	return errors.Join(errs...)
-}
-
-var durationPattern = regexp.MustCompile(`^(\d+)(ms|s|m|h|d)$`)
-
-// ParseDuration converts a compact single-unit duration string such as
-// "15m" or "7d" into a time.Duration, matching the legacy syntax.
-func ParseDuration(value string) (time.Duration, error) {
-	match := durationPattern.FindStringSubmatch(strings.TrimSpace(value))
-	if match == nil {
-		return 0, fmt.Errorf(
-			"invalid duration %q: want a number followed by ms, s, m, h, or d",
-			value,
-		)
-	}
-
-	amount, _ := strconv.Atoi(match[1])
-	switch match[2] {
-	case "ms":
-		return time.Duration(amount) * time.Millisecond, nil
-	case "s":
-		return time.Duration(amount) * time.Second, nil
-	case "m":
-		return time.Duration(amount) * time.Minute, nil
-	case "h":
-		return time.Duration(amount) * time.Hour, nil
-	case "d":
-		return time.Duration(amount) * 24 * time.Hour, nil
-	}
-
-	return 0, fmt.Errorf("invalid duration unit %q", match[2])
-}
-
-// envOr returns the environment variable value or the fallback when unset.
-func envOr(key string, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-
-	return fallback
-}
-
-// required returns a mandatory environment variable or records it missing.
-func required(key string, errs *[]error) string {
-	value := os.Getenv(key)
+// loadRequiredEnv returns a non-empty environment variable or an error.
+func loadRequiredEnv(name string) (string, error) {
+	value := os.Getenv(name)
 	if value == "" {
-		*errs = append(*errs, fmt.Errorf("%s is required", key))
+		return "", errors.New("missing required environment variable: " + name)
 	}
-
-	return value
-}
-
-// durationEnv returns a mandatory compact duration environment variable.
-func durationEnv(key string, errs *[]error) time.Duration {
-	raw := required(key, errs)
-	if raw == "" {
-		return 0
-	}
-
-	duration, err := ParseDuration(raw)
-	if err != nil {
-		*errs = append(*errs, fmt.Errorf("%s: %w", key, err))
-		return 0
-	}
-
-	return duration
-}
-
-// loadDotEnv adds variables from a dotenv file to the environment without
-// overriding variables that are already set. A missing file is not an error.
-func loadDotEnv(path string) error {
-	file, err := os.Open(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("open %s: %w", path, err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		key, value, found := strings.Cut(line, "=")
-		if !found {
-			continue
-		}
-
-		key = strings.TrimSpace(key)
-		value = strings.Trim(strings.TrimSpace(value), `"'`)
-		if key == "" || os.Getenv(key) != "" {
-			continue
-		}
-		if err := os.Setenv(key, value); err != nil {
-			return fmt.Errorf("set %s: %w", key, err)
-		}
-	}
-
-	return scanner.Err()
+	return value, nil
 }
