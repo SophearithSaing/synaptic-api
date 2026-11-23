@@ -13,17 +13,27 @@ import (
 
 // CatalogStore implements catalog.Repository using MongoDB.
 type CatalogStore struct {
-	categories   *mongo.Collection
-	topics       *mongo.Collection
-	questionSets *mongo.Collection
+	categories         *mongo.Collection
+	topics             *mongo.Collection
+	questionSets       *mongo.Collection
+	sessions           *mongo.Collection
+	liveSessions       *mongo.Collection
+	setAttempts        *mongo.Collection
+	liveQuestions      *mongo.Collection
+	sessionEvaluations *mongo.Collection
 }
 
 // NewCatalogStore builds a CatalogStore over a database.
 func NewCatalogStore(database *mongo.Database) *CatalogStore {
 	return &CatalogStore{
-		categories:   database.Collection("categories"),
-		topics:       database.Collection("topics"),
-		questionSets: database.Collection("questionSets"),
+		categories:         database.Collection("categories"),
+		topics:             database.Collection("topics"),
+		questionSets:       database.Collection("questionSets"),
+		sessions:           database.Collection("sessions"),
+		liveSessions:       database.Collection("liveSessions"),
+		setAttempts:        database.Collection("setAttempts"),
+		liveQuestions:      database.Collection("liveQuestions"),
+		sessionEvaluations: database.Collection("sessionEvaluations"),
 	}
 }
 
@@ -278,6 +288,9 @@ func (s *CatalogStore) decodeTopic(
 		Tags:        document.Tags,
 		CategoryID:  document.CategoryID.Hex(),
 		Category:    nested,
+		CreatedAt:   document.CreatedAt,
+		UpdatedAt:   document.UpdatedAt,
+		Version:     document.Version,
 	}, nil
 }
 

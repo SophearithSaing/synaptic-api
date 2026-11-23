@@ -10,6 +10,7 @@ import (
 // seededCatalog mirrors the fixture seed data.
 func seededCatalog() (http.Handler, string) {
 	repo := newRepoState()
+	seedDate := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	repo.seedCategory(catalog.Category{
 		ID:          "665f1e2b9d1a2c3b4d5e0003",
 		Title:       "Core Concepts",
@@ -39,6 +40,9 @@ func seededCatalog() (http.Handler, string) {
 			Description: "Foundational computing theory.",
 			Icon:        "cpu",
 		},
+		CreatedAt: seedDate,
+		UpdatedAt: seedDate,
+		Version:   3,
 	}
 	repo.seedTopic(topic)
 
@@ -62,7 +66,6 @@ func seededCatalog() (http.Handler, string) {
 			Misconceptions: []string{"Misconception."},
 		},
 	}}
-	seedDate := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	questionSet := catalog.QuestionSet{
 		ID:        "665f1e2b9d1a2c3b4d5e0006",
 		TopicID:   topic.ID,

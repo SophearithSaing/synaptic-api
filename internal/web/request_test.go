@@ -66,6 +66,12 @@ func TestDecodeJSONRejectsTrailingValues(t *testing.T) {
 	requireBadRequest(t, decodePOST(t, `{"name":"a"} {"name":"b"}`))
 }
 
+func TestDecodeJSONRejectsTrailingClosingDelimiter(t *testing.T) {
+	t.Parallel()
+
+	requireBadRequest(t, decodePOST(t, `{"name":"a"} }`))
+}
+
 func TestDecodeJSONRejectsOversizedBody(t *testing.T) {
 	t.Parallel()
 

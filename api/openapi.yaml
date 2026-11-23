@@ -430,7 +430,9 @@ paths:
       tags: [categories]
       operationId: deleteCategory
       summary: Delete a category
-      description: Admin only. Returns 204 with an empty body.
+      description: >-
+        Admin only. Returns 204 with an empty body, or 409 while one or more
+        topics reference the category.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -454,6 +456,15 @@ paths:
                 statusCode: 404
                 message: Category not found
                 error: Not Found
+        '409':
+          description: Category is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Category is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /topics/create:
@@ -462,10 +473,9 @@ paths:
       operationId: createTopic
       summary: Create a topic
       description: >-
-        Admin only. `category` must reference an existing category ID
-        (not verified at validation time; a dangling ID is persisted and
-        only breaks later on populate). A duplicate `slug` surfaces as
-        500, not 409.
+        Admin only. `category` must reference an existing category ID;
+        missing references return 404. A duplicate `slug` surfaces as 500,
+        not 409.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -487,6 +497,15 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Referenced category not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 404
+                message: Category not found
+                error: Not Found
         '429': { $ref: '#/components/responses/Throttled' }
         '500': { $ref: '#/components/responses/InternalError' }
 
@@ -542,7 +561,9 @@ paths:
       tags: [topics]
       operationId: deleteTopic
       summary: Delete a topic
-      description: Admin only. Returns 204 with an empty body.
+      description: >-
+        Admin only. Returns 204 with an empty body, or 409 while a question
+        set, session, or other persisted record references the topic.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -566,6 +587,15 @@ paths:
                 statusCode: 404
                 message: Topic not found
                 error: Not Found
+        '409':
+          description: Topic is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Topic is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /questions/create:
@@ -574,9 +604,10 @@ paths:
       operationId: createQuestionSets
       summary: Create question sets (bulk)
       description: >-
-        Admin only. Body is a JSON array validated item-by-item via
-        `ParseArrayPipe` (a non-array body fails 400; an empty array
-        passes and returns `[]`).
+        Admin only. Body is a JSON array validated item-by-item (a non-array
+        body fails 400; an empty array passes and returns `[]`). All items are
+        validated before writing; writes then proceed in input order and stop
+        at the first storage or reference failure, retaining earlier creates.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -602,6 +633,7 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Referenced topic not found }
         '429': { $ref: '#/components/responses/Throttled' }
 
   /questions/update:
@@ -610,10 +642,10 @@ paths:
       operationId: bulkUpdateQuestionSets
       summary: Update question sets (bulk)
       description: >-
-        Admin only. Each item must carry the target `id`; items are
-        applied independently via `Promise.all`, so one missing set fails
-        the whole request with 404 and sibling updates may already be
-        persisted.
+        Admin only. Each item must carry the target `id`; items are applied
+        independently. Every item is validated first, then each write is
+        attempted; successful siblings may persist when another item fails.
+        A missing set or a supplied missing topic reference returns 404.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -730,7 +762,9 @@ paths:
       tags: [questions]
       operationId: updateQuestionSet
       summary: Update a question set
-      description: Admin only. All body fields optional.
+      description: >-
+        Admin only. All body fields optional. A missing set or a supplied
+        missing topic reference returns 404.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -768,7 +802,9 @@ paths:
       tags: [questions]
       operationId: deleteQuestionSet
       summary: Delete a question set
-      description: Admin only. Returns 204 with an empty body.
+      description: >-
+        Admin only. Returns 204 with an empty body, or 409 while a set
+        attempt, live question, or other persisted record references it.
       security:
         - bearerAuth: []
           csrfCookie: []
@@ -792,6 +828,15 @@ paths:
                 statusCode: 404
                 message: Question set not found
                 error: Not Found
+        '409':
+          description: Question set is referenced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                statusCode: 409
+                message: Question set is referenced
+                error: Conflict
         '429': { $ref: '#/components/responses/Throttled' }
 
   /sessions/start:
@@ -1629,6 +1674,11 @@ components:
 
     Question:
       type: object
+      description: >-
+        Question IDs must be unique within a set. MCQ questions require
+        nonempty options with unique IDs and a correctOptionId matching an
+        option. Written questions require prompt, concepts, feedback, and
+        rubrics, and must not supply nonempty MCQ-only fields.
       required: [id, type, prompt, targetConcepts, feedback, rubrics]
       properties:
         id: { type: string, minLength: 1 }
@@ -1656,9 +1706,9 @@ components:
     PopulatedTopic:
       type: object
       description: >-
-        Raw populated Mongoose topic document as serialized by
-        `QuestionSetResponseDto` (`_id`, `__v` and the `category`
-        ObjectId are NOT remapped).
+        Explicit populated topic response used only by question-set reads.
+        Its Mongo-style `_id`, `category`, timestamps, and `__v` fields are
+        intentionally preserved; authoring topic responses use `Topic`.
       properties:
         _id: { $ref: '#/components/schemas/ObjectId' }
         title: { type: string }
@@ -1699,7 +1749,10 @@ components:
       properties:
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Required nonnegative whole-number level.
         questions:
           type: array
           minItems: 1
@@ -1711,7 +1764,10 @@ components:
       properties:
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Nonnegative whole-number level when supplied.
         questions:
           type: array
           minItems: 1
@@ -1725,7 +1781,10 @@ components:
         id: { $ref: '#/components/schemas/ObjectId' }
         topic: { $ref: '#/components/schemas/ObjectId' }
         setType: { $ref: '#/components/schemas/QuestionSetType' }
-        level: { type: number, minimum: 0 }
+        level:
+          type: integer
+          minimum: 0
+          description: Nonnegative whole-number level when supplied.
         questions:
           type: array
           minItems: 1

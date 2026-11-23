@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 )
 
@@ -19,7 +20,8 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, value any) error {
 	if err := decoder.Decode(value); err != nil {
 		return NewError(http.StatusBadRequest, "Invalid request body")
 	}
-	if decoder.More() {
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
 		return NewError(
 			http.StatusBadRequest,
 			"Request body must contain a single JSON value",

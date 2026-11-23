@@ -65,3 +65,21 @@ func EnsureThrottleIndexes(ctx context.Context, database *mongo.Database) error 
 
 	return err
 }
+
+// EnsureCatalogIndexes creates the audited unique slug indexes. Question sets
+// intentionally have no unique compound key because duplicate groups are part
+// of the catalog contract.
+func EnsureCatalogIndexes(ctx context.Context, database *mongo.Database) error {
+	for _, collection := range []string{"categories", "topics"} {
+		if _, err := database.Collection(collection).Indexes().CreateOne(ctx,
+			mongo.IndexModel{
+				Keys:    bson.M{"slug": 1},
+				Options: options.Index().SetUnique(true),
+			},
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
