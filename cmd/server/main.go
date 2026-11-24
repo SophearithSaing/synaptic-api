@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/SophearithSaing/synaptic-api/internal/config"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // main runs the API and reports fatal startup or server errors.
@@ -29,6 +30,18 @@ func run() error {
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, cfg.DBURL)
+	if err != nil {
+		return errors.New("invalid database configuration")
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		return errors.New("database connection failed")
+	}
+	slog.Info("database connected")
 
 	mux := http.NewServeMux()
 	server := &http.Server{
@@ -52,7 +65,7 @@ func run() error {
 
 	select {
 	case err := <-serverErr:
-		if !errors.Is(err, http.ErrServerClosed) {
+		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 		return fmt.Errorf("unexpected error: %w", err)
