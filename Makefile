@@ -45,4 +45,4 @@ docker-down:
 	docker compose down
 
 docker-logs:
-	docker compose logs -f mongo
+	docker compose logs -f postgres
