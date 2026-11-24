@@ -4,10 +4,10 @@ BINARY := bin/api
 	tidy ci clean docker-up docker-down docker-logs
 
 build:
-	go build -o $(BINARY) ./cmd/api
+	go build -o $(BINARY) ./cmd/server
 
 run:
-	go run ./cmd/api
+	go run ./cmd/server
 
 migrate:
 	go run ./cmd/migrate
@@ -45,4 +45,4 @@ docker-down:
 	docker compose down
 
 docker-logs:
-	docker compose logs -f mongo
+	docker compose logs -f postgres
